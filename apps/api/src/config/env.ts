@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 /**
- * Process-env validation. Fails fast with clear messages when PostgreSQL URL
- * is missing or clearly unusable.
+ * Process-env validation. Fails fast when DATABASE_URL is missing/invalid.
+ * Does not embed real credentials — see .env.example for placeholders only.
  */
 const EnvSchema = z.object({
   NODE_ENV: z
@@ -13,23 +13,20 @@ const EnvSchema = z.object({
   DATABASE_URL: z
     .string({
       required_error:
-        'DATABASE_URL is required (e.g. postgresql://greencity:greencity@localhost:5432/greencity?schema=public)',
+        'DATABASE_URL is required (set in repository-root .env; see .env.example placeholders)',
     })
     .min(1, 'DATABASE_URL is required')
     .refine(
       (v) => v.startsWith('postgresql://') || v.startsWith('postgres://'),
       'DATABASE_URL must be a PostgreSQL connection string (postgresql://...)',
     ),
-  /** local | s3 — Phase 0 default: local filesystem */
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('.local/storage'),
-  /** Future S3-compatible (unused when STORAGE_DRIVER=local) */
   S3_ENDPOINT: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
   S3_BUCKET: z.string().optional(),
   S3_REGION: z.string().default('auto'),
-  /** console | file | smtp — Phase 0 default: console */
   MAIL_DRIVER: z.enum(['console', 'file', 'smtp']).default('console'),
   MAIL_FILE_DIR: z.string().default('.local/mail'),
   SMTP_HOST: z.string().optional(),
@@ -49,7 +46,8 @@ export function loadEnv(raw: NodeJS.ProcessEnv = process.env): AppEnv {
     );
     throw new Error(
       [
-        'Invalid environment configuration. Fix .env (see .env.example).',
+        'Invalid environment configuration.',
+        'Load only the repository-root .env (see .env.example). Do not rely on parent-directory env files.',
         ...lines,
       ].join('\n'),
     );

@@ -6,16 +6,17 @@ import { PrismaService } from '../prisma/prisma.service';
 export class HealthService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Readiness check: DB + PostGIS must both be up for status "ok".
+   * Otherwise status is "error" (HTTP 503 via controller).
+   */
   async check(): Promise<HealthStatus> {
     const database = await this.pingDatabase();
     const postgis = database === 'up' ? await this.pingPostgis() : 'down';
 
-    const status =
-      database === 'up' && postgis === 'up'
-        ? 'ok'
-        : database === 'up'
-          ? 'degraded'
-          : 'error';
+    // Readiness: both required for "ok". Partial PostGIS failure is also not ready.
+    const status: HealthStatus['status'] =
+      database === 'up' && postgis === 'up' ? 'ok' : 'error';
 
     return {
       status,

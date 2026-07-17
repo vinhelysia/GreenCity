@@ -2,60 +2,61 @@
 <#
 .SYNOPSIS
   Enable PostGIS extension on the GreenCity database (Windows native).
-.NOTES
-  Requires PostGIS binaries installed for your PostgreSQL major version
-  (Stack Builder "Spatial Extensions" or OSGeo postgis-bundle zip).
-  See README.md "Install PostGIS on Windows".
+.EXAMPLE
+  $env:PGPASSWORD = '<admin-password>'
+  pnpm db:postgis
 #>
 param(
   [string]$PgBin = $env:PG_BIN,
-  [string]$AdminUser = "postgres",
-  [string]$AdminPassword = $(if ($env:PGPASSWORD) { $env:PGPASSWORD } else { "postgres" }),
-  [string]$HostName = "localhost",
-  [int]$Port = 5432,
-  [string]$AppDb = "greencity"
+  [string]$AdminUser = $(if ($env:PGUSER) { $env:PGUSER } else { "postgres" }),
+  [string]$AdminPassword = $env:PGPASSWORD,
+  [string]$HostName = $(if ($env:PGHOST) { $env:PGHOST } else { "localhost" }),
+  [int]$Port = $(if ($env:PGPORT) { [int]$env:PGPORT } else { 5432 }),
+  [string]$AppDb = $(if ($env:GREENCITY_DB_NAME) { $env:GREENCITY_DB_NAME } else { "greencity" })
 )
 
 $ErrorActionPreference = "Stop"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+. (Join-Path $ScriptDir "db-common.ps1")
 
-function Resolve-PgBin {
-  if ($PgBin -and (Test-Path (Join-Path $PgBin "psql.exe"))) { return $PgBin }
-  foreach ($c in @(
-      "C:\Program Files\PostgreSQL\16\bin",
-      "C:\Program Files\PostgreSQL\17\bin",
-      "C:\Program Files\PostgreSQL\15\bin",
-      "C:\Program Files\PostgreSQL\18\bin"
-    )) {
-    if (Test-Path (Join-Path $c "psql.exe")) { return $c }
-  }
-  throw "psql.exe not found. Set -PgBin or PG_BIN."
-}
+Require-EnvSecret -Name "PGPASSWORD" -Value $AdminPassword
+Assert-PgIdentifier -Name $AdminUser -Label "AdminUser"
+Assert-PgIdentifier -Name $AppDb -Label "AppDb"
 
-$PgBin = Resolve-PgBin
+$PgBin = Resolve-PgBin -PgBin $PgBin
 $psql = Join-Path $PgBin "psql.exe"
 $env:PGPASSWORD = $AdminPassword
 
 Write-Host "Enabling PostGIS on database $AppDb..."
 
 try {
-  & $psql -U $AdminUser -h $HostName -p $Port -d $AppDb -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS postgis;"
+  Invoke-Psql -PsqlPath $psql -Arguments @(
+    "-U", $AdminUser, "-h", $HostName, "-p", "$Port", "-d", $AppDb,
+    "-v", "ON_ERROR_STOP=1", "-c", "CREATE EXTENSION IF NOT EXISTS postgis;"
+  ) -FailureMessage "CREATE EXTENSION postgis failed (is the PostGIS bundle installed?)"
 } catch {
   Write-Error @"
 Failed to CREATE EXTENSION postgis.
 
-PostGIS is not available in this PostgreSQL installation.
 Install the PostGIS bundle for your PG major version, then re-run:
 
   1) Stack Builder → Spatial Extensions → PostGIS Bundle
-     OR download https://download.osgeo.org/postgis/windows/ and install
+     OR https://download.osgeo.org/postgis/windows/
   2) pnpm db:postgis
-  3) Verify: pnpm db:verify
+  3) pnpm db:verify
 
-Original error: $_
+$_
 "@
   exit 1
 }
 
 $ver = & $psql -U $AdminUser -h $HostName -p $Port -d $AppDb -tAc "SELECT PostGIS_Version();"
+if ($LASTEXITCODE -ne 0) {
+  throw "PostGIS_Version() failed (exit $LASTEXITCODE)"
+}
+if ([string]::IsNullOrWhiteSpace($ver)) {
+  throw "PostGIS_Version() returned empty"
+}
+
 Write-Host "PostGIS_Version(): $ver"
 Write-Host "OK: PostGIS enabled"

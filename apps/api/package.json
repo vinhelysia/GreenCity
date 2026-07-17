@@ -10,7 +10,7 @@
     "start": "node dist/main.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node -e \"console.log('api: no unit tests yet')\""
+    "test": "tsx src/storage/local-object-storage.spec.ts && tsx src/config/paths.spec.ts"
   },
   "dependencies": {
     "@greencity/shared": "workspace:*",
@@ -30,6 +30,7 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.7",
     "prisma": "^6.3.0",
+    "tsx": "^4.23.1",
     "typescript": "^5.7.3"
   }
 }

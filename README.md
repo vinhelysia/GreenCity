@@ -21,22 +21,20 @@ Optional later: Docker only for CI/deploy — not for the owner’s local workfl
 
 ```powershell
 # From repo root
-pnpm install
+pnpm install --frozen-lockfile
 copy .env.example .env
+# Edit .env: set real DATABASE_URL (placeholders only in .env.example)
 
-# Create role + database (default admin: postgres / postgres)
-# Override: $env:PGPASSWORD = "your-admin-password"
+# Credentials for setup scripts (required — no insecure defaults)
+$env:PGPASSWORD = '<postgres-admin-password>'
+$env:GREENCITY_DB_PASSWORD = '<app-role-password>'
+# optional: $env:GREENCITY_DB_USER / $env:GREENCITY_DB_NAME (default greencity)
+
 pnpm db:setup
-
-# Enable PostGIS (after PostGIS binaries are installed into PostgreSQL)
-pnpm db:postgis
-
-# Prisma client + migrations
-pnpm db:generate
+pnpm db:postgis   # after PostGIS binaries are installed into PostgreSQL
+pnpm db:generate  # no live DB required
 pnpm db:migrate
-
-# Verify connectivity + SELECT PostGIS_Version()
-pnpm db:verify
+pnpm db:verify    # SELECT 1 + PostGIS_Version()
 ```
 
 ### Install PostGIS on Windows (once per machine)
@@ -55,14 +53,20 @@ pnpm dev:api   # http://localhost:3001
 pnpm dev:web   # http://localhost:3000
 ```
 
-### Health
+### Health (readiness only)
+
+`GET /health` is a **readiness** probe, not liveness.
+
+| Condition | Result |
+|-----------|--------|
+| DB + PostGIS up | HTTP **200**, `status: ok` |
+| DB unreachable | API **stays running**, HTTP **503**, `database`/`postgis` down |
+| Missing/invalid env | **Startup fails** (clear error; only monorepo-root `.env` is loaded) |
 
 ```powershell
-Invoke-RestMethod http://localhost:3001/health
-# expect: status "ok", checks.database "up", checks.postgis "up"
+# HTTP status matters — use Invoke-WebRequest for 503 cases
+(Invoke-WebRequest http://localhost:3001/health).StatusCode
 ```
-
-API **refuses to start** if `DATABASE_URL` is missing/invalid or PostgreSQL is unreachable (clear error message — no silent empty boot).
 
 ## Storage & mail (Phase 0)
 
