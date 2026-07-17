@@ -186,7 +186,8 @@ copy .env.example .env
 # One-time machine: PostgreSQL 16+ + PostGIS bundle installed into PG
 # (Stack Builder Spatial Extensions OR OSGeo installer for pg16)
 
-$env:PGPASSWORD = "postgres"   # admin password for db:setup / db:postgis
+$env:PGPASSWORD = '<postgres-admin-password>'
+$env:GREENCITY_DB_PASSWORD = '<app-role-password>'
 pnpm db:setup
 pnpm db:postgis
 pnpm db:generate
