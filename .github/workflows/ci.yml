@@ -1,10 +1,11 @@
 name: CI
 
+# Default branch is master (not main).
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   build:
@@ -16,7 +17,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 9.15.0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -24,26 +25,21 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      # Local development is Docker-free (native Postgres on Windows).
+      # CI only needs install/lint/typecheck/test/build; prisma generate does not need a live DB.
       - name: Install dependencies
-        run: pnpm install
-
-      - name: Build shared package
-        run: pnpm --filter @greencity/shared build
-
-      - name: Generate Prisma client
-        run: pnpm db:generate
-        env:
-          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
         run: pnpm lint
         env:
-          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+          # Placeholder only — generate does not connect; never use production secrets in CI.
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public
 
       - name: Typecheck
         run: pnpm typecheck
         env:
-          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public
 
       - name: Test
         run: pnpm test
@@ -51,4 +47,4 @@ jobs:
       - name: Build
         run: pnpm build
         env:
-          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+          DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci?schema=public

@@ -227,7 +227,22 @@ flowchart TB
 **Phase 0:** `STORAGE_DRIVER=local` → filesystem under `.local/storage` via `ObjectStorage` port.  
 **Later:** `STORAGE_DRIVER=s3` → S3-compatible adapter (interface already stubbed).
 
-Phase 1 media may add presigned S3 PUT; local driver can accept server-side writes in dev.
+Paths resolve from **monorepo root** (via `pnpm-workspace.yaml` discovery), so starting from repo root or `apps/api` yields the same storage root.
+
+Local driver rejects `..` traversal, absolute paths, and symlink/junction ancestors.
+**Residual TOCTOU:** a directory could be swapped for a junction between containment checks and write; Phase 0 accepts this for single-trust-dev hosts; upgrade if untrusted multi-tenant writers share the FS.
+
+### Health / readiness
+
+`GET /health` is a **readiness** endpoint only (not liveness):
+
+| Condition | HTTP | Body status |
+|-----------|------|-------------|
+| DB + PostGIS up | 200 | `ok` |
+| DB and/or PostGIS down | 503 | `error` with checks down |
+| Invalid env | process exits at startup | n/a |
+
+The process **stays up** when the database is unreachable so readiness can return 503.
 
 ### Mail
 

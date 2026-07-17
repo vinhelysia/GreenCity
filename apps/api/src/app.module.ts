@@ -9,7 +9,8 @@ import { StorageModule } from './storage/storage.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '../../.env'],
+      // Env already loaded from monorepo-root .env in main.ts; avoid non-root files.
+      ignoreEnvFile: true,
     }),
     PrismaModule,
     StorageModule,
