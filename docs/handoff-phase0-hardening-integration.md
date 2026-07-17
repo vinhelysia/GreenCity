@@ -1,8 +1,8 @@
 # GreenCity — Handoff for ChatGPT: Phase 0 Hardening Integration
 
-**Date:** 2026-07-17  
-**Workspace:** `C:\Stuff\GreenCity`  
-**OS:** Windows  
+**Date:** 2026-07-17
+**Workspace:** `C:\Stuff\GreenCity`
+**OS:** Windows
 
 ---
 
@@ -56,10 +56,10 @@ b7fe42d Phase 0 hardening: credentials, storage containment, readiness, CI.
 
 ## 2. Codex patch status (critical)
 
-**`codex/phase0-hardening` was NOT found** in this repo (no remote, no local branch, no audit report file).  
+**`codex/phase0-hardening` was NOT found** in this repo (no remote, no local branch, no audit report file).
 Placeholder `<CODEX_PATCH_SHA>` could not be cherry-picked.
 
-Hardening was **reimplemented from the integration brief (areas A–G)** on `integration/phase0-hardening` so acceptance criteria pass.  
+Hardening was **reimplemented from the integration brief (areas A–G)** on `integration/phase0-hardening` so acceptance criteria pass.
 This is **not** an auditable cherry-pick of a third-party Codex commit. If Codex SHA appears later, three-way compare against `f12054c`.
 
 ---
@@ -132,19 +132,19 @@ This is **not** an auditable cherry-pick of a third-party Codex commit. If Codex
 ## 6. Runtime semantics (authoritative)
 
 ### Health = readiness only
-- **200** + `status: "ok"` when database and PostGIS both up  
-- **503** + `status: "error"` when either down  
-- Process **does not exit** solely because DB is down  
-- Invalid/missing env **does** fail startup  
+- **200** + `status: "ok"` when database and PostGIS both up
+- **503** + `status: "error"` when either down
+- Process **does not exit** solely because DB is down
+- Invalid/missing env **does** fail startup
 
 ### Local storage
-- Root: `STORAGE_LOCAL_DIR` resolved from monorepo root  
-- Rejects: `..`, absolute paths, UNC, symlink/junction ancestors  
-- Residual **TOCTOU** risk documented  
+- Root: `STORAGE_LOCAL_DIR` resolved from monorepo root
+- Rejects: `..`, absolute paths, UNC, symlink/junction ancestors
+- Residual **TOCTOU** risk documented
 
 ### DB scripts
-- Require: `PGPASSWORD`, `GREENCITY_DB_PASSWORD` (for setup)  
-- `DATABASE_URL` required for verify (no default credentials)  
+- Require: `PGPASSWORD`, `GREENCITY_DB_PASSWORD` (for setup)
+- `DATABASE_URL` required for verify (no default credentials)
 
 ---
 
@@ -173,19 +173,19 @@ pnpm dev:web   # :3000
 
 ## 8. Remaining risks
 
-1. Codex original SHA never compared — re-audit if branch appears.  
-2. Storage TOCTOU residual.  
-3. Symlink test may skip without Windows privileges.  
-4. Local `.env` secrets on disk (gitignored).  
-5. Optional Docker compose still operator-configured if used.  
+1. Codex original SHA never compared — re-audit if branch appears.
+2. Storage TOCTOU residual.
+3. Symlink test may skip without Windows privileges.
+4. Local `.env` secrets on disk (gitignored).
+5. Optional Docker compose still operator-configured if used.
 
 ---
 
 ## 9. What was NOT done
 
-- Phase 1+ (auth, RBAC, media product flows, marketplace, cleanup, subscription, payment, rewards)  
-- Automatic merge to `master`  
-- Cherry-pick of missing Codex commit  
+- Phase 1+ (auth, RBAC, media product flows, marketplace, cleanup, subscription, payment, rewards)
+- Automatic merge to `master`
+- Cherry-pick of missing Codex commit
 
 ---
 
@@ -199,7 +199,7 @@ git merge --no-ff integration/phase0-hardening
 # do not auto-merge without review
 ```
 
-**Safe to merge after human review:** yes, as Phase 0 hardening.  
+**Safe to merge after human review:** yes, as Phase 0 hardening.
 **Do not claim “Codex cherry-pick verified”** without the original branch.
 
 ---
