@@ -1,13 +1,13 @@
-﻿# GreenCity â€” Full Handoff Report for GPT / Next Agent
+# GreenCity — Full Handoff Report for GPT / Next Agent
 
-**Date:** 2026-07-17  
-**Workspace:** `C:\Stuff\GreenCity`  
-**OS:** Windows  
-**Branch:** `master`  
-**HEAD:** `67c582f164f081f1bb7718b331aeda8d6303dd51`  
-**Phase 0 status:** **HARDENED & MERGED**  
-**Tag (after handoff commit):** `phase-0-hardened`  
-**Git status:** clean after handoff update  
+**Date:** 2026-07-17
+**Workspace:** `C:\Stuff\GreenCity`
+**OS:** Windows
+**Branch:** `master`
+**HEAD:** 221adbea73aa96c306f3af6d12f9a97c5a8efe43
+**Phase 0 status:** **HARDENED & MERGED**
+**Tag (after handoff commit):** `phase-0-hardened`
+**Git status:** clean after handoff update
 
 **Hardening note:** Codex findings were independently reimplemented, reviewed, and verified on `integration/phase0-hardening` (not cherry-picked). Source tip at merge: `113f566` (includes `f12054c` + docs hygiene).
 
@@ -17,29 +17,29 @@
 
 GreenCity is a **responsive web platform** with two domains:
 
-### A. Chá»£ online (Marketplace)
+### A. Chợ online (Marketplace)
 1. User submits recyclable materials (photos, category, estimated qty/weight, location).
-2. GreenCity reviews and quotes; public configurable price range per category (e.g. 1,000â€“1,500 VND/kg).
+2. GreenCity reviews and quotes; public configurable price range per category (e.g. 1,000–1,500 VND/kg).
 3. Admin picks specific price within range; user accepts/rejects.
-4. On accept â†’ marketplace listing (fixed price, **no bidding**).
+4. On accept → marketplace listing (fixed price, **no bidding**).
 5. Buyers need **active subscription 50,000 VND/month**.
 6. Buyers reserve/purchase at fixed price.
-7. Final amount = agreed unit price Ã— **confirmed actual weight**.
+7. Final amount = agreed unit price × **confirmed actual weight**.
 8. Buyer pays through GreenCity.
-9. After settlement, seller reward **2,000â€“5,000 VND** via deterministic rules + append-only ledger.
+9. After settlement, seller reward **2,000–5,000 VND** via deterministic rules + append-only ledger.
 
-### B. ÄÃ³ng gÃ³p (Cleanup contribution)
+### B. Đóng góp (Cleanup contribution)
 1. User reports illegal dumping (images, description, waste type, GPS, address).
 2. GreenCity verifies + dedupes.
-3. Assign cleanup partner â†’ partner before/after evidence.
+3. Assign cleanup partner → partner before/after evidence.
 4. GreenCity verifies completion.
-5. Reporter reward **2,000â€“10,000 VND** via deterministic rules + ledger.
+5. Reporter reward **2,000–10,000 VND** via deterministic rules + ledger.
 
 ### Hard constraints (never violate)
 - Modular monolith only (no microservices, K8s, blockchain, custom wallets, AI vision, realtime chat for MVP).
 - Frontend **must not** control status transitions (command API + server state machines).
 - No double accepted reservation/order per listing (DB partial unique + transactions).
-- **No** `users.balance` as reward source of truth â€” append-only ledger.
+- **No** `users.balance` as reward source of truth — append-only ledger.
 - Do not expose exact seller/report addresses before authorization.
 - Do not invent payment-provider capabilities; **no payment integration until domain + state machines stable**.
 - **Docker is NOT required for local development** (project owner mandate). Native Windows PostgreSQL + PostGIS.
@@ -55,7 +55,7 @@ GreenCity is a **responsive web platform** with two domains:
 | **Phase 1+** | **NOT STARTED** |
 
 ### Explicitly NOT implemented yet
-- Authentication (login/register/cookies/guards) â€” only User/Session **schema**
+- Authentication (login/register/cookies/guards) — only User/Session **schema**
 - RBAC enforcement, media upload flows, location privacy layers
 - Marketplace, cleanup, payment, subscription, rewards
 - Any domain state machines in code
@@ -67,14 +67,14 @@ GreenCity is a **responsive web platform** with two domains:
 ```
 8e4aa36 merge: Phase 0 hardening
 113f566 docs: remove concrete admin password example from handoff.
-â€¦ (hardening on integration/phase0-hardening)
+… (hardening on integration/phase0-hardening)
 f12054c fix prepare.mjs spawn on Windows
 b7fe42d Phase 0 hardening (main fixes)
 ea81fd0 docs: full Phase 0 handoff report for next agent (GPT).
 9ed7bb5 Phase 0: Docker-free local stack (native Postgres/PostGIS, local storage/mail).
 ```
 
-**Merge:** `8e4aa36` â† `integration/phase0-hardening` @ `113f566` (hardening core through `f12054c` + docs).
+**Merge:** `8e4aa36` ← `integration/phase0-hardening` @ `113f566` (hardening core through `f12054c` + docs).
 
 ---
 
@@ -82,22 +82,22 @@ ea81fd0 docs: full Phase 0 handoff report for next agent (GPT).
 
 ```text
 GreenCity/
-â”œâ”€â”€ apps/
-â”‚   â”œâ”€â”€ api/          # NestJS modular monolith + Prisma
-â”‚   â””â”€â”€ web/          # Next.js 15 App Router + Tailwind
-â”œâ”€â”€ packages/
-â”‚   â”œâ”€â”€ shared/       # @greencity/shared â€” Zod HealthStatus, ApiError, APP_NAME
-â”‚   â””â”€â”€ tsconfig/     # shared TS base
-â”œâ”€â”€ scripts/          # Windows-native DB: setup, postgis, verify
-â”œâ”€â”€ infra/docker/     # OPTIONAL only â€” not required for local owner workflow
-â”œâ”€â”€ docs/             # planning + this handoff
-â”œâ”€â”€ package.json      # pnpm workspace root scripts
-â”œâ”€â”€ pnpm-workspace.yaml
-â”œâ”€â”€ .env.example
-â””â”€â”€ README.md
+├── apps/
+│   ├── api/          # NestJS modular monolith + Prisma
+│   └── web/          # Next.js 15 App Router + Tailwind
+├── packages/
+│   ├── shared/       # @greencity/shared — Zod HealthStatus, ApiError, APP_NAME
+│   └── tsconfig/     # shared TS base
+├── scripts/          # Windows-native DB: setup, postgis, verify
+├── infra/docker/     # OPTIONAL only — not required for local owner workflow
+├── docs/             # planning + this handoff
+├── package.json      # pnpm workspace root scripts
+├── pnpm-workspace.yaml
+├── .env.example
+└── README.md
 ```
 
-**Package manager:** pnpm 9 (`packageManager: pnpm@9.15.0`)  
+**Package manager:** pnpm 9 (`packageManager: pnpm@9.15.0`)
 **No Turborepo.**
 
 ---
@@ -114,7 +114,7 @@ GreenCity/
 | ORM | Prisma 6 |
 | Storage | Port `ObjectStorage`: `local` default; `s3` stub |
 | Mail | Port `MailSender`: `console`/`file` default; `smtp` stub |
-| CI | `.github/workflows/ci.yml` (install â†’ lint â†’ typecheck â†’ test â†’ build) |
+| CI | `.github/workflows/ci.yml` (install → lint → typecheck → test → build) |
 
 ---
 
@@ -123,14 +123,14 @@ GreenCity/
 ### Modules wired in `apps/api/src/app.module.ts`
 - `ConfigModule` (global)
 - `PrismaModule` / `PrismaService`
-- `StorageModule` (global) â€” inject `OBJECT_STORAGE`
-- `MailModule` (global) â€” inject `MAIL_SENDER`
-- `HealthModule` â€” `GET /health`
+- `StorageModule` (global) — inject `OBJECT_STORAGE`
+- `MailModule` (global) — inject `MAIL_SENDER`
+- `HealthModule` — `GET /health`
 
 ### Bootstrap (`main.ts`)
 1. Loads `.env` from cwd and `../../.env` via dotenv.
-2. `loadEnv()` validates with Zod â€” fails clearly if bad/missing env.
-3. `assertPostgresReachable()` â€” **process exits** if `SELECT 1` fails (clear Windows setup instructions in error).
+2. `loadEnv()` validates with Zod — fails clearly if bad/missing env.
+3. `assertPostgresReachable()` — **process exits** if `SELECT 1` fails (clear Windows setup instructions in error).
 4. Listens on `API_PORT` (default 3001); CORS for `http://localhost:3000`.
 
 ### Health response shape (`@greencity/shared`)
@@ -147,8 +147,8 @@ GreenCity/
 - `error` if DB down.
 
 ### Prisma models (only)
-- `User` â€” id, email?, phone?, displayName?, passwordHash?, roles[], status, timestamps, sessions
-- `Session` â€” id, userId, tokenHash (unique), expiresAt, revokedAt?, userAgent?, ipAddress?
+- `User` — id, email?, phone?, displayName?, passwordHash?, roles[], status, timestamps, sessions
+- `Session` — id, userId, tokenHash (unique), expiresAt, revokedAt?, userAgent?, ipAddress?
 - Migrations:
   - `20260717000001_init_user_session`
   - `20260717120000_enable_postgis` (`CREATE EXTENSION IF NOT EXISTS postgis`)
@@ -159,15 +159,15 @@ GreenCity/
 - Local data dirs: `.local/storage`, `.local/mail` (gitignored)
 
 ### Web
-- Placeholder page: title GreenCity, â€œPhase 0 shell â€” no marketplace featuresâ€
-- Optional rewrite: `/api/*` â†’ `http://localhost:3001/*`
+- Placeholder page: title GreenCity, “Phase 0 shell — no marketplace features”
+- Optional rewrite: `/api/*` → `http://localhost:3001/*`
 - Port 3000
 
 ---
 
 ## 7. Environment
 
-Copy `.env.example` â†’ `.env`:
+Copy `.env.example` → `.env`:
 
 ```env
 DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/DATABASE?schema=public
@@ -229,9 +229,9 @@ pnpm --filter web build
 | `pnpm --filter api build` | Pass |
 | `pnpm --filter web build` | Pass |
 | Prisma migrate (native PG) | Pass |
-| `pnpm db:verify` / `PostGIS_Version()` | Pass â€” `3.6 USE_GEOS=1 USE_PROJ=1 USE_STATS=1` |
-| `GET /health` | Pass â€” `database:up`, `postgis:up`, `status:ok` |
-| Web homepage | Pass â€” HTTP 200, GreenCity Phase 0 |
+| `pnpm db:verify` / `PostGIS_Version()` | Pass — `3.6 USE_GEOS=1 USE_PROJ=1 USE_STATS=1` |
+| `GET /health` | Pass — `database:up`, `postgis:up`, `status:ok` |
+| Web homepage | Pass — HTTP 200, GreenCity Phase 0 |
 
 ---
 
@@ -240,26 +240,26 @@ pnpm --filter web build
 | Doc | Purpose |
 |------|---------|
 | `docs/project-context.md` | Product + local policy |
-| `docs/domain-model.md` | Actors, invariants, open questions Q1â€“Q20 |
+| `docs/domain-model.md` | Actors, invariants, open questions Q1–Q20 |
 | `docs/state-machines.md` | Marketplace, cleanup, payment, reward machines |
 | `docs/architecture.md` | Module boundaries, ERD, storage/mail ports |
 | `docs/security-risks.md` | P0 risks: fraud, double-reserve, payment spoof, location leak, IDOR |
 | `docs/testing-strategy.md` | Pyramid, concurrency tests, DoD |
-| `docs/implementation-roadmap.md` | Phases 0â€“6 |
+| `docs/implementation-roadmap.md` | Phases 0–6 |
 
 ### Phase order (next)
-1. **Phase 1** â€” Auth sessions/cookies, RBAC, media via storage port, location privacy, unit tests  
-2. **Phase 2** â€” Catalog + scrap â†’ quote â†’ LISTED (no payment)  
-3. **Phase 3** â€” Subscriptions + reservation concurrency  
-4. **Phase 4** â€” Weight, payment adapter (provider TBD), settle, seller reward ledger  
-5. **Phase 5** â€” Cleanup contribution + reporter reward  
-6. **Phase 6** â€” Hardening, observability, launch  
+1. **Phase 1** — Auth sessions/cookies, RBAC, media via storage port, location privacy, unit tests
+2. **Phase 2** — Catalog + scrap → quote → LISTED (no payment)
+3. **Phase 3** — Subscriptions + reservation concurrency
+4. **Phase 4** — Weight, payment adapter (provider TBD), settle, seller reward ledger
+5. **Phase 5** — Cleanup contribution + reporter reward
+6. **Phase 6** — Hardening, observability, launch
 
 ### Open product questions that block later design
-- **Q1** Who confirms actual weight?  
-- **Q5** Seller commercial proceeds vs reward-only?  
-- **Q20** Payment provider (MoMo/ZaloPay/VNPay/â€¦) â€” **blocks Phase 4**  
-- **Q9â€“Q11** Reward rule inputs; payout channel; duplicate-report policy  
+- **Q1** Who confirms actual weight?
+- **Q5** Seller commercial proceeds vs reward-only?
+- **Q20** Payment provider (MoMo/ZaloPay/VNPay/…) — **blocks Phase 4**
+- **Q9–Q11** Reward rule inputs; payout channel; duplicate-report policy
 - Full list in `docs/domain-model.md`
 
 ---
@@ -272,21 +272,21 @@ pnpm --filter web build
 - Status: command handlers only; never accept client `status` fields as truth.
 - Rewards: ledger append-only + idempotency keys.
 - Tests: placeholders today; Phase 1+ must add real unit/integration/concurrency per `docs/testing-strategy.md`.
-- Windows note: `prisma generate` can EPERM if API process locks query engine DLL â€” stop API first.
+- Windows note: `prisma generate` can EPERM if API process locks query engine DLL — stop API first.
 
 ---
 
 ## 12. What the next agent should do
 
-### If continuing product work â†’ **Phase 1 only**
-1. Read `docs/implementation-roadmap.md` Phase 1 + `docs/security-risks.md` auth sections.  
-2. Implement register/login/logout with **Postgres Session** (schema exists); HttpOnly cookies; argon2id/bcrypt.  
-3. Roles on User; never client-settable.  
-4. Authz helpers + deny-by-default.  
-5. MediaModule on `OBJECT_STORAGE` (local).  
-6. LocationExact/LocationPublic + redaction DTOs.  
-7. Unit tests for authz + geo redaction.  
-8. Do **not** implement marketplace/cleanup/payment/subscription/reward yet.  
+### If continuing product work → **Phase 1 only**
+1. Read `docs/implementation-roadmap.md` Phase 1 + `docs/security-risks.md` auth sections.
+2. Implement register/login/logout with **Postgres Session** (schema exists); HttpOnly cookies; argon2id/bcrypt.
+3. Roles on User; never client-settable.
+4. Authz helpers + deny-by-default.
+5. MediaModule on `OBJECT_STORAGE` (local).
+6. LocationExact/LocationPublic + redaction DTOs.
+7. Unit tests for authz + geo redaction.
+8. Do **not** implement marketplace/cleanup/payment/subscription/reward yet.
 9. Re-run lint/typecheck/build; keep health green.
 
 ### If only verifying environment
@@ -311,12 +311,12 @@ pnpm --filter api start   # or dev:api
 
 ## 14. Confirmation for next agent
 
-1. **Phase 0 is closed** under Docker-free criteria.  
-2. **Do not rebuild Phase 0** unless something is broken.  
-3. **Do not implement domain commerce** until Phase 1 foundations land.  
-4. **Do not make Docker mandatory** again.  
+1. **Phase 0 is closed** under Docker-free criteria.
+2. **Do not rebuild Phase 0** unless something is broken.
+3. **Do not implement domain commerce** until Phase 1 foundations land.
+4. **Do not make Docker mandatory** again.
 5. Authoritative planning lives in `docs/*`; this handoff summarizes state for session transfer.
 
 ---
 
-*End of handoff. Paste this file or its contents into the next GPT/agent session with instruction: â€œContinue from Phase 1 using docs/handoff-to-gpt.md and docs/implementation-roadmap.md.â€*
+*End of handoff. Paste this file or its contents into the next GPT/agent session with instruction: “Continue from Phase 1 using docs/handoff-to-gpt.md and docs/implementation-roadmap.md.”*
