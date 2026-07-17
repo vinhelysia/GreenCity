@@ -6,12 +6,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "prelint": "pnpm --filter @greencity/shared build && pnpm db:generate",
     "lint": "pnpm -r --if-present run lint",
-    "pretypecheck": "pnpm --filter @greencity/shared build && pnpm db:generate",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test",
-    "prebuild": "pnpm --filter @greencity/shared build && pnpm db:generate",
+    "prebuild": "pnpm --filter @greencity/shared build",
     "build": "pnpm -r --if-present run build",
     "dev:api": "pnpm --filter api dev",
     "dev:web": "pnpm --filter web dev",
