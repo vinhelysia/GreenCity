@@ -1,8 +1,8 @@
 # GreenCity — Project Context
 
-**Document status:** Planning (no production implementation yet)  
+**Document status:** Phase 0 scaffold complete; planning docs remain authoritative for later phases  
 **Date:** 2026-07-17  
-**Mode:** Repository discovery + implementation planning
+**Mode:** Implementation started (Phase 0 only)
 
 ---
 
@@ -31,18 +31,22 @@ Currency is **VND** (integer đồng). There is **no bidding** in the MVP.
 | **No documented install commands** | No README |
 | Agent skill scaffolding only | 22 skills locked in `skills-lock.json` (process/design/test guidance, not product code) |
 
-### Build / test status (executed)
+### Build / test status (Phase 0 — executed)
 
 | Command category | Result |
 |------------------|--------|
-| Install | **N/A** — no package manifest |
-| Lint | **N/A** — no linter config |
-| Type-check | **N/A** — no TypeScript project |
-| Unit/integration tests | **N/A** — no test runner |
-| Build | **N/A** — no build system |
-| Git | **Fail** — not a git repository |
+| `pnpm install` | **Pass** |
+| `pnpm lint` | **Pass** |
+| `pnpm typecheck` | **Pass** |
+| `pnpm test` | **Pass** (placeholders) |
+| `pnpm --filter api build` | **Pass** |
+| `pnpm --filter web build` | **Pass** |
+| `docker compose up` | **Not run** — Docker CLI not installed on implementer host; Compose files are present under `infra/docker/` |
+| `GET /health` | **Pass** with `database: "up"` (native PostgreSQL 16 + Prisma migrate) |
+| Web home page | **Pass** (HTTP 200, "GreenCity" Phase 0 shell) |
+| Git | **Pass** — history on `master` |
 
-**Verdict:** greenfield / no build system. Nothing was claimed to pass; nothing product-related exists to run.
+**Verdict:** Phase 0 scaffold is runnable. Domain features not implemented.
 
 ---
 
