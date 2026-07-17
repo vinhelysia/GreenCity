@@ -93,7 +93,7 @@ pnpm dev:web   # http://localhost:3000
 See [`.env.example`](.env.example). Minimum:
 
 ```
-DATABASE_URL=postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/DATABASE?schema=public
 API_PORT=3001
 STORAGE_DRIVER=local
 MAIL_DRIVER=console

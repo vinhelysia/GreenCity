@@ -1,10 +1,9 @@
 # GreenCity Phase 0 — local infra only (no app containers)
 # Start: docker compose -f infra/docker/docker-compose.yml up -d
 #
-# Credentials (local dev only — never use in production):
-#   Postgres: greencity / greencity  (db: greencity)
-#   MinIO:    minioadmin / minioadmin
-#   MailHog:  no auth; UI http://localhost:8025
+# OPTIONAL stack only — not required for local Windows development.
+# Set credentials via environment / override file; do not commit real secrets.
+# Example override: POSTGRES_PASSWORD from your shell env.
 
 services:
   db:
@@ -12,9 +11,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: greencity
-      POSTGRES_PASSWORD: greencity
-      POSTGRES_DB: greencity
+      POSTGRES_USER: ${POSTGRES_USER:-greencity}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-greencity}
     volumes:
       - greencity_pgdata:/var/lib/postgresql/data
       - ./init:/docker-entrypoint-initdb.d:ro
@@ -31,8 +30,8 @@ services:
       - "9000:9000" # S3 API
       - "9001:9001" # Console
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
     command: server /data --console-address ":9001"
     volumes:
       - greencity_minio:/data
@@ -42,10 +41,13 @@ services:
     image: minio/mc
     depends_on:
       - minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
     entrypoint: >
       /bin/sh -c "
       sleep 3;
-      mc alias set local http://minio:9000 minioadmin minioadmin;
+      mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
       mc mb --ignore-existing local/greencity;
       exit 0;
       "

@@ -162,7 +162,7 @@ GreenCity/
 Copy `.env.example` → `.env`:
 
 ```env
-DATABASE_URL=postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+DATABASE_URL=postgresql://USER:PASSWORD@localhost:5432/DATABASE?schema=public
 API_PORT=3001
 NEXT_PUBLIC_API_URL=http://localhost:3001
 STORAGE_DRIVER=local
@@ -171,7 +171,7 @@ MAIL_DRIVER=console
 MAIL_FILE_DIR=.local/mail
 ```
 
-Admin Postgres password used by setup scripts defaults to `postgres` via `$env:PGPASSWORD` (override if different).
+Setup scripts require `PGPASSWORD` and `GREENCITY_DB_PASSWORD` (no insecure defaults).
 
 ---
 
@@ -294,9 +294,9 @@ pnpm --filter api start   # or dev:api
 - PostgreSQL 16 installed under `C:\Program Files\PostgreSQL\16`
 - PostGIS 3.6.2 bundle installed into that prefix (OSGeo Windows setup)
 - DB/user: `greencity` / `greencity` on `localhost:5432`
-- Admin role `postgres` password used during setup: `postgres` (may differ on other machines)
-- Docker CLI **not** used / not required
-- Node v24+ available; pnpm 9.15.0 used
+- Docker CLI **not** used / not required for local owner workflow
+- Node 20+ / pnpm 9.15.0
+- See branch `integration/phase0-hardening` for Phase 0 hardening integration
 
 ---
 
