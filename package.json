@@ -15,7 +15,10 @@
     "dev:web": "pnpm --filter web dev",
     "db:generate": "pnpm --filter api exec prisma generate",
     "db:migrate": "pnpm --filter api exec prisma migrate deploy",
-    "db:migrate:dev": "pnpm --filter api exec prisma migrate dev"
+    "db:migrate:dev": "pnpm --filter api exec prisma migrate dev",
+    "db:setup": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/db-setup.ps1",
+    "db:postgis": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/db-postgis.ps1",
+    "db:verify": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/db-verify.ps1"
   },
   "devDependencies": {
     "typescript": "^5.7.3"

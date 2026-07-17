@@ -43,3 +43,10 @@ test-results/
 # Agent skill trees (local tooling; not product source)
 .claude/
 .grok/
+
+# Local runtime data (storage, mail, tooling downloads)
+.local/
+data/
+uploads/
+tmp/
+temp/

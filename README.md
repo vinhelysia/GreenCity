@@ -1,79 +1,108 @@
 # GreenCity
 
-GreenCity is a monorepo scaffold for a local marketplace platform (API + web).
+GreenCity is a pnpm monorepo for a recycling marketplace + cleanup platform (API + web).
 
-**Phase 0 only — no marketplace features yet.** This repo currently provides workspace layout, tooling, CI, local infra hooks, and planning docs. Product features come in later phases.
+**Phase 0 only — no marketplace features yet.** Scaffold: NestJS API, Next.js web, Prisma (`User` / `Session`), native local PostgreSQL + PostGIS, local filesystem storage, console mail.
 
-## Prerequisites
+**Docker is not required for local development.**
 
-- Node.js 20+
-- pnpm 9
-- Docker
+## Prerequisites (Windows)
 
-## Setup
+| Tool | Notes |
+|------|--------|
+| Node.js 20+ | |
+| pnpm 9 | `npm i -g pnpm@9` |
+| PostgreSQL 16+ | [EnterpriseDB Windows installer](https://www.postgresql.org/download/windows/) |
+| PostGIS | Stack Builder → Spatial Extensions → PostGIS Bundle, **or** [OSGeo Windows bundles](https://download.osgeo.org/postgis/windows/) matching your PG major version |
 
-```bash
+Optional later: Docker only for CI/deploy — not for the owner’s local workflow.
+
+## Setup (native PostgreSQL)
+
+```powershell
+# From repo root
 pnpm install
-cp .env.example .env
-```
+copy .env.example .env
 
-## Local infrastructure
+# Create role + database (default admin: postgres / postgres)
+# Override: $env:PGPASSWORD = "your-admin-password"
+pnpm db:setup
 
-```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-```
+# Enable PostGIS (after PostGIS binaries are installed into PostgreSQL)
+pnpm db:postgis
 
-## Database
-
-```bash
-pnpm db:migrate:dev
-# or (deploy-style): pnpm db:migrate
-```
-
-Generate the Prisma client:
-
-```bash
+# Prisma client + migrations
 pnpm db:generate
+pnpm db:migrate
+
+# Verify connectivity + SELECT PostGIS_Version()
+pnpm db:verify
 ```
+
+### Install PostGIS on Windows (once per machine)
+
+1. Open **Application Stack Builder** (ships with EnterpriseDB PostgreSQL), select your PostgreSQL install, install **Spatial Extensions → PostGIS Bundle**, **or**
+2. Download the matching installer/zip from [download.osgeo.org/postgis/windows](https://download.osgeo.org/postgis/windows/) (e.g. `pg16` for PostgreSQL 16) and install into the same PostgreSQL prefix.
+3. Confirm control file exists, e.g.  
+   `C:\Program Files\PostgreSQL\16\share\extension\postgis.control`
+4. Run `pnpm db:postgis` then `pnpm db:verify`.
 
 ## Development
 
-```bash
-pnpm dev:api   # API on http://localhost:3001
-pnpm dev:web   # Next.js web app
+```powershell
+pnpm --filter @greencity/shared build
+pnpm dev:api   # http://localhost:3001
+pnpm dev:web   # http://localhost:3000
 ```
 
-### Health check
+### Health
 
-```bash
-curl http://localhost:3001/health
+```powershell
+Invoke-RestMethod http://localhost:3001/health
+# expect: status "ok", checks.database "up", checks.postgis "up"
 ```
 
-`GET /health` should return a successful response when the API is up.
+API **refuses to start** if `DATABASE_URL` is missing/invalid or PostgreSQL is unreachable (clear error message — no silent empty boot).
+
+## Storage & mail (Phase 0)
+
+| Concern | Local default | Production interface (later) |
+|---------|---------------|------------------------------|
+| Objects | `STORAGE_DRIVER=local` → `.local/storage` | `STORAGE_DRIVER=s3` (S3-compatible adapter stub) |
+| Email | `MAIL_DRIVER=console` (or `file` → `.local/mail`) | `MAIL_DRIVER=smtp` (stub until Phase 1+) |
 
 ## Scripts
 
 | Script | Description |
 |--------|-------------|
-| `pnpm lint` | Lint all packages that define a lint script |
-| `pnpm typecheck` | Typecheck all packages that define a typecheck script |
-| `pnpm test` | Run tests across the monorepo |
-| `pnpm build` | Build all packages/apps |
-| `pnpm dev:api` | Start the API in watch/dev mode |
-| `pnpm dev:web` | Start the web app in dev mode |
+| `pnpm lint` / `typecheck` / `test` / `build` | Monorepo quality gates |
+| `pnpm dev:api` / `dev:web` | Dev servers |
+| `pnpm db:setup` | Create `greencity` role + database |
+| `pnpm db:postgis` | `CREATE EXTENSION postgis` |
 | `pnpm db:generate` | Prisma generate |
-| `pnpm db:migrate:dev` | Prisma migrate (dev) |
 | `pnpm db:migrate` | Prisma migrate deploy |
+| `pnpm db:migrate:dev` | Prisma migrate dev |
+| `pnpm db:verify` | Connectivity + `PostGIS_Version()` |
+
+## Environment
+
+See [`.env.example`](.env.example). Minimum:
+
+```
+DATABASE_URL=postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+API_PORT=3001
+STORAGE_DRIVER=local
+MAIL_DRIVER=console
+```
 
 ## CI
 
-Pushes and pull requests to `main` run install → lint → typecheck → test → build via [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+GitHub Actions runs install → lint → typecheck → test → build. Local Postgres/PostGIS remains the primary developer path.
 
 ## Docs
 
-Domain planning, architecture, roadmap, and related notes live under [`docs/`](docs/). Start with:
+Planning and domain notes: [`docs/`](docs/). Start with:
 
 - [`docs/project-context.md`](docs/project-context.md)
 - [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md)
 - [`docs/architecture.md`](docs/architecture.md)
-- [`docs/domain-model.md`](docs/domain-model.md)

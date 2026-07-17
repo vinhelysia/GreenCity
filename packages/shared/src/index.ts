@@ -8,6 +8,7 @@ export const HealthStatusSchema = z.object({
   checks: z
     .object({
       database: z.enum(["up", "down"]).optional(),
+      postgis: z.enum(["up", "down"]).optional(),
     })
     .optional(),
 });

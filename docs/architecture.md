@@ -1,7 +1,8 @@
 # GreenCity — Architecture
 
-**Status:** Planning (greenfield)  
-**Style:** Modular monolith, fewest moving parts
+**Status:** Phase 0 scaffold active  
+**Style:** Modular monolith, fewest moving parts  
+**Local infra:** Native Windows PostgreSQL + PostGIS — **Docker not required**
 
 ---
 
@@ -9,13 +10,15 @@
 
 | Kind | Statement |
 |------|-----------|
-| **Fact** | Repo has no apps, packages, Docker, or Prisma yet |
+| **Fact** | Phase 0 monorepo exists: `apps/api`, `apps/web`, `packages/shared`, Prisma User/Session |
 | **Recommendation** | pnpm workspaces: `apps/web`, `apps/api`, `packages/shared` |
-| **Recommendation** | NestJS feature modules for marketplace, cleanup, rewards, payments, media, auth |
+| **Recommendation** | NestJS feature modules for marketplace, cleanup, rewards, payments, media, auth (later phases) |
 | **Recommendation** | Prisma + raw SQL for PostGIS |
 | **Recommendation** | Cookie sessions (Postgres-backed); Next rewrite proxy for same-origin cookies |
-| **Recommendation** | Presigned S3 uploads; private bucket |
-| **Rejected** | Microservices, K8s, Redis/BullMQ on day 1, GraphQL, separate admin SPA, event bus |
+| **Recommendation** | Object storage **port**: local FS (Phase 0) → S3-compatible (prod) |
+| **Recommendation** | Mail **port**: console/file (Phase 0) → SMTP (prod) |
+| **Local DB** | Native PostgreSQL + PostGIS (Windows). Docker optional for CI/deploy only |
+| **Rejected** | Microservices, K8s, Redis/BullMQ on day 1, GraphQL, separate admin SPA, mandatory Docker for local dev |
 
 ---
 
@@ -24,18 +27,15 @@
 ```text
 GreenCity/
 ├── apps/
-│   ├── web/                 # Next.js App Router + Tailwind + shadcn/ui
+│   ├── web/                 # Next.js App Router + Tailwind
 │   └── api/                 # NestJS modular monolith + Prisma
 ├── packages/
-│   ├── shared/              # Zod schemas, enums, constants (pure TS)
-│   ├── tsconfig/            # shared TS bases
-│   └── eslint-config/       # shared lint (optional early)
+│   ├── shared/              # Zod schemas, enums, constants
+│   └── tsconfig/
+├── scripts/                 # Windows-native DB setup / PostGIS / verify
 ├── infra/
-│   └── docker/
-│       ├── docker-compose.yml   # postgis, minio, mailhog
-│       └── init/                # optional SQL
-├── e2e/                     # Playwright
-├── docs/                    # this planning set + future ADRs
+│   └── docker/              # OPTIONAL only (CI/deploy) — not required locally
+├── docs/
 ├── package.json
 ├── pnpm-workspace.yaml
 └── .env.example
@@ -80,7 +80,7 @@ packages:
 | **Payments** | Thin payment lifecycle + future provider adapter | Payment |
 | **Cleanup** | Reports, dedupe, assignment, evidence, completion | DumpReport, Assignment, Evidence |
 | **Rewards** | Rules + sole ledger writer | RewardRule, RewardLedgerEntry |
-| **Notifications** | Transactional email (MailHog local) | — |
+| **Notifications** | Transactional email (console/file local; SMTP later) | — |
 | **Admin** | Thin controllers composing other modules | — |
 
 ### Dependency rules
@@ -142,10 +142,10 @@ flowchart TB
     ADM[AdminModule]
   end
 
-  subgraph infra[infra/docker]
-    PG[(PostgreSQL + PostGIS)]
-    S3[(MinIO / S3)]
-    MAIL[MailHog]
+  subgraph infra[Local / production adapters]
+    PG[(PostgreSQL + PostGIS native)]
+    S3[(Local FS / S3)]
+    MAIL[Console / file / SMTP]
   end
 
   WEB --> SHARED
@@ -222,37 +222,37 @@ flowchart TB
 | Password | argon2id (or bcrypt if ops prefer) |
 | Roles | `user`, `admin`, `cleanup_partner` (+ buyer capability via subscription) |
 
-### Uploads
+### Uploads / object storage
 
-1. `POST /media/presign` → validate MIME/size → `MediaAsset(pending)` + presigned URL  
-2. Client PUT to MinIO/S3  
-3. `POST /media/:id/complete` → verify object exists → ready  
-4. Domain entities reference `assetId`s  
+**Phase 0:** `STORAGE_DRIVER=local` → filesystem under `.local/storage` via `ObjectStorage` port.  
+**Later:** `STORAGE_DRIVER=s3` → S3-compatible adapter (interface already stubbed).
 
-Private bucket; short-lived GET presigns for display. Strip EXIF when serving public-facing images if location leak risk.
+Phase 1 media may add presigned S3 PUT; local driver can accept server-side writes in dev.
+
+### Mail
+
+**Phase 0:** `MAIL_DRIVER=console` (or `file`).  
+**Later:** `MAIL_DRIVER=smtp` (interface stubbed). No MailHog required.
 
 ### Jobs (MVP)
 
 - No dedicated worker.
 - Nest schedule for reservation/quote TTL expiry if policies require it.
-- Email fire-and-forget with logging; upgrade to queue when reliability demands.
+- Email fire-and-forget with console/file logging; SMTP when configured.
 
 ### Database
 
 | Piece | Choice |
 |-------|--------|
-| Engine | PostgreSQL 16 + PostGIS |
+| Engine | PostgreSQL 16 + PostGIS (**native local**; Docker optional) |
 | ORM | Prisma migrations + models |
 | Geo | `Unsupported("geometry(Point,4326)")` + raw SQL `ST_*` |
 | Money | Integer VND |
+| Setup scripts | `pnpm db:setup`, `db:postgis`, `db:migrate`, `db:verify` |
 
-### Docker Compose (local)
+### Optional Docker (CI/deploy only)
 
-| Service | Purpose |
-|---------|---------|
-| `db` | postgis/postgis |
-| `minio` | S3-compatible |
-| `mailhog` | capture email |
+`infra/docker/` may host a compose file for teams that want containers. **It is not required for local development** on the project owner’s machine.
 
 No Redis/Kafka/Elasticsearch for MVP.
 
