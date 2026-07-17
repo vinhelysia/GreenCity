@@ -4,9 +4,12 @@
 **Workspace:** `C:\Stuff\GreenCity`  
 **OS:** Windows  
 **Branch:** `master`  
-**HEAD:** `9ed7bb5661a745bbab492dfbb086514139628668`  
-**Short:** `9ed7bb5` — *Phase 0: Docker-free local stack (native Postgres/PostGIS, local storage/mail).*  
-**Git status:** clean (`nothing to commit, working tree clean`)
+**HEAD:** `8e4aa36a65386967308a20cbb8900a1974a94082` (pre-handoff-meta; see latest after docs commit)  
+**Phase 0 status:** **HARDENED & MERGED**  
+**Tag (after handoff commit):** `phase-0-hardened`  
+**Git status:** clean after handoff update  
+
+**Hardening note:** Codex findings were independently reimplemented, reviewed, and verified on `integration/phase0-hardening` (not cherry-picked). Source tip at merge: `113f566` (includes `f12054c` + docs hygiene).
 
 ---
 
@@ -48,7 +51,7 @@ GreenCity is a **responsive web platform** with two domains:
 | Phase | Status |
 |-------|--------|
 | **Planning docs** | Complete under `docs/` |
-| **Phase 0** (scaffold) | **COMPLETE & VERIFIED** (revised Docker-free) |
+| **Phase 0** (scaffold + hardening) | **COMPLETE, VERIFIED, MERGED TO MASTER** (Docker-free) |
 | **Phase 1+** | **NOT STARTED** |
 
 ### Explicitly NOT implemented yet
@@ -62,11 +65,16 @@ GreenCity is a **responsive web platform** with two domains:
 ## 3. Git history (relevant)
 
 ```
+8e4aa36 merge: Phase 0 hardening
+113f566 docs: remove concrete admin password example from handoff.
+… (hardening on integration/phase0-hardening)
+f12054c fix prepare.mjs spawn on Windows
+b7fe42d Phase 0 hardening (main fixes)
+ea81fd0 docs: full Phase 0 handoff report for next agent (GPT).
 9ed7bb5 Phase 0: Docker-free local stack (native Postgres/PostGIS, local storage/mail).
-f670bc5 docs: record Phase 0 executed build/test status.
-2fc2c96 Phase 0: simplify root scripts; document Docker/native Postgres acceptance.
-24d6556 Phase 0: monorepo scaffold (pnpm, Nest API, Next web, Prisma, Docker).
 ```
+
+**Merge:** `8e4aa36` ← `integration/phase0-hardening` @ `113f566` (hardening core through `f12054c` + docs).
 
 ---
 
