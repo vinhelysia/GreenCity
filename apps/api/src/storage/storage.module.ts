@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { findRepoRoot, resolveFromRepoRoot } from '../config/paths';
+import { findRuntimeRoot, resolveFromRepoRoot } from '../config/paths';
 import { loadEnv } from '../config/env';
 import { LocalObjectStorage } from './local-object-storage';
 import { S3ObjectStorageStub } from './s3-object-storage.stub';
@@ -21,7 +21,7 @@ import { OBJECT_STORAGE } from './storage.types';
             region: env.S3_REGION,
           });
         }
-        const repoRoot = findRepoRoot();
+        const repoRoot = findRuntimeRoot();
         const root = resolveFromRepoRoot(env.STORAGE_LOCAL_DIR, repoRoot);
         return new LocalObjectStorage(root);
       },

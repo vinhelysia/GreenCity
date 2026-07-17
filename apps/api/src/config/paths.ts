@@ -21,10 +21,22 @@ export function findRepoRoot(startDir: string = process.cwd()): string {
   }
 }
 
-/** Absolute path under repo root (rejects escape via resolve + prefix check later in storage). */
+/** Repo root during development; artifact root when deployed without workspace metadata. */
+export function findRuntimeRoot(
+  startDir: string = process.cwd(),
+  artifactRoot: string = path.resolve(__dirname, '../..'),
+): string {
+  try {
+    return findRepoRoot(startDir);
+  } catch {
+    return path.resolve(artifactRoot);
+  }
+}
+
+/** Absolute path under runtime root (rejects escape via resolve + prefix check later in storage). */
 export function resolveFromRepoRoot(
   relativeOrAbsolute: string,
-  repoRoot: string = findRepoRoot(),
+  repoRoot: string = findRuntimeRoot(),
 ): string {
   if (path.isAbsolute(relativeOrAbsolute)) {
     return path.normalize(relativeOrAbsolute);
@@ -32,6 +44,6 @@ export function resolveFromRepoRoot(
   return path.normalize(path.join(repoRoot, relativeOrAbsolute));
 }
 
-export function repoRootEnvPath(repoRoot: string = findRepoRoot()): string {
+export function repoRootEnvPath(repoRoot: string = findRuntimeRoot()): string {
   return path.join(repoRoot, '.env');
 }

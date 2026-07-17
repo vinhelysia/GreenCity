@@ -4,14 +4,14 @@ import { config as loadDotenv } from 'dotenv';
 import { existsSync } from 'node:fs';
 import { AppModule } from './app.module';
 import { loadEnv } from './config/env';
-import { findRepoRoot, repoRootEnvPath } from './config/paths';
+import { findRuntimeRoot, repoRootEnvPath } from './config/paths';
 
 /**
- * Load only the monorepo-root .env (canonical).
- * Does not load parent directories outside the repo or apps/api/.env.
+ * Load only the runtime-root .env (repository root in development, artifact root in production).
+ * Does not load parent directories or a cwd-relative .env.
  */
 function loadCanonicalEnv(): void {
-  const repoRoot = findRepoRoot();
+  const repoRoot = findRuntimeRoot();
   const envPath = repoRootEnvPath(repoRoot);
   if (existsSync(envPath)) {
     loadDotenv({ path: envPath, override: false });

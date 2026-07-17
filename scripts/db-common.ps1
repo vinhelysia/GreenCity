@@ -29,9 +29,16 @@ function Invoke-Psql {
   param(
     [Parameter(Mandatory = $true)][string]$PsqlPath,
     [Parameter(Mandatory = $true)][string[]]$Arguments,
-    [string]$FailureMessage = "psql failed"
+    [string]$FailureMessage = "psql failed",
+    [string]$InputSql
   )
-  & $PsqlPath @Arguments
+
+  if ($PSBoundParameters.ContainsKey("InputSql")) {
+    $InputSql | & $PsqlPath @Arguments
+  } else {
+    & $PsqlPath @Arguments
+  }
+
   if ($LASTEXITCODE -ne 0) {
     throw "$FailureMessage (exit $LASTEXITCODE)"
   }
