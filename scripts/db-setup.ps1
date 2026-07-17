@@ -44,20 +44,23 @@ Invoke-Psql -PsqlPath $psql -Arguments @(
   "-v", "ON_ERROR_STOP=1", "-tAc", "SELECT 1"
 ) -FailureMessage "Admin authentication or connectivity failed. Check PGPASSWORD / PGUSER / host."
 
-$createRoleSql = @"
-DO `$`$
-BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '$AppUser') THEN
-    CREATE ROLE $AppUser LOGIN PASSWORD '$AppPassword';
-  END IF;
-END
-`$`$;
+$env:GREENCITY_DB_USER = $AppUser
+$env:GREENCITY_DB_PASSWORD = $AppPassword
+$reconcileRoleSql = @"
+\set ON_ERROR_STOP on
+\getenv app_user GREENCITY_DB_USER
+\getenv app_password GREENCITY_DB_PASSWORD
+SELECT format('CREATE ROLE %I LOGIN', :'app_user')
+WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'app_user')
+\gexec
+SELECT format('ALTER ROLE %I LOGIN PASSWORD %L', :'app_user', :'app_password')
+\gexec
 "@
 
 Invoke-Psql -PsqlPath $psql -Arguments @(
-  "-U", $AdminUser, "-h", $HostName, "-p", "$Port",
-  "-v", "ON_ERROR_STOP=1", "-c", $createRoleSql
-) -FailureMessage "Failed to ensure application role"
+  "-U", $AdminUser, "-h", $HostName, "-p", "$Port", "-d", "postgres",
+  "-X", "-v", "ON_ERROR_STOP=1", "-f", "-"
+) -InputSql $reconcileRoleSql -FailureMessage "Failed to reconcile application role"
 
 $exists = & $psql -U $AdminUser -h $HostName -p $Port -tAc "SELECT 1 FROM pg_database WHERE datname='$AppDb'"
 if ($LASTEXITCODE -ne 0) {
@@ -84,5 +87,15 @@ Invoke-Psql -PsqlPath $psql -Arguments @(
   "-U", $AdminUser, "-h", $HostName, "-p", "$Port", "-d", $AppDb,
   "-v", "ON_ERROR_STOP=1", "-c", $grantSql
 ) -FailureMessage "Failed to grant privileges"
+
+$env:PGPASSWORD = $AppPassword
+try {
+  Invoke-Psql -PsqlPath $psql -Arguments @(
+    "-U", $AppUser, "-h", $HostName, "-p", "$Port", "-d", $AppDb,
+    "-X", "-v", "ON_ERROR_STOP=1", "-tAc", "SELECT 1"
+  ) -FailureMessage "Application role verification failed"
+} finally {
+  $env:PGPASSWORD = $AdminPassword
+}
 
 Write-Host "OK: database ready. Next: pnpm db:postgis  then  pnpm db:migrate"

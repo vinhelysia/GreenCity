@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { findRepoRoot, resolveFromRepoRoot } from './paths';
+import { findRepoRoot, findRuntimeRoot, resolveFromRepoRoot } from './paths';
 
 function assert(cond: unknown, msg: string): asserts cond {
   if (!cond) throw new Error(msg);
@@ -20,6 +20,14 @@ function run(): void {
   const a = resolveFromRepoRoot('.local/storage', fromRoot);
   const b = resolveFromRepoRoot('.local/storage', fromApi);
   assert(a === b, 'storage path must be identical from root and apps/api');
+
+  const artifactRoot = path.join(base, 'artifact');
+  const outsideRepo = path.join(tmpdir(), 'gc-outside-repo');
+  mkdirSync(artifactRoot, { recursive: true });
+  assert(
+    findRuntimeRoot(outsideRepo, artifactRoot) === artifactRoot,
+    'runtime root must fall back to the artifact root outside a workspace',
+  );
 
   rmSync(base, { recursive: true, force: true });
   // eslint-disable-next-line no-console

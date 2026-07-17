@@ -1,5 +1,5 @@
 import { Global, Module } from '@nestjs/common';
-import { findRepoRoot, resolveFromRepoRoot } from '../config/paths';
+import { findRuntimeRoot, resolveFromRepoRoot } from '../config/paths';
 import { loadEnv } from '../config/env';
 import { ConsoleMailSender } from './console-mail.sender';
 import { FileMailSender } from './file-mail.sender';
@@ -23,7 +23,7 @@ import { SmtpMailSenderStub } from './smtp-mail.sender.stub';
           });
         }
         if (env.MAIL_DRIVER === 'file') {
-          const repoRoot = findRepoRoot();
+          const repoRoot = findRuntimeRoot();
           const dir = resolveFromRepoRoot(env.MAIL_FILE_DIR, repoRoot);
           return new FileMailSender(dir);
         }
