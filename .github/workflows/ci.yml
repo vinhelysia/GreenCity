@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build shared package
+        run: pnpm --filter @greencity/shared build
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+
+      - name: Lint
+        run: pnpm lint
+        env:
+          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+
+      - name: Typecheck
+        run: pnpm typecheck
+        env:
+          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+        env:
+          DATABASE_URL: postgresql://greencity:greencity@localhost:5432/greencity?schema=public
