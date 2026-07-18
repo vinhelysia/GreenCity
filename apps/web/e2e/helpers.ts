@@ -46,7 +46,10 @@ export type RuntimeIssues = {
  * Attach listeners before navigation. Collects console/page/network problems.
  * Call assertCleanRuntime() after interactions.
  */
-export function attachRuntimeGuards(page: Page): RuntimeIssues {
+export function attachRuntimeGuards(
+  page: Page,
+  { allowConflict = false } = {},
+): RuntimeIssues {
   const issues: RuntimeIssues = {
     consoleErrors: [],
     pageErrors: [],
@@ -61,8 +64,12 @@ export function attachRuntimeGuards(page: Page): RuntimeIssues {
       // Chromium logs document 404s and expected auth 401s as console.error.
       if (/Failed to load resource:.*status of 404/i.test(text)) return;
       if (/Failed to load resource:.*status of 401/i.test(text)) return;
-      // Failed login/register validation may surface as 409/400 resource logs.
-      if (/Failed to load resource:.*status of (400|409|429)/i.test(text)) return;
+      if (
+        allowConflict &&
+        /Failed to load resource:.*status of 409/i.test(text)
+      ) {
+        return;
+      }
       issues.consoleErrors.push(text);
     }
     if (HYDRATION.test(text) || (msg.type() === "warning" && REACT_WARN.test(text))) {

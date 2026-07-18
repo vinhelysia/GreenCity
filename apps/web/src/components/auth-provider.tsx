@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import type { PublicUser } from "@greencity/shared";
 import {
   fetchMe,
@@ -36,27 +35,13 @@ type AuthContextValue = {
     },
   ) => Promise<{ ok: true } | { ok: false; error: ParsedApiError; status: number }>;
   logout: () => Promise<void>;
-  /** Clear client auth and send user to login (session expired / 401). */
-  clearSessionAndRedirect: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const AUTH_PAGES = new Set(["/dang-nhap", "/dang-ky"]);
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [status, setStatus] = useState<AuthStatus>("loading");
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const clearSessionAndRedirect = useCallback(() => {
-    setUser(null);
-    setStatus("unauthenticated");
-    if (!AUTH_PAGES.has(pathname)) {
-      router.replace("/dang-nhap");
-    }
-  }, [pathname, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,9 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
-      clearSessionAndRedirect,
     }),
-    [user, status, login, register, logout, clearSessionAndRedirect],
+    [user, status, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

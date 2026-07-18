@@ -18,19 +18,15 @@ function email(name: string): string {
 }
 
 function cleanupUsers() {
-  try {
-    execFileSync(
-      process.execPath,
-      [path.join(process.cwd(), "e2e/cleanup-auth-users.mjs"), RUN_SUFFIX],
-      {
-        cwd: process.cwd(),
-        stdio: "pipe",
-        env: process.env,
-      },
-    );
-  } catch (err) {
-    console.warn("auth cleanup warning:", err);
-  }
+  execFileSync(
+    process.execPath,
+    [path.join(process.cwd(), "e2e/cleanup-auth-users.mjs"), RUN_SUFFIX],
+    {
+      cwd: process.cwd(),
+      stdio: "inherit",
+      env: process.env,
+    },
+  );
 }
 
 async function registerViaUi(
@@ -162,7 +158,7 @@ test.describe("Auth flows", () => {
   test("5 duplicate email → readable field-level 409 message", async ({
     page,
   }) => {
-    const issues = attachRuntimeGuards(page);
+    const issues = attachRuntimeGuards(page, { allowConflict: true });
     const userEmail = email("dupe");
     await registerViaUi(page, userEmail);
     await page.getByTestId("header-logout").click();
@@ -200,7 +196,7 @@ test.describe("Auth flows", () => {
       page.getByText(/ít nhất 8 ký tự/i).first(),
     ).toBeVisible();
 
-    await page.getByLabel("Email").fill("ok@example.com");
+    await page.getByLabel("Email").fill(email("ok"));
     await page.getByLabel("Mật khẩu", { exact: true }).fill("longenough");
     // Native maxLength=80 matches the schema ceiling; also force-set 81 chars
     // so Zod field validation is exercised (fill() is capped by maxLength).
