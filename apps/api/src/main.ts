@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { ForbiddenException, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { config as loadDotenv } from 'dotenv';
 import cookieParser from 'cookie-parser';
@@ -43,7 +43,13 @@ async function bootstrap() {
         callback(null, true);
         return;
       }
-      callback(new Error(`CORS origin not allowed: ${origin}`), false);
+      callback(
+        new ForbiddenException({
+          code: 'INVALID_ORIGIN',
+          message: 'Origin is not allowed',
+        }),
+        false,
+      );
     },
     credentials: true,
   });

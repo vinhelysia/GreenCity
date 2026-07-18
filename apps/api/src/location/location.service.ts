@@ -92,9 +92,16 @@ export class LocationService {
     };
   }
 
-  async getExact(auth: AuthContext, id: string): Promise<LocationExactDto> {
-    const exact = await this.prisma.locationExact.findUnique({
-      where: { id },
+  async getExact(
+    auth: AuthContext,
+    id: string,
+    requestId?: string,
+  ): Promise<LocationExactDto> {
+    const exact = await this.prisma.locationExact.findFirst({
+      where: {
+        id,
+        ...(auth.roles.includes('ADMIN') ? {} : { ownerId: auth.user.id }),
+      },
     });
     if (!exact) {
       throw new NotFoundException({
@@ -107,6 +114,15 @@ export class LocationService {
       exact.ownerId,
       'Not allowed to view exact location',
     );
+    if (auth.user.id !== exact.ownerId) {
+      await this.audit.record({
+        actorId: auth.user.id,
+        action: 'location.read_exact',
+        targetType: 'LocationExact',
+        targetId: exact.id,
+        requestId,
+      });
+    }
     return toExactDto(exact);
   }
 

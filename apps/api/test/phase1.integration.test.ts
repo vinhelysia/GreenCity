@@ -1,8 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { Controller, Get, INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import sharp from 'sharp';
+import { MEDIA_MAX_BYTES } from '@greencity/shared';
 import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/http-exception.filter';
 import { requestIdMiddleware } from '../src/common/request-id';
@@ -11,9 +12,15 @@ import { processImageUpload } from '../src/media/image-pipeline';
 import { assertNoPrivateLocationKeys } from '../src/location/location.redaction';
 import './setup-env';
 
-const hasDb = Boolean(process.env.DATABASE_URL);
+@Controller('_audit/unguarded')
+class UnguardedAuditController {
+  @Get()
+  get() {
+    return { exposed: true };
+  }
+}
 
-(hasDb ? describe : describe.skip)('Phase 1 integration', () => {
+describe('Phase 1 integration', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -21,6 +28,7 @@ const hasDb = Boolean(process.env.DATABASE_URL);
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
+      controllers: [UnguardedAuditController],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -92,6 +100,32 @@ const hasDb = Boolean(process.env.DATABASE_URL);
     expect(res.body.error.code).toBe('EMAIL_TAKEN');
   });
 
+  it('lets the database serialize concurrent normalized duplicate registration', async () => {
+    const mixedCase = email('RACE');
+    const lowerCase = mixedCase.toLowerCase();
+    const responses = await Promise.all([
+      request(app.getHttpServer())
+        .post('/auth/register')
+        .set('Origin', 'http://localhost:3000')
+        .send({ email: mixedCase, password: 'password-123' }),
+      request(app.getHttpServer())
+        .post('/auth/register')
+        .set('Origin', 'http://localhost:3000')
+        .send({ email: lowerCase, password: 'password-123' }),
+    ]);
+
+    expect(responses.map((res) => res.status).sort()).toEqual([201, 409]);
+    expect(await prisma.user.count({ where: { email: lowerCase } })).toBe(1);
+  });
+
+  it('rejects non-normalized email writes at the database boundary', async () => {
+    await expect(
+      prisma.$executeRaw`
+        INSERT INTO "User" ("id", "email", "updatedAt")
+        VALUES (${`audit-raw-${suffix}`}, ${`Mixed.Raw@phase1-${suffix}.test`}, CURRENT_TIMESTAMP)
+      `,
+    ).rejects.toBeDefined();
+  });
   it('logs in successfully and fails generically on bad password', async () => {
     await register('carol', 'secret-pass-99');
     const ok = await request(app.getHttpServer())
@@ -131,6 +165,38 @@ const hasDb = Boolean(process.env.DATABASE_URL);
     expect(me2.status).toBe(401);
   });
 
+  it('logout revokes only the presented session', async () => {
+    const registered = await register('single-logout', 'logout-pass');
+    const firstCookie = cookieFrom(registered);
+    const second = await request(app.getHttpServer())
+      .post('/auth/login')
+      .set('Origin', 'http://localhost:3000')
+      .send({ email: email('single-logout'), password: 'logout-pass' });
+    const secondCookie = cookieFrom(second);
+
+    expect(
+      (
+        await request(app.getHttpServer())
+          .post('/auth/logout')
+          .set('Origin', 'http://localhost:3000')
+          .set('Cookie', firstCookie)
+      ).status,
+    ).toBe(200);
+    expect(
+      (
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Cookie', firstCookie)
+      ).status,
+    ).toBe(401);
+    expect(
+      (
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Cookie', secondCookie)
+      ).status,
+    ).toBe(200);
+  });
   it('logout-all revokes all sessions', async () => {
     await register('erin', 'logout-all-pass');
     const a = await request(app.getHttpServer())
@@ -236,6 +302,41 @@ const hasDb = Boolean(process.env.DATABASE_URL);
     expect(res.body.error.code).toBe('INVALID_ORIGIN');
   });
 
+  it('requires Origin for browsers and allows an explicit bearer client', async () => {
+    const reg = await register('csrf');
+    const cookie = cookieFrom(reg);
+
+    for (const origin of [undefined, 'null', 'not-an-origin']) {
+      let call = request(app.getHttpServer())
+        .post('/auth/logout')
+        .set('Cookie', cookie);
+      if (origin) call = call.set('Origin', origin);
+      const res = await call;
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe('INVALID_ORIGIN');
+    }
+
+    const rawToken = /gc_session=([^;]+)/.exec(cookie)?.[1];
+    expect(rawToken).toBeTruthy();
+    const bearer = await request(app.getHttpServer())
+      .post('/locations')
+      .set('Authorization', `Bearer ${rawToken}`)
+      .send({ latitude: 10, longitude: 106 });
+    expect(bearer.status).toBe(201);
+
+    const anonymous = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: email('csrf'), password: 'password-123' });
+    expect(anonymous.status).toBe(403);
+    expect(anonymous.body.error.code).toBe('INVALID_ORIGIN');
+  });
+
+  it('denies a new route unless it is explicitly public', async () => {
+    const res = await request(app.getHttpServer()).get('/_audit/unguarded');
+    expect(res.status).toBe(401);
+    expect(res.body.error.code).toBe('UNAUTHENTICATED');
+  });
+
   it('creates location with exact for owner and public without private keys', async () => {
     const reg = await register('geo');
     const cookie = cookieFrom(reg);
@@ -272,7 +373,24 @@ const hasDb = Boolean(process.env.DATABASE_URL);
     const denied = await request(app.getHttpServer())
       .get(`/locations/${created.body.exact.id}/exact`)
       .set('Cookie', strangerCookie);
-    expect(denied.status).toBe(403);
+    expect(denied.status).toBe(404);
+    const admin = await prisma.user.update({
+      where: { email: email('stranger') },
+      data: { roles: ['ADMIN'] },
+    });
+    const privileged = await request(app.getHttpServer())
+      .get(`/locations/${created.body.exact.id}/exact`)
+      .set('Cookie', strangerCookie);
+    expect(privileged.status).toBe(200);
+    expect(
+      await prisma.auditLog.count({
+        where: {
+          actorId: admin.id,
+          action: 'location.read_exact',
+          targetId: created.body.exact.id,
+        },
+      }),
+    ).toBe(1);
   });
 
   it('uploads image securely, streams content, rejects spoof and paths', async () => {
@@ -306,6 +424,9 @@ const hasDb = Boolean(process.env.DATABASE_URL);
       .set('Cookie', cookie);
     expect(content.status).toBe(200);
     expect(content.headers['content-type']).toMatch(/image\//);
+    expect(content.headers['content-disposition']).toBe('inline');
+    expect(content.headers['x-content-type-options']).toBe('nosniff');
+    expect(content.headers['cache-control']).toBe('private, no-store');
 
     // Unauthorized stranger
     const stranger = await register('mediathief');
@@ -313,7 +434,24 @@ const hasDb = Boolean(process.env.DATABASE_URL);
     const denied = await request(app.getHttpServer())
       .get(up.body.downloadPath)
       .set('Cookie', thiefCookie);
-    expect(denied.status).toBe(403);
+    expect(denied.status).toBe(404);
+    const admin = await prisma.user.update({
+      where: { email: email('mediathief') },
+      data: { roles: ['ADMIN'] },
+    });
+    const privileged = await request(app.getHttpServer())
+      .get(up.body.downloadPath)
+      .set('Cookie', thiefCookie);
+    expect(privileged.status).toBe(200);
+    expect(
+      await prisma.auditLog.count({
+        where: {
+          actorId: admin.id,
+          action: 'media.read_content',
+          targetId: up.body.id,
+        },
+      }),
+    ).toBe(1);
 
     // Spoofed MIME: text as image/jpeg
     const spoof = await request(app.getHttpServer())
@@ -326,12 +464,76 @@ const hasDb = Boolean(process.env.DATABASE_URL);
       });
     expect(spoof.status).toBe(400);
 
+    const tooLarge = await request(app.getHttpServer())
+      .post('/media/upload')
+      .set('Origin', 'http://localhost:3000')
+      .set('Cookie', cookie)
+      .attach('file', Buffer.alloc(MEDIA_MAX_BYTES + 1), {
+        filename: 'large.jpg',
+        contentType: 'image/jpeg',
+      });
+    expect(tooLarge.status).toBe(413);
+    expect(tooLarge.body.error.code).toBe('FILE_TOO_LARGE');
     // Empty / invalid
     const invalid = await request(app.getHttpServer())
       .post('/media/upload')
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', cookie);
     expect(invalid.status).toBe(400);
+
+    const deleted = await request(app.getHttpServer())
+      .delete(`/media/${up.body.id}`)
+      .set('Origin', 'http://localhost:3000')
+      .set('Cookie', cookie);
+    expect(deleted.status).toBe(200);
+    const duplicateDelete = await request(app.getHttpServer())
+      .delete(`/media/${up.body.id}`)
+      .set('Origin', 'http://localhost:3000')
+      .set('Cookie', cookie);
+    expect(duplicateDelete.status).toBe(404);
+  });
+
+  it('rate limits login and registration by socket IP before handlers', async () => {
+    const oldLimit = process.env.AUTH_LOGIN_RATE_LIMIT;
+    process.env.AUTH_LOGIN_RATE_LIMIT = '2';
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const rateApp = moduleRef.createNestApplication();
+    rateApp.use(requestIdMiddleware);
+    rateApp.use(cookieParser());
+    rateApp.useGlobalFilters(new ApiExceptionFilter());
+
+    try {
+      await rateApp.init();
+      const registerStatuses = [];
+      const loginStatuses = [];
+      for (let i = 0; i < 3; i += 1) {
+        registerStatuses.push(
+          (
+            await request(rateApp.getHttpServer())
+              .post('/auth/register')
+              .set('Origin', 'http://localhost:3000')
+              .set('X-Forwarded-For', `203.0.113.${i + 1}`)
+              .send({})
+          ).status,
+        );
+        loginStatuses.push(
+          (
+            await request(rateApp.getHttpServer())
+              .post('/auth/login')
+              .set('Origin', 'http://localhost:3000')
+              .set('X-Forwarded-For', `198.51.100.${i + 1}`)
+              .send({ email: email(`rate-${i}`), password: 'password-123' })
+          ).status,
+        );
+      }
+
+      expect(registerStatuses).toEqual([400, 400, 429]);
+      expect(loginStatuses).toEqual([401, 401, 429]);
+    } finally {
+      await rateApp.close();
+      if (oldLimit === undefined) delete process.env.AUTH_LOGIN_RATE_LIMIT;
+      else process.env.AUTH_LOGIN_RATE_LIMIT = oldLimit;
+    }
   });
 });
 
@@ -361,6 +563,42 @@ describe('image pipeline unit', () => {
     expect(meta.exif).toBeUndefined();
   });
 
+  it('rejects corrupt, oversized, and extension-mismatched images', async () => {
+    const corrupt = Buffer.from([
+      0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]);
+    await expect(processImageUpload(corrupt, 'image/jpeg', 'x.jpg')).rejects.toMatchObject({
+      response: { code: 'INVALID_IMAGE' },
+    });
+
+    const oversized = await sharp({
+      create: {
+        width: 4097,
+        height: 1,
+        channels: 3,
+        background: { r: 0, g: 0, b: 0 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await expect(
+      processImageUpload(oversized, 'image/png', 'x.png'),
+    ).rejects.toMatchObject({ response: { code: 'IMAGE_TOO_LARGE' } });
+
+    const png = await sharp({
+      create: {
+        width: 8,
+        height: 8,
+        channels: 3,
+        background: { r: 0, g: 0, b: 0 },
+      },
+    })
+      .png()
+      .toBuffer();
+    await expect(
+      processImageUpload(png, 'image/png', 'renamed.jpg'),
+    ).rejects.toMatchObject({ response: { code: 'MIME_MISMATCH' } });
+  });
   it('rejects MIME spoof when magic bytes disagree', async () => {
     const png = await sharp({
       create: {

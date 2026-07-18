@@ -1,5 +1,6 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import type { Response } from 'express';
+import { Public } from '../authz/authenticated.guard';
 import { HealthService } from './health.service';
 
 /**
@@ -10,6 +11,7 @@ import { HealthService } from './health.service';
  * Invalid env still fails process startup (see main.ts).
  */
 @Controller('health')
+@Public()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 

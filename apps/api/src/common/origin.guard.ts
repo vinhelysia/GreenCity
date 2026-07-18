@@ -10,33 +10,39 @@ import { loadEnv } from '../config/env';
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /**
- * For cookie-authenticated unsafe methods, require Origin (or same-origin Referer)
- * to match an allowed CORS origin. Mitigates cross-site cookie CSRF (SameSite=Lax helps
- * but Origin check is belt-and-suspenders for non-GET mutations).
+ * Unsafe browser requests require exactly one allowed Origin. Non-browser
+ * clients may omit Origin only with an explicit bearer session token.
  */
 @Injectable()
 export class OriginGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<Request>();
+    const req = context.switchToHttp().getRequest<
+      Request & { cookies?: Record<string, string> }
+    >();
     if (!UNSAFE_METHODS.has(req.method.toUpperCase())) {
       return true;
     }
 
     const env = loadEnv();
-    const allowed = new Set(env.CORS_ORIGINS);
-    const origin = req.headers.origin;
-    if (origin) {
-      if (!allowed.has(origin)) {
-        throw new ForbiddenException({
-          code: 'INVALID_ORIGIN',
-          message: 'Origin is not allowed',
-        });
-      }
+    const origins = req.headersDistinct.origin ?? [];
+    if (origins.length === 1 && env.CORS_ORIGINS.includes(origins[0]!)) {
       return true;
     }
 
-    // Non-browser clients (curl, mobile) may omit Origin — allow when no Origin header.
-    // Browser cross-site POSTs send Origin; same-site navigations use GET (safe).
-    return true;
+    const authorization = req.headers.authorization;
+    const hasCookieSession = Boolean(req.cookies?.[env.SESSION_COOKIE_NAME]);
+    if (
+      origins.length === 0 &&
+      !hasCookieSession &&
+      authorization?.startsWith('Bearer ') &&
+      authorization.length > 'Bearer '.length
+    ) {
+      return true;
+    }
+
+    throw new ForbiddenException({
+      code: 'INVALID_ORIGIN',
+      message: 'Origin is not allowed',
+    });
   }
 }

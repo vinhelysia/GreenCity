@@ -15,6 +15,8 @@ const INVALID_LOGIN = {
   code: 'INVALID_CREDENTIALS',
   message: 'Invalid email or password',
 } as const;
+const DUMMY_PASSWORD_HASH =
+  '$argon2id$v=19$m=19456,t=2,p=1$LSRjNycVVgUfs7tSGDf8sw$E8WSp/hB/xPXtGFxD7OqXwGl0ZVj+bChVSY43Jdwhhc';
 
 @Injectable()
 export class AuthService {
@@ -84,12 +86,11 @@ export class AuthService {
     const email = normalizeEmail(input.email);
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    if (!user || !user.passwordHash) {
-      throw new UnauthorizedException(INVALID_LOGIN);
-    }
-
-    const ok = await this.passwords.verify(user.passwordHash, input.password);
-    if (!ok) {
+    const ok = await this.passwords.verify(
+      user?.passwordHash ?? DUMMY_PASSWORD_HASH,
+      input.password,
+    );
+    if (!user?.passwordHash || !ok) {
       throw new UnauthorizedException(INVALID_LOGIN);
     }
 

@@ -16,3 +16,5 @@ process.env.STORAGE_LOCAL_DIR =
   process.env.STORAGE_LOCAL_DIR ?? '.local/storage-test';
 process.env.MAIL_DRIVER = process.env.MAIL_DRIVER ?? 'console';
 process.env.SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME ?? 'gc_session';
+process.env.AUTH_LOGIN_RATE_LIMIT =
+  process.env.AUTH_LOGIN_RATE_LIMIT ?? '100';

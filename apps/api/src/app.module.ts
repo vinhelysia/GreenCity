@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { AuthenticatedGuard } from './authz/authenticated.guard';
+import { OriginGuard } from './common/origin.guard';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionModule } from './auth/session.module';
@@ -12,19 +14,6 @@ import { MailModule } from './mail/mail.module';
 import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
-import { loadEnv } from './config/env';
-
-const env = (() => {
-  try {
-    return loadEnv();
-  } catch {
-    // Tests / partial bootstrap may load module before env is set; throttler defaults.
-    return {
-      AUTH_LOGIN_RATE_LIMIT: 10,
-      AUTH_LOGIN_RATE_TTL_SECONDS: 60,
-    };
-  }
-})();
 
 @Module({
   imports: [
@@ -56,6 +45,14 @@ const env = (() => {
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: OriginGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AuthenticatedGuard,
     },
   ],
 })

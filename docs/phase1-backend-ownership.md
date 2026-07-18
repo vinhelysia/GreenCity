@@ -1,7 +1,7 @@
 # Phase 1 Backend — Task Graph & File Ownership
 
-**Branch:** `grok/phase1-backend`  
-**Base:** `3acf9e20bfbab3443024569293a7b3cdec31229d`  
+**Branch:** `grok/phase1-backend`
+**Base:** `3acf9e20bfbab3443024569293a7b3cdec31229d`
 **Integration lead:** exclusive owner of integration-critical paths
 
 ## Task graph

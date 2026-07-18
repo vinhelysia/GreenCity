@@ -28,7 +28,11 @@ export class MediaService {
     file: { buffer: Buffer; mimetype?: string; originalname?: string },
     requestId?: string,
   ): Promise<MediaAssetPublic> {
-    const processed = await processImageUpload(file.buffer, file.mimetype);
+    const processed = await processImageUpload(
+      file.buffer,
+      file.mimetype,
+      file.originalname,
+    );
     const idPart = randomBytes(16).toString('hex');
     const ext = extensionForMime(processed.contentType);
     const objectKey = `media/${auth.user.id}/${idPart}.${ext}`;
@@ -39,17 +43,29 @@ export class MediaService {
       contentType: processed.contentType,
     });
 
-    const asset = await this.prisma.mediaAsset.create({
-      data: {
-        ownerId: auth.user.id,
-        objectKey,
-        contentType: processed.contentType,
-        byteSize: processed.byteSize,
-        width: processed.width,
-        height: processed.height,
-        originalName: file.originalname?.slice(0, 200) ?? null,
-      },
-    });
+    const asset = await this.prisma.mediaAsset
+      .create({
+        data: {
+          ownerId: auth.user.id,
+          objectKey,
+          contentType: processed.contentType,
+          byteSize: processed.byteSize,
+          width: processed.width,
+          height: processed.height,
+          originalName: file.originalname?.slice(0, 200) ?? null,
+        },
+      })
+      .catch(async (error: unknown) => {
+        try {
+          await this.storage.deleteObject(objectKey);
+        } catch (cleanupError) {
+          throw new AggregateError(
+            [error, cleanupError],
+            'Failed to roll back stored upload after metadata failure',
+          );
+        }
+        throw error;
+      });
 
     await this.audit.record({
       actorId: auth.user.id,
@@ -69,9 +85,14 @@ export class MediaService {
   async getAuthorized(
     auth: AuthContext,
     id: string,
+    requestId?: string,
   ): Promise<{ asset: import('@prisma/client').MediaAsset; body: Buffer }> {
     const asset = await this.prisma.mediaAsset.findFirst({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+        ...(auth.roles.includes('ADMIN') ? {} : { ownerId: auth.user.id }),
+      },
     });
     if (!asset) {
       throw new NotFoundException({
@@ -81,12 +102,29 @@ export class MediaService {
     }
     assertOwnerOrAdmin(auth, asset.ownerId, 'Not allowed to read this media');
     const body = await this.storage.getObject(asset.objectKey);
+    if (auth.user.id !== asset.ownerId) {
+      await this.audit.record({
+        actorId: auth.user.id,
+        action: 'media.read_content',
+        targetType: 'MediaAsset',
+        targetId: asset.id,
+        requestId,
+      });
+    }
     return { asset, body };
   }
 
-  async getMeta(auth: AuthContext, id: string): Promise<MediaAssetPublic> {
+  async getMeta(
+    auth: AuthContext,
+    id: string,
+    requestId?: string,
+  ): Promise<MediaAssetPublic> {
     const asset = await this.prisma.mediaAsset.findFirst({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+        ...(auth.roles.includes('ADMIN') ? {} : { ownerId: auth.user.id }),
+      },
     });
     if (!asset) {
       throw new NotFoundException({
@@ -95,6 +133,15 @@ export class MediaService {
       });
     }
     assertOwnerOrAdmin(auth, asset.ownerId, 'Not allowed to read this media');
+    if (auth.user.id !== asset.ownerId) {
+      await this.audit.record({
+        actorId: auth.user.id,
+        action: 'media.read_metadata',
+        targetType: 'MediaAsset',
+        targetId: asset.id,
+        requestId,
+      });
+    }
     return this.toPublic(asset);
   }
 
@@ -104,7 +151,11 @@ export class MediaService {
     requestId?: string,
   ): Promise<void> {
     const asset = await this.prisma.mediaAsset.findFirst({
-      where: { id, deletedAt: null },
+      where: {
+        id,
+        deletedAt: null,
+        ...(auth.roles.includes('ADMIN') ? {} : { ownerId: auth.user.id }),
+      },
     });
     if (!asset) {
       throw new NotFoundException({
@@ -113,11 +164,11 @@ export class MediaService {
       });
     }
     assertOwnerOrAdmin(auth, asset.ownerId, 'Not allowed to delete this media');
+    await this.storage.deleteObject(asset.objectKey);
     await this.prisma.mediaAsset.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
-    await this.storage.deleteObject(asset.objectKey).catch(() => undefined);
     await this.audit.record({
       actorId: auth.user.id,
       action: 'media.delete',

@@ -1,6 +1,6 @@
 # Phase 1 Backend — Identity, RBAC, Media, Location
 
-**Branch:** `grok/phase1-backend`  
+**Branch:** `grok/phase1-backend`
 **Scope:** Backend only (no production frontend)
 
 ## API contracts
@@ -63,10 +63,12 @@ Header: `x-request-id` echoed/generated on every response.
 2. Opaque session tokens; hash-only at rest; fixation prevention via new token on login/register.
 3. Roles `USER | ADMIN | CLEANUP_PARTNER`; never client-assignable; Buyer is not a role.
 4. Deny-by-default guards + ownership policy + authorization matrix.
-5. Origin check on unsafe methods for cookie CSRF defense in depth.
+5. Unsafe browser methods require exactly one allowlisted `Origin`; missing `Origin` is allowed only for an explicit bearer session token with no cookie.
 6. Media: magic-byte validation, re-encode, EXIF strip, private keys, app streaming only.
 7. Location: exact vs public tables; public JSON tests forbid private keys.
 8. Audit log for auth, media, location privileged actions.
+9. `CORS_ORIGINS` accepts exact HTTP(S) origins only; wildcards, paths and malformed values fail startup.
+10. Rate limits use the socket IP and do not trust `X-Forwarded-For`. `trust proxy` remains disabled until a concrete proxy-hop topology is documented.
 
 ## Frontend contract handoff
 
@@ -74,6 +76,8 @@ Header: `x-request-id` echoed/generated on every response.
 - Configure web origin in `CORS_ORIGINS`.
 - Do not send `roles` / `status` on register.
 - Prefer Next rewrite proxy `/api/*` → Nest for same-site cookies.
+- Unsafe cookie requests must preserve the browser `Origin` header. Non-browser clients must use `Authorization: Bearer <opaque-session-token>` when omitting `Origin`.
+- A shared Next proxy IP will aggregate IP rate limits. Before production, choose direct API traffic or configure only the documented trusted proxy hop; do not enable global `trust proxy`.
 - Media: upload multipart; display via authenticated `downloadPath` (blob/fetch with cookies), never expect public CDN URLs in Phase 1.
 - Location: render `public` for maps; request `exact` only when authorized.
 - Shared Zod schemas live in `@greencity/shared`.
@@ -83,3 +87,4 @@ Header: `x-request-id` echoed/generated on every response.
 1. `20260717000001_init_user_session`
 2. `20260717120000_enable_postgis`
 3. `20260718000001_phase1_identity_media_location` — enums, harden User, AuditLog, MediaAsset, LocationExact/Public
+4. `20260718000002_audit_email_normalization` — database CHECK enforcing lowercase/trimmed non-empty email

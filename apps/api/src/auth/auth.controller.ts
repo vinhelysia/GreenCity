@@ -5,7 +5,6 @@ import {
   Post,
   Req,
   Res,
-  UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -17,20 +16,28 @@ import {
 import type { Request, Response } from 'express';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { getRequestId } from '../common/request-id';
-import { OriginGuard } from '../common/origin.guard';
+import { loadEnv } from '../config/env';
 import { Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { clearSessionCookie, setSessionCookie } from './cookie';
-import { AuthenticatedGuard } from '../authz/authenticated.guard';
+import { Public } from '../authz/authenticated.guard';
 import { CurrentUser } from '../authz/current-user.decorator';
 import type { AuthContext } from '../authz/auth-context';
 
+const AUTH_THROTTLE = {
+  default: {
+    limit: () => loadEnv().AUTH_LOGIN_RATE_LIMIT,
+    ttl: () => loadEnv().AUTH_LOGIN_RATE_TTL_SECONDS * 1000,
+  },
+};
+
 @Controller('auth')
-@UseGuards(OriginGuard)
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('register')
+  @Public()
+  @Throttle(AUTH_THROTTLE)
   async register(
     @Body(new ZodValidationPipe(RegisterRequestSchema)) body: RegisterRequest,
     @Req() req: Request,
@@ -47,12 +54,8 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(200)
-  @Throttle({
-    default: {
-      limit: Number(process.env.AUTH_LOGIN_RATE_LIMIT ?? 10),
-      ttl: Number(process.env.AUTH_LOGIN_RATE_TTL_SECONDS ?? 60) * 1000,
-    },
-  })
+  @Public()
+  @Throttle(AUTH_THROTTLE)
   async login(
     @Body(new ZodValidationPipe(LoginRequestSchema)) body: LoginRequest,
     @Req() req: Request,
@@ -69,7 +72,6 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(200)
-  @UseGuards(AuthenticatedGuard)
   async logout(
     @CurrentUser() ctx: AuthContext,
     @Req() req: Request,
@@ -82,7 +84,6 @@ export class AuthController {
 
   @Post('logout-all')
   @HttpCode(200)
-  @UseGuards(AuthenticatedGuard)
   async logoutAll(
     @CurrentUser() ctx: AuthContext,
     @Req() req: Request,
@@ -94,7 +95,6 @@ export class AuthController {
   }
 
   @Get('me')
-  @UseGuards(AuthenticatedGuard)
   me(@CurrentUser() ctx: AuthContext) {
     return { user: this.auth.me(ctx.user) };
   }

@@ -45,6 +45,10 @@ export class ApiExceptionFilter implements ExceptionFilter {
               ? obj.error
               : (HttpStatus[status] ?? 'HTTP_ERROR');
         if (obj.details !== undefined) details = obj.details;
+        if (status === HttpStatus.PAYLOAD_TOO_LARGE) {
+          code = 'FILE_TOO_LARGE';
+          message = 'Uploaded file is too large';
+        }
       }
     } else if (exception instanceof Error) {
       this.logger.error(

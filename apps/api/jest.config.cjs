@@ -15,4 +15,3 @@ module.exports = {
   setupFiles: ['<rootDir>/test/setup-env.ts'],
   collectCoverageFrom: ['src/**/*.ts', '!src/main.ts'],
 };
-

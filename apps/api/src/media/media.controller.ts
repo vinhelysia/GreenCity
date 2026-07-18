@@ -7,7 +7,6 @@ import {
   Req,
   Res,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
   BadRequestException,
 } from '@nestjs/common';
@@ -15,15 +14,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Request, Response } from 'express';
 import { MEDIA_MAX_BYTES } from '@greencity/shared';
-import { OriginGuard } from '../common/origin.guard';
 import { getRequestId } from '../common/request-id';
-import { AuthenticatedGuard } from '../authz/authenticated.guard';
 import { CurrentUser } from '../authz/current-user.decorator';
 import type { AuthContext } from '../authz/auth-context';
 import { MediaService } from './media.service';
 
 @Controller('media')
-@UseGuards(OriginGuard, AuthenticatedGuard)
 export class MediaController {
   constructor(private readonly media: MediaService) {}
 
@@ -57,19 +53,30 @@ export class MediaController {
   }
 
   @Get(':id')
-  async meta(@CurrentUser() auth: AuthContext, @Param('id') id: string) {
-    return this.media.getMeta(auth, id);
+  async meta(
+    @CurrentUser() auth: AuthContext,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
+    return this.media.getMeta(auth, id, getRequestId(req));
   }
 
   @Get(':id/content')
   async content(
     @CurrentUser() auth: AuthContext,
     @Param('id') id: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
-    const { asset, body } = await this.media.getAuthorized(auth, id);
+    const { asset, body } = await this.media.getAuthorized(
+      auth,
+      id,
+      getRequestId(req),
+    );
     res.setHeader('Content-Type', asset.contentType);
     res.setHeader('Content-Length', String(body.length));
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private, no-store');
     res.send(body);
   }

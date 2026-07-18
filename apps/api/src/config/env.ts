@@ -43,6 +43,22 @@ const EnvSchema = z.object({
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean),
+    )
+    .refine(
+      (origins) =>
+        origins.length > 0 &&
+        origins.every((origin) => {
+          try {
+            const url = new URL(origin);
+            return (
+              (url.protocol === 'http:' || url.protocol === 'https:') &&
+              url.origin === origin
+            );
+          } catch {
+            return false;
+          }
+        }),
+      'CORS_ORIGINS must contain only exact http(s) origins without paths, queries, or wildcards',
     ),
   SESSION_COOKIE_NAME: z.string().default('gc_session'),
   /** Session TTL in hours (default 14 days). */
