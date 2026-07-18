@@ -44,6 +44,9 @@ test-results/
 .claude/
 .grok/
 
+# Generated design-tool session state (not product source)
+.hallmark/
+
 # Local runtime data (storage, mail, tooling downloads)
 .local/
 data/
