@@ -1,8 +1,8 @@
 # Phase 1 Backend Audit Integration
 
-**Integration branch:** `integration/phase1-backend-reviewed`  
-**Base backend:** `fcf404e` (`grok/phase1-backend`)  
-**Codex audit:** `70c0f997` (`codex/audit-phase1-backend`)  
+**Integration branch:** `integration/phase1-backend-reviewed`
+**Base backend:** `fcf404e` (`grok/phase1-backend`)
+**Codex audit:** `70c0f997` (`codex/audit-phase1-backend`)
 **Application method:** `git cherry-pick 70c0f997` (no conflicts)
 
 ## Review decision
