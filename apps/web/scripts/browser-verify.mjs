@@ -177,4 +177,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("browser-verify OK — screenshots in", shotDir);
+console.log("browser-verify OK — screenshots in", reportedShotDir);

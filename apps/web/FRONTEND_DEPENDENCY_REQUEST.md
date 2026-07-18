@@ -1,66 +1,41 @@
 # Frontend dependency request
 
-**Branch / worktree:** `grok/frontend-foundation`
-**Constraint:** Frontend agent must not modify root `package.json`, `pnpm-workspace.yaml`, or `pnpm-lock.yaml`.
+**Branch / worktree:** `integration/frontend-foundation-reviewed`
+**Constraint (historical):** Frontend agents must not modify root lockfile unless
+acting as integration owner with explicit approval.
 
----
+## Approved and installed (this integration)
 
-## Requested packages
+| Package | Version range | Where | Reason |
+|---------|---------------|-------|--------|
+| `@playwright/test` | `^1.51.0` | `apps/web` devDependencies | Repository-owned E2E / browser verification |
+| `@axe-core/playwright` | `^4.10.1` | `apps/web` devDependencies | Automated a11y scan in e2e/a11y.spec.ts |
 
-### 1. Playwright (E2E smoke)
+Root `pnpm-lock.yaml` is updated by the integration owner for these packages only.
 
-| Field | Value |
-|-------|--------|
-| Package | `@playwright/test` |
-| Version range | `^1.49.0` (or current monorepo-approved) |
-| Where | `apps/web` **devDependencies** |
-| Reason | Route smoke tests, navigation, mobile menu, viewport overflow, screenshots |
-| Intended `apps/web/package.json` change | Add `"@playwright/test": "^1.49.0"` under `devDependencies`; add scripts `"test:e2e": "playwright test"` and optional `"pretest:e2e": "next build"` |
-
-### 2. Optional a11y helper
-
-| Field | Value |
-|-------|--------|
-| Package | `@axe-core/playwright` |
-| Version range | `^4.10.0` |
-| Where | `apps/web` **devDependencies** |
-| Reason | Automated accessibility checks in Playwright |
-| Required for foundation? | No — manual + keyboard verification covers foundation gate |
-
----
-
-## Scripts after approval
-
-```json
-{
-  "test:e2e": "playwright test",
-  "pretest:e2e": "next build"
-}
-```
-
-Lockfile must be updated by an agent allowed to run `pnpm add -D ... --filter web` (or root-owned install).
-After the dependency is installed, provision the declared browser explicitly:
+## Browser binaries (not committed)
 
 ```powershell
+pnpm install --frozen-lockfile
 pnpm --filter web exec playwright install chromium
+# or
+pnpm --filter web run test:e2e:install
 ```
 
-CI on Linux should use `playwright install --with-deps chromium`. Browser binaries
-are not installed by `pnpm install` alone.
+CI on Linux should use `playwright install --with-deps chromium`.
+Browser binaries are **not** installed by `pnpm install` alone and must **not**
+be committed to git.
 
----
+## Scripts
 
-## Interim testing (this PR)
+| Script | Purpose |
+|--------|---------|
+| `pnpm --filter web test` | Structure smoke (no browser) |
+| `pnpm --filter web test:e2e` | Playwright suite (builds via `pretest:e2e`) |
+| `pnpm --filter web test:e2e:install` | Install Chromium for Playwright |
 
-Without Playwright on the lockfile:
+## Verification policy
 
-- `pnpm --filter web test` runs a **file/route smoke script** (`scripts/smoke.mjs`) that verifies required routes and components exist and that source does not hard-code API hosts or fake fetch targets.
-- Browser verification remains blocked until the repository-owned Playwright dependency and Chromium binary are installed.
-
----
-
-## Not requested
-
-- No new UI libraries (no shadcn install yet)
-- No framer-motion / chart / map packages
-- No auth SDK packages
+- Browser test success must come from **repository-owned** `@playwright/test`.
+- Global / machine-local Playwright is not acceptable evidence.
+- `scripts/browser-verify.mjs` requires `@playwright/test` only (no `playwright` fallback).

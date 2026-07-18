@@ -106,6 +106,14 @@ const browserVerify = readFileSync(
 if (/require\(["']playwright["']\)/.test(browserVerify)) {
   failures.push("browser-verify must use repository-owned @playwright/test only");
 }
+if (!/require\(["']@playwright\/test["']\)/.test(browserVerify)) {
+  failures.push("browser-verify must require @playwright/test");
+}
+
+const pkg = JSON.parse(readFileSync(join(webRoot, "package.json"), "utf8"));
+if (!pkg.devDependencies?.["@playwright/test"]) {
+  failures.push("package.json must declare @playwright/test as a devDependency");
+}
 
 const verifyReport = readFileSync(
   join(webRoot, "screenshots/VERIFY_REPORT.txt"),
@@ -113,6 +121,15 @@ const verifyReport = readFileSync(
 );
 if (/^screenshots=(?:[A-Za-z]:[\\/]|\/)/m.test(verifyReport)) {
   failures.push("VERIFY_REPORT must not contain an absolute machine-local path");
+}
+if (/C:\\\\Stuff\\\\|C:\\Stuff\\/i.test(verifyReport)) {
+  failures.push("VERIFY_REPORT contains machine-local absolute path");
+}
+if (!existsSync(join(webRoot, "playwright.config.ts"))) {
+  failures.push("missing playwright.config.ts");
+}
+if (!existsSync(join(webRoot, "e2e"))) {
+  failures.push("missing e2e/ test directory");
 }
 
 if (failures.length) {

@@ -6,7 +6,7 @@ import { SiteNav } from "./site-nav";
 /** Application header: identity left, navigation + login right. */
 export function SiteHeader() {
   return (
-    <header className="site-header sticky top-0 z-30 border-b border-rule bg-paper">
+    <header className="site-header sticky top-0 z-50 border-b border-rule bg-paper">
       <div className="mx-auto flex h-[var(--header-height)] w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"

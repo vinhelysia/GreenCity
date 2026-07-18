@@ -1,6 +1,7 @@
 # Frontend foundation
 
-Public shell for GreenCity (`apps/web`). Phase foundation only — no marketplace, cleanup, or auth backend wiring.
+Public shell for GreenCity (`apps/web`). Phase foundation only — no marketplace,
+cleanup, or auth backend wiring.
 
 ## Routes
 
@@ -24,8 +25,10 @@ Public shell for GreenCity (`apps/web`). Phase foundation only — no marketplac
 ## Visual
 
 - Hallmark **Garden** (editorial), stacked wireframe document
-- Fonts: Bricolage Grotesque (display) + Be Vietnam Pro (body)
+- Fonts via `next/font/google`: Bricolage Grotesque (display) + Be Vietnam Pro (body)
 - Honest placeholders — no fake stats, listings, or rewards
+- Cold production builds may need network access once for Google Fonts download
+  (cached afterward). No machine-local font binaries are required or committed.
 
 ## API boundary
 
@@ -33,6 +36,13 @@ Public shell for GreenCity (`apps/web`). Phase foundation only — no marketplac
 - See `BACKEND_CONTRACT_REQUEST.md`
 - Login does not call any endpoint
 
-## Dependencies
+## Testing
 
-See `FRONTEND_DEPENDENCY_REQUEST.md` for Playwright.
+| Command | What |
+|---------|------|
+| `pnpm --filter web test` | Smoke structure + anti-fake-API guards |
+| `pnpm --filter web exec playwright install chromium` | One-time browser binary |
+| `pnpm --filter web test:e2e` | Full Playwright suite (builds first) |
+
+Evidence screenshots live under `apps/web/screenshots/` with portable
+`VERIFY_REPORT.txt` (relative paths only).

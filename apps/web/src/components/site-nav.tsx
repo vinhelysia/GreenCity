@@ -62,11 +62,11 @@ export function SiteNav() {
         <span aria-hidden="true">{open ? "Đóng" : "Menu"}</span>
       </button>
 
-      {/* Backdrop — mobile only when open */}
+      {/* Backdrop below header so the toggle stays clickable */}
       {open ? (
         <button
           type="button"
-          className="fixed inset-0 z-40 bg-ink/20 lg:hidden"
+          className="fixed inset-x-0 bottom-0 top-[var(--header-height,3.5rem)] z-40 bg-ink/20 lg:hidden"
           aria-label="Đóng menu điều hướng"
           onClick={closeAndFocusToggle}
         />
