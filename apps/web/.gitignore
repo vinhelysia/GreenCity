@@ -1,0 +1,8 @@
+# Next.js
+.next/
+out/
+
+# Local test artifacts (keep intentional screenshot set if committed)
+test-results/
+playwright-report/
+blob-report/

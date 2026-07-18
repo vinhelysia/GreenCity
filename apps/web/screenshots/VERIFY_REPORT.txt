@@ -1,0 +1,3 @@
+OK
+baseURL=http://127.0.0.1:3100
+screenshots=C:\Stuff\GreenCity\.local\worktrees\grok-frontend-foundation\apps\web\screenshots

@@ -8,7 +8,7 @@
     "start": "next start -p 3000",
     "lint": "next lint",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node -e \"console.log('web: no unit tests yet')\""
+    "test": "node ./scripts/smoke.mjs"
   },
   "dependencies": {
     "@greencity/shared": "workspace:*",
