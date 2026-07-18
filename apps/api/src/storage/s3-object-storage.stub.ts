@@ -43,6 +43,14 @@ export class S3ObjectStorageStub implements ObjectStorage {
     );
   }
 
+  getObject(_key: string): Promise<Buffer> {
+    return Promise.reject(
+      new Error(
+        'S3 object storage is not implemented in Phase 0. Use STORAGE_DRIVER=local.',
+      ),
+    );
+  }
+
   deleteObject(_key: string): Promise<void> {
     return Promise.reject(
       new Error(

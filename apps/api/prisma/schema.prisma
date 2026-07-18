@@ -7,23 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+  CLEANUP_PARTNER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+  PENDING
+}
+
 model User {
-  id           String    @id @default(cuid())
-  email        String?   @unique
-  phone        String?   @unique
+  id           String     @id @default(cuid())
+  /// Normalized lowercase trimmed email (unique).
+  email        String     @unique
+  phone        String?    @unique
   displayName  String?
+  /// Required for local email/password accounts (enforced in application layer).
   passwordHash String?
-  roles        String[]  @default(["user"])
-  status       String    @default("active")
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  sessions     Session[]
+  roles        UserRole[] @default([USER])
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  sessions       Session[]
+  auditLogs      AuditLog[]      @relation("AuditActor")
+  mediaAssets    MediaAsset[]
+  locationsExact LocationExact[]
 }
 
 model Session {
   id        String    @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 hex of the opaque session token (never store raw token).
   tokenHash String    @unique
   expiresAt DateTime
   createdAt DateTime  @default(now())
@@ -33,4 +52,76 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  targetType String?
+  targetId   String?
+  requestId  String?
+  /// Safe metadata only — never passwords, tokens, or exact secrets.
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([requestId])
+}
+
+model MediaAsset {
+  id          String    @id @default(cuid())
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  /// Random object key under private storage (never a filesystem path in API responses).
+  objectKey   String    @unique
+  contentType String
+  byteSize    Int
+  width       Int?
+  height      Int?
+  originalName String?
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  @@index([ownerId])
+}
+
+/// Privileged exact location — never expose via public DTOs.
+model LocationExact {
+  id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  label       String?
+  addressLine String?
+  ward        String?
+  district    String?
+  city        String?
+  country     String   @default("VN")
+  latitude    Float
+  longitude   Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  publicView LocationPublic?
+
+  @@index([ownerId])
+}
+
+/// Coarse public location derived from exact — safe for unauthorized audiences.
+model LocationPublic {
+  id              String   @id @default(cuid())
+  exactId         String   @unique
+  exact           LocationExact @relation(fields: [exactId], references: [id], onDelete: Cascade)
+  approxLatitude  Float
+  approxLongitude Float
+  city            String?
+  district        String?
+  ward            String?
+  /// Optional grid cell id for map bucketing.
+  gridCell        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

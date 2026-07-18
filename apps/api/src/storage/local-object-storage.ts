@@ -1,5 +1,5 @@
 import { lstatSync, mkdirSync } from 'node:fs';
-import { mkdir, writeFile, unlink } from 'node:fs/promises';
+import { mkdir, writeFile, unlink, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type {
   ObjectStorage,
@@ -132,6 +132,11 @@ export class LocalObjectStorage implements ObjectStorage {
 
   async getReadUrl(key: string): Promise<string> {
     return `file://${this.resolveSafePath(key)}`;
+  }
+
+  async getObject(key: string): Promise<Buffer> {
+    const full = this.resolveSafePath(key);
+    return readFile(full);
   }
 
   async deleteObject(key: string): Promise<void> {

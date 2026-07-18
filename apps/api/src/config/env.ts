@@ -34,6 +34,38 @@ const EnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  /** Comma-separated browser origins allowed for credentialed CORS + cookie CSRF Origin check. */
+  CORS_ORIGINS: z
+    .string()
+    .default('http://localhost:3000')
+    .transform((v) =>
+      v
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    )
+    .refine(
+      (origins) =>
+        origins.length > 0 &&
+        origins.every((origin) => {
+          try {
+            const url = new URL(origin);
+            return (
+              (url.protocol === 'http:' || url.protocol === 'https:') &&
+              url.origin === origin
+            );
+          } catch {
+            return false;
+          }
+        }),
+      'CORS_ORIGINS must contain only exact http(s) origins without paths, queries, or wildcards',
+    ),
+  SESSION_COOKIE_NAME: z.string().default('gc_session'),
+  /** Session TTL in hours (default 14 days). */
+  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(24 * 14),
+  /** Login rate limit: max attempts per IP per window. */
+  AUTH_LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
+  AUTH_LOGIN_RATE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;
