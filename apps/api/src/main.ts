@@ -1,8 +1,11 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { config as loadDotenv } from 'dotenv';
+import cookieParser from 'cookie-parser';
 import { existsSync } from 'node:fs';
 import { AppModule } from './app.module';
+import { ApiExceptionFilter } from './common/http-exception.filter';
+import { requestIdMiddleware } from './common/request-id';
 import { loadEnv } from './config/env';
 import { findRuntimeRoot, repoRootEnvPath } from './config/paths';
 
@@ -26,8 +29,22 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  app.use(requestIdMiddleware);
+  app.use(cookieParser());
+  app.useGlobalFilters(new ApiExceptionFilter());
+
   app.enableCors({
-    origin: 'http://localhost:3000',
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow non-browser tools (no Origin) and configured frontends.
+      if (!origin || env.CORS_ORIGINS.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS origin not allowed: ${origin}`), false);
+    },
     credentials: true,
   });
 

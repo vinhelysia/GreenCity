@@ -14,8 +14,13 @@ export interface PutObjectResult {
 export interface ObjectStorage {
   readonly driver: 'local' | 's3';
   putObject(input: PutObjectInput): Promise<PutObjectResult>;
-  /** Returns a path or temporary URL suitable for authorized download. */
+  /**
+   * Returns a path or temporary URL for internal use only.
+   * Never forward local file:// or absolute paths to API clients.
+   */
   getReadUrl(key: string, expiresSeconds?: number): Promise<string>;
+  /** Read object bytes for authorized application streaming. */
+  getObject(key: string): Promise<Buffer>;
   deleteObject(key: string): Promise<void>;
 }
 
