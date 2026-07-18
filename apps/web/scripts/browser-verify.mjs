@@ -1,8 +1,6 @@
 /**
  * Optional browser verification using Playwright if resolvable.
- * Does not require package.json changes when run via:
- *   pnpm exec playwright  (after approved install)
- * or when @playwright/test is available from a shared node_modules.
+ * Requires the approved repository-owned @playwright/test dependency.
  *
  * Usage (from apps/web, after next start on PORT):
  *   node ./scripts/browser-verify.mjs
@@ -12,7 +10,7 @@
  *   SCREENSHOT_DIR=./screenshots
  */
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join, dirname } from "node:path";
+import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 
@@ -22,19 +20,17 @@ const baseURL = process.env.BASE_URL ?? "http://127.0.0.1:3100";
 const shotDir = process.env.SCREENSHOT_DIR
   ? join(process.cwd(), process.env.SCREENSHOT_DIR)
   : join(webRoot, "screenshots");
+const reportedShotDir =
+  relative(process.cwd(), shotDir).replace(/\\/g, "/") || ".";
 
 let chromium;
 try {
   ({ chromium } = require("@playwright/test"));
 } catch {
-  try {
-    ({ chromium } = require("playwright"));
-  } catch {
-    console.error(
-      "browser-verify: Playwright not installed. See FRONTEND_DEPENDENCY_REQUEST.md",
-    );
-    process.exit(2);
-  }
+  console.error(
+    "browser-verify: @playwright/test not installed. See FRONTEND_DEPENDENCY_REQUEST.md",
+  );
+  process.exit(2);
 }
 
 const ROUTES = [
@@ -168,7 +164,7 @@ try {
     join(shotDir, "VERIFY_REPORT.txt"),
     failures.length
       ? `FAIL\n${failures.join("\n")}\n`
-      : `OK\nbaseURL=${baseURL}\nscreenshots=${shotDir}\n`,
+      : `OK\nbaseURL=${baseURL}\nscreenshots=${reportedShotDir}\n`,
     "utf8",
   );
 } finally {

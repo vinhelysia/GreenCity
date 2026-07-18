@@ -1,6 +1,6 @@
 # Frontend dependency request
 
-**Branch / worktree:** `grok/frontend-foundation`  
+**Branch / worktree:** `grok/frontend-foundation`
 **Constraint:** Frontend agent must not modify root `package.json`, `pnpm-workspace.yaml`, or `pnpm-lock.yaml`.
 
 ---
@@ -39,6 +39,14 @@
 ```
 
 Lockfile must be updated by an agent allowed to run `pnpm add -D ... --filter web` (or root-owned install).
+After the dependency is installed, provision the declared browser explicitly:
+
+```powershell
+pnpm --filter web exec playwright install chromium
+```
+
+CI on Linux should use `playwright install --with-deps chromium`. Browser binaries
+are not installed by `pnpm install` alone.
 
 ---
 
@@ -47,7 +55,7 @@ Lockfile must be updated by an agent allowed to run `pnpm add -D ... --filter we
 Without Playwright on the lockfile:
 
 - `pnpm --filter web test` runs a **file/route smoke script** (`scripts/smoke.mjs`) that verifies required routes and components exist and that source does not hard-code API hosts or fake fetch targets.
-- Browser verification is performed separately when a Playwright binary is available (npx / shared install), and screenshots are stored under `apps/web/screenshots/`.
+- Browser verification remains blocked until the repository-owned Playwright dependency and Chromium binary are installed.
 
 ---
 

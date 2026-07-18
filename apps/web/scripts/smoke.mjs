@@ -99,6 +99,22 @@ if (/fetch\s*\(/.test(login)) {
   failures.push("login-form must not call fetch");
 }
 
+const browserVerify = readFileSync(
+  join(webRoot, "scripts/browser-verify.mjs"),
+  "utf8",
+);
+if (/require\(["']playwright["']\)/.test(browserVerify)) {
+  failures.push("browser-verify must use repository-owned @playwright/test only");
+}
+
+const verifyReport = readFileSync(
+  join(webRoot, "screenshots/VERIFY_REPORT.txt"),
+  "utf8",
+);
+if (/^screenshots=(?:[A-Za-z]:[\\/]|\/)/m.test(verifyReport)) {
+  failures.push("VERIFY_REPORT must not contain an absolute machine-local path");
+}
+
 if (failures.length) {
   console.error("web smoke FAILED:");
   for (const f of failures) console.error(" -", f);

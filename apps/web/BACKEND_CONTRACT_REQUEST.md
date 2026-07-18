@@ -1,7 +1,7 @@
 # Backend contract request — frontend foundation
 
-**Owner:** Frontend (`apps/web`)  
-**Status:** Needed before any real browser auth or domain data  
+**Owner:** Frontend (`apps/web`)
+**Status:** Needed before any real browser auth or domain data
 **Browser rule:** All client traffic must use same-origin `/api/*` (Next rewrite to Nest). Never hard-code `localhost:3001` or `NEXT_PUBLIC_API_URL` in client components.
 
 ---
