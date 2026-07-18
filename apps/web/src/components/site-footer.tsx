@@ -28,6 +28,14 @@ export function SiteFooter() {
             ))}
             <li>
               <Link
+                href="/dang-ky"
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
+              >
+                Đăng ký
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/dang-nhap"
                 className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline"
               >

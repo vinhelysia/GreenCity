@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { LoginForm } from "@/components/login-form";
 import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = {
   title: "Đăng nhập",
-  description:
-    "Giao diện đăng nhập GreenCity — chỉ là vỏ form, chưa kết nối xác thực.",
+  description: "Đăng nhập GreenCity bằng email và mật khẩu.",
 };
 
 export default function DangNhapPage() {
@@ -15,8 +15,15 @@ export default function DangNhapPage() {
         title="Đăng nhập"
         description={
           <p>
-            Form dưới đây chỉ để kiểm tra giao diện và khả năng truy cập. Chưa
-            có phiên đăng nhập, cookie hay gọi API xác thực.
+            Dùng email và mật khẩu đã đăng ký. Phiên được lưu bằng cookie bảo mật
+            (HttpOnly) — trình duyệt gửi kèm mỗi lần gọi API. Chưa có tài khoản?{" "}
+            <Link
+              href="/dang-ky"
+              className="font-medium text-accent underline-offset-4 hover:underline"
+            >
+              Đăng ký
+            </Link>
+            .
           </p>
         }
       />

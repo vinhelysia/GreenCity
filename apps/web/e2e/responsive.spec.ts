@@ -6,6 +6,7 @@ import {
   assertNoHorizontalOverflow,
   menuToggle,
   mainNav,
+  waitForAuthReady,
 } from "./helpers";
 
 test.describe("Responsive overflow and layout", () => {
@@ -14,11 +15,12 @@ test.describe("Responsive overflow and layout", () => {
       const issues = attachRuntimeGuards(page);
       await page.setViewportSize({ width: vp.width, height: vp.height });
       await page.goto("/", { waitUntil: "networkidle" });
+      await waitForAuthReady(page);
       await assertNoHorizontalOverflow(page);
 
       // Header brand and login remain in layout
       await expect(page.getByRole("link", { name: "GreenCity" }).first()).toBeVisible();
-      await expect(page.getByRole("link", { name: "Đăng nhập" }).first()).toBeVisible();
+      await expect(page.getByTestId("header-login")).toBeVisible();
 
       if (vp.width < 1024) {
         await expect(menuToggle(page)).toBeVisible();
@@ -26,8 +28,8 @@ test.describe("Responsive overflow and layout", () => {
         await expect(mainNav(page).getByRole("link", { name: "Chợ online" })).toBeVisible();
       }
 
-      // Spot-check other routes for overflow
-      for (const path of ["/cho-online", "/dang-nhap", "/thung-rac"]) {
+      // Spot-check other routes for overflow (include both auth pages)
+      for (const path of ["/cho-online", "/dang-nhap", "/dang-ky", "/thung-rac"]) {
         await page.goto(path, { waitUntil: "networkidle" });
         await assertNoHorizontalOverflow(page);
       }

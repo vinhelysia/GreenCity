@@ -16,6 +16,7 @@ const REQUIRED_ROUTES = [
   "app/dong-gop/page.tsx",
   "app/cho-online/page.tsx",
   "app/dang-nhap/page.tsx",
+  "app/dang-ky/page.tsx",
   "app/loading.tsx",
   "app/error.tsx",
   "app/not-found.tsx",
@@ -28,11 +29,14 @@ const REQUIRED_COMPONENTS = [
   "components/site-nav.tsx",
   "components/nav-links.ts",
   "components/login-form.tsx",
+  "components/register-form.tsx",
   "components/header-login-link.tsx",
+  "components/auth-provider.tsx",
   "components/empty-state.tsx",
   "components/feature-unavailable.tsx",
   "components/page-header.tsx",
   "components/skip-link.tsx",
+  "lib/api.ts",
 ];
 
 const FORBIDDEN_SOURCE_PATTERNS = [
@@ -91,12 +95,34 @@ for (const section of ["Quảng cáo", "Tin tức", "Thế giới", "Dự án"])
   }
 }
 
+// Real auth: login form submits via same-origin /api (fetch lives in lib/api.ts).
 const login = readFileSync(join(srcRoot, "components/login-form.tsx"), "utf8");
+const apiLib = readFileSync(join(srcRoot, "lib/api.ts"), "utf8");
+const register = readFileSync(
+  join(srcRoot, "components/register-form.tsx"),
+  "utf8",
+);
+
 if (!login.includes("preventDefault")) {
-  failures.push("login-form must preventDefault (no fake submit)");
+  failures.push("login-form must preventDefault on submit");
 }
-if (/fetch\s*\(/.test(login)) {
-  failures.push("login-form must not call fetch");
+if (!/fetch\s*\(/.test(apiLib) && !/fetch\s*\(/.test(login)) {
+  failures.push("login-form path must call fetch");
+}
+if (
+  !/['"`]\/api\/auth\/login['"`]/.test(apiLib) &&
+  !/['"`]\/api\/auth\/login['"`]/.test(login)
+) {
+  failures.push("login must call same-origin /api/auth/login");
+}
+if (
+  !/['"`]\/api\/auth\/register['"`]/.test(apiLib) &&
+  !/['"`]\/api\/auth\/register['"`]/.test(register)
+) {
+  failures.push("register must call same-origin /api/auth/register");
+}
+if (!login.includes("useAuth") && !/fetch\s*\(/.test(login)) {
+  failures.push("login-form must invoke auth login (useAuth or fetch)");
 }
 
 const browserVerify = readFileSync(
@@ -142,4 +168,4 @@ console.log("web smoke OK:");
 console.log(` - ${REQUIRED_ROUTES.length} routes/boundaries`);
 console.log(` - ${REQUIRED_COMPONENTS.length} components`);
 console.log(` - scanned ${sourceFiles.length} source files (no hard-coded API hosts)`);
-console.log(" - homepage hierarchy + login shell guards");
+console.log(" - homepage hierarchy + real auth same-origin /api guards");

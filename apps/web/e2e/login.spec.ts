@@ -2,36 +2,37 @@ import { test, expect } from "@playwright/test";
 import {
   attachRuntimeGuards,
   assertCleanRuntime,
+  waitForAuthReady,
 } from "./helpers";
 
-test.describe("Login visual shell", () => {
+test.describe("Login form", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
-  test("labels, pending message, no network submit, password toggle", async ({
+  test("labels, same-origin login fetch, password toggle, no role fields", async ({
     page,
   }) => {
     const issues = attachRuntimeGuards(page);
-    const apiish: string[] = [];
+    const loginApiCalls: string[] = [];
+    const directBackend: string[] = [];
+
     page.on("request", (req) => {
       const url = req.url();
-      // Any non-document request to /api/* or backend ports is unexpected here.
-      if (/\/api\//.test(url) || /:3001\//.test(url)) {
-        apiish.push(url);
+      if (/:3001\//.test(url) || /localhost:3001/.test(url)) {
+        directBackend.push(url);
+      }
+      if (req.method() === "POST" && /\/api\/auth\/login(?:\?|$)/.test(url)) {
+        loginApiCalls.push(url);
       }
     });
 
     await page.goto("/dang-nhap", { waitUntil: "networkidle" });
+    await waitForAuthReady(page);
     await expect(page.locator("h1")).toHaveText("Đăng nhập");
 
     const email = page.getByLabel("Email");
-    const password = page.getByLabel("Mật khẩu");
+    const password = page.getByLabel("Mật khẩu", { exact: true });
     await expect(email).toBeVisible();
     await expect(password).toBeVisible();
-
-    // Pending-backend message visible before submit
-    await expect(
-      page.getByText(/Chưa gửi yêu cầu tới máy chủ|xác thực backend/i),
-    ).toBeVisible();
 
     // No role/status form fields for privilege elevation
     await expect(page.locator('input[name="role"]')).toHaveCount(0);
@@ -41,7 +42,7 @@ test.describe("Login visual shell", () => {
     await email.fill("user@example.com");
     await password.fill("secret-not-logged");
 
-    // Password show/hide preserves value
+    // Password show/hide preserves value and focus
     const toggle = page.getByRole("button", { name: /Hiện mật khẩu|Ẩn mật khẩu/i });
     await expect(password).toHaveAttribute("type", "password");
     await toggle.click();
@@ -52,18 +53,27 @@ test.describe("Login visual shell", () => {
     await expect(password).toHaveAttribute("type", "password");
     await expect(password).toHaveValue("secret-not-logged");
 
-    // Submit must not hit network APIs; should update status message
+    // Submit must call same-origin /api/auth/login (not :3001 directly)
     await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+    await expect
+      .poll(() => loginApiCalls.length, { timeout: 15_000 })
+      .toBeGreaterThan(0);
+    expect(
+      loginApiCalls.every((u) => /\/api\/auth\/login/.test(u)),
+      "login must call /api/auth/login",
+    ).toBeTruthy();
+    expect(directBackend, "login must not call :3001 directly").toEqual([]);
+
+    // Wrong/unknown credentials → generic error, no fake success
+    // (filter: Next.js also mounts a route announcer with role=alert)
     await expect(
-      page.getByRole("status"),
-    ).toContainText(/Đăng nhập chưa khả dụng|hợp đồng API/i);
+      page.getByRole("alert").filter({ hasText: /Email hoặc mật khẩu không đúng/i }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/đăng nhập thành công|welcome back/i),
+    ).toHaveCount(0);
+    await expect(page.getByTestId("header-login")).toBeVisible();
 
-    // No fake success
-    await expect(page.getByText(/đăng nhập thành công|welcome back/i)).toHaveCount(
-      0,
-    );
-
-    expect(apiish, "login must not call /api or :3001").toEqual([]);
     assertCleanRuntime(issues, "login");
 
     // Password must not appear in console

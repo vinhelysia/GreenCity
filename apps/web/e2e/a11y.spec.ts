@@ -5,6 +5,7 @@ import {
   attachRuntimeGuards,
   assertCleanRuntime,
   assertOneH1,
+  waitForAuthReady,
 } from "./helpers";
 
 test.describe("Accessibility behavior", () => {
@@ -57,6 +58,7 @@ test.describe("Accessibility behavior", () => {
 
   test("focus-visible styles are not disabled globally", async ({ page }) => {
     await page.goto("/", { waitUntil: "networkidle" });
+    await waitForAuthReady(page);
 
     // Our globals.css must declare :focus-visible with a real outline.
     const hasFocusVisibleRule = await page.evaluate(() => {
@@ -90,9 +92,7 @@ test.describe("Accessibility behavior", () => {
     const skip = page.getByRole("link", { name: "Bỏ qua đến nội dung chính" });
     await expect(skip).toBeFocused();
 
-    const login = page
-      .getByRole("banner")
-      .getByRole("link", { name: "Đăng nhập" });
+    const login = page.getByRole("banner").getByTestId("header-login");
     await login.focus();
     await expect(login).toBeFocused();
   });

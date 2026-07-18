@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Bricolage_Grotesque } from "next/font/google";
 import { APP_NAME } from "@greencity/shared";
+import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SkipLink } from "@/components/skip-link";
@@ -36,16 +37,18 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${display.variable} ${body.variable}`}>
       <body className="flex min-h-dvh flex-col font-sans text-ink antialiased">
-        <SkipLink />
-        <SiteHeader />
-        <main
-          id="noi-dung"
-          className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
-          tabIndex={-1}
-        >
-          {children}
-        </main>
-        <SiteFooter />
+        <Providers>
+          <SkipLink />
+          <SiteHeader />
+          <main
+            id="noi-dung"
+            className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+            tabIndex={-1}
+          >
+            {children}
+          </main>
+          <SiteFooter />
+        </Providers>
       </body>
     </html>
   );

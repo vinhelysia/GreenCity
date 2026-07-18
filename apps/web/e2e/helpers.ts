@@ -8,6 +8,7 @@ export const ROUTES = [
   { path: "/dong-gop", h1: "Đóng góp" },
   { path: "/cho-online", h1: "Chợ online" },
   { path: "/dang-nhap", h1: "Đăng nhập" },
+  { path: "/dang-ky", h1: "Đăng ký" },
 ] as const;
 
 export const NAV_LINKS = [
@@ -57,8 +58,11 @@ export function attachRuntimeGuards(page: Page): RuntimeIssues {
   page.on("console", (msg: ConsoleMessage) => {
     const text = msg.text();
     if (msg.type() === "error") {
-      // Chromium logs document 404s as console.error — expected for not-found routes.
+      // Chromium logs document 404s and expected auth 401s as console.error.
       if (/Failed to load resource:.*status of 404/i.test(text)) return;
+      if (/Failed to load resource:.*status of 401/i.test(text)) return;
+      // Failed login/register validation may surface as 409/400 resource logs.
+      if (/Failed to load resource:.*status of (400|409|429)/i.test(text)) return;
       issues.consoleErrors.push(text);
     }
     if (HYDRATION.test(text) || (msg.type() === "warning" && REACT_WARN.test(text))) {
@@ -125,4 +129,11 @@ export function mainNav(page: Page) {
 /** Primary mobile menu control (not the backdrop dismiss button). */
 export function menuToggle(page: Page) {
   return page.locator("button.nav-toggle");
+}
+
+/** Wait until AuthProvider finished GET /api/auth/me (loading placeholder gone). */
+export async function waitForAuthReady(page: Page) {
+  await expect(page.getByTestId("header-login").or(page.getByTestId("header-logout"))).toBeVisible({
+    timeout: 20_000,
+  });
 }
