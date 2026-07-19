@@ -10,7 +10,9 @@
     "start": "node dist/main.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx src/storage/local-object-storage.spec.ts && tsx src/config/paths.spec.ts && jest --config jest.config.cjs --runInBand"
+    "test": "pnpm run test:unit && pnpm run test:integration",
+    "test:unit": "tsx src/storage/local-object-storage.spec.ts && tsx src/config/paths.spec.ts && jest --config jest.unit.config.cjs --runInBand",
+    "test:integration": "jest --config jest.integration.config.cjs --runInBand"
   },
   "dependencies": {
     "@greencity/shared": "workspace:*",

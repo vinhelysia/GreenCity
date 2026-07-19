@@ -10,6 +10,8 @@
     "lint": "pnpm -r --if-present run lint",
     "typecheck": "pnpm -r --if-present run typecheck",
     "test": "pnpm -r --if-present run test",
+    "test:unit": "pnpm --filter api test:unit && pnpm --filter web test",
+    "test:integration": "pnpm --filter api test:integration",
     "prebuild": "pnpm --filter @greencity/shared build",
     "build": "pnpm -r --if-present run build",
     "dev:api": "pnpm --filter api dev",
