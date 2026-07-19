@@ -36,6 +36,11 @@ model User {
   auditLogs      AuditLog[]      @relation("AuditActor")
   mediaAssets    MediaAsset[]
   locationsExact LocationExact[]
+
+  scrapRequests       ScrapRequest[]
+  marketplaceListings MarketplaceListing[]
+  reservations        Reservation[]
+  subscriptions       Subscription[]
 }
 
 model Session {
@@ -86,6 +91,9 @@ model MediaAsset {
   createdAt   DateTime  @default(now())
   deletedAt   DateTime?
 
+  /// One scrap request may claim a media asset as its single required photo.
+  scrapRequest ScrapRequest?
+
   @@index([ownerId])
 }
 
@@ -124,4 +132,142 @@ model LocationPublic {
   gridCell        String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ─── Marketplace: scrap request → quote → listing → reservation ─────────────
+
+enum ScrapRequestStatus {
+  SUBMITTED
+  QUOTED
+  ACCEPTED
+  REJECTED
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  SUPERSEDED
+}
+
+enum ListingStatus {
+  AVAILABLE
+  RESERVED
+  COMPLETED
+  CANCELLED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+/// Published price band per material. Server-enforces every admin quote inside
+/// [minPricePerKgVnd, maxPricePerKgVnd] — see the CHECK constraint in the
+/// marketplace migration for the same invariant at the database boundary.
+model ScrapCategory {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  minPricePerKgVnd Int
+  maxPricePerKgVnd Int
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  scrapRequests ScrapRequest[]
+}
+
+/// Seller's submission for quotation. mediaAssetId is @unique: exactly one
+/// photo, and a photo may back only one request ever.
+model ScrapRequest {
+  id                String             @id @default(cuid())
+  sellerId          String
+  seller            User               @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  categoryId        String
+  category          ScrapCategory      @relation(fields: [categoryId], references: [id])
+  estimatedWeightKg Float
+  mediaAssetId      String             @unique
+  media             MediaAsset         @relation(fields: [mediaAssetId], references: [id])
+  note              String?
+  status            ScrapRequestStatus @default(SUBMITTED)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  quotes  Quote[]
+  listing MarketplaceListing?
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+/// SUPERSEDED marks a quote replaced by a newer one on the same request —
+/// quotes are kept rather than overwritten so price history stays auditable.
+model Quote {
+  id             String       @id @default(cuid())
+  scrapRequestId String
+  scrapRequest   ScrapRequest @relation(fields: [scrapRequestId], references: [id], onDelete: Cascade)
+  pricePerKgVnd  Int
+  status         QuoteStatus  @default(PENDING)
+  createdAt      DateTime     @default(now())
+  acceptedAt     DateTime?
+
+  listing MarketplaceListing?
+
+  @@index([scrapRequestId, status])
+}
+
+/// Snapshot created the instant a seller accepts a quote. Stores both sides of
+/// the price for accounting; only buyerPricePerKgVnd is ever serialized to a
+/// buyer-facing DTO (see MarketplaceListingSchema in packages/shared).
+/// mediaAssetId is a plain denormalized copy of the originating
+/// ScrapRequest.mediaAssetId (no FK) — the public photo route resolves it
+/// directly and listing visibility must not depend on the request's lifecycle.
+model MarketplaceListing {
+  id                  String        @id @default(cuid())
+  quoteId             String        @unique
+  quote               Quote         @relation(fields: [quoteId], references: [id])
+  scrapRequestId      String        @unique
+  scrapRequest        ScrapRequest  @relation(fields: [scrapRequestId], references: [id])
+  sellerId            String
+  seller              User          @relation(fields: [sellerId], references: [id])
+  categoryName        String
+  estimatedWeightKg    Float
+  sellerPricePerKgVnd Int
+  buyerPricePerKgVnd  Int
+  status              ListingStatus @default(AVAILABLE)
+  mediaAssetId        String
+  createdAt           DateTime      @default(now())
+
+  reservation Reservation?
+
+  @@index([status])
+}
+
+/// At most one reservation per listing — enforced here by @unique and, in the
+/// application layer, by a conditional status update so two concurrent
+/// reserve calls resolve to exactly one success.
+model Reservation {
+  id        String             @id @default(cuid())
+  listingId String             @unique
+  listing   MarketplaceListing @relation(fields: [listingId], references: [id])
+  buyerId   String
+  buyer     User               @relation(fields: [buyerId], references: [id])
+  createdAt DateTime           @default(now())
+
+  @@index([buyerId])
+}
+
+/// Eligibility gate for reserving a listing. Not a role — several rows per
+/// user are allowed so history survives; eligibility is a query, not a flag.
+model Subscription {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    SubscriptionStatus
+  startsAt  DateTime
+  expiresAt DateTime
+  note      String?
+  createdAt DateTime           @default(now())
+
+  @@index([userId, status])
 }

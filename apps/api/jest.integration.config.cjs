@@ -9,5 +9,8 @@ const base = require('./jest.config.cjs');
  */
 module.exports = {
   ...base,
-  testMatch: ['<rootDir>/test/phase1.integration.test.ts'],
+  testMatch: [
+    '<rootDir>/test/phase1.integration.test.ts',
+    '<rootDir>/test/marketplace.integration.test.ts',
+  ],
 };

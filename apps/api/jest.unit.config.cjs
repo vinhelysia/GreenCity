@@ -15,6 +15,7 @@ module.exports = {
   ...base,
   testPathIgnorePatterns: [
     ...base.testPathIgnorePatterns,
-    'test/phase1\\.integration\\.test\\.ts$',
+    // Any *.integration.test.ts belongs to the database-backed lane, not here.
+    '\\.integration\\.test\\.ts$',
   ],
 };

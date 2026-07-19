@@ -12,7 +12,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "pnpm run test:unit && pnpm run test:integration",
     "test:unit": "tsx src/storage/local-object-storage.spec.ts && tsx src/config/paths.spec.ts && jest --config jest.unit.config.cjs --runInBand",
-    "test:integration": "jest --config jest.integration.config.cjs --runInBand"
+    "test:integration": "jest --config jest.integration.config.cjs --runInBand",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@greencity/shared": "workspace:*",
