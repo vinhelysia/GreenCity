@@ -28,7 +28,7 @@ try {
   ({ chromium } = require("@playwright/test"));
 } catch {
   console.error(
-    "browser-verify: @playwright/test not installed. See FRONTEND_DEPENDENCY_REQUEST.md",
+    "browser-verify: @playwright/test not installed. Run: pnpm --filter web exec playwright install chromium",
   );
   process.exit(2);
 }

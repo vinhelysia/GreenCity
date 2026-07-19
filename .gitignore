@@ -40,13 +40,6 @@ test-results/
 *.pem
 .vercel
 
-# Agent skill trees (local tooling; not product source)
-.claude/
-.grok/
-
-# Generated design-tool session state (not product source)
-.hallmark/
-
 # Local runtime data (storage, mail, tooling downloads)
 .local/
 data/

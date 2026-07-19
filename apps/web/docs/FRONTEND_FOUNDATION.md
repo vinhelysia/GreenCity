@@ -32,9 +32,8 @@ cleanup, or auth backend wiring.
 
 ## API boundary
 
-- Browser → same-origin `/api/*` only (when contracts exist)
-- See `BACKEND_CONTRACT_REQUEST.md`
-- Login does not call any endpoint
+- Browser → same-origin `/api/*` only; never an absolute API host
+- Login and registration call `/api/auth/*` through the Next rewrite
 
 ## Testing
 

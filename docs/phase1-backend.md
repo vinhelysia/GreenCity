@@ -1,6 +1,5 @@
 # Phase 1 Backend — Identity, RBAC, Media, Location
 
-**Branch:** `grok/phase1-backend`
 **Scope:** Backend only (no production frontend)
 
 ## API contracts
