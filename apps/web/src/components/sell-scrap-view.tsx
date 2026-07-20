@@ -242,7 +242,10 @@ function SubmitScrapRequestForm({
     setServerError(null);
     setFieldErrors({});
 
-    const fd = new FormData(event.currentTarget);
+    // Capture the form now: after the await below, React has nulled
+    // event.currentTarget, so touching it later throws and skips onSubmitted().
+    const form = event.currentTarget;
+    const fd = new FormData(form);
     const noteRaw = String(fd.get("note") ?? "").trim();
     const raw = {
       categoryId: String(fd.get("categoryId") ?? ""),
@@ -284,7 +287,7 @@ function SubmitScrapRequestForm({
       if (prev.status === "done") URL.revokeObjectURL(prev.previewUrl);
       return { status: "idle" };
     });
-    event.currentTarget.reset();
+    form.reset();
     onSubmitted();
   }
 

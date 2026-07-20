@@ -56,7 +56,17 @@ export class ListingService {
         message: 'Listing photo not found',
       });
     }
-    const body = await this.storage.getObject(asset.objectKey);
+    let body: Buffer;
+    try {
+      body = await this.storage.getObject(asset.objectKey);
+    } catch {
+      // A missing/unreadable object is a 404, not a 500 — the metadata row can
+      // outlive its file (e.g. a wiped local storage dir).
+      throw new NotFoundException({
+        code: 'LISTING_NOT_AVAILABLE',
+        message: 'Listing photo not found',
+      });
+    }
     return { contentType: asset.contentType, body };
   }
 

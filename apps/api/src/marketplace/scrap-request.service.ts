@@ -224,31 +224,23 @@ export class ScrapRequestService {
     return { ok: true };
   }
 
-  async adminList(status?: ScrapRequestStatus) {
+  async adminList(status?: ScrapRequestStatus): Promise<ScrapRequestList> {
+    // Same DTO shape as /scrap-requests/mine, which is what the admin screen
+    // parses (ScrapRequestListSchema) and reads (request.media.downloadPath).
     const rows = await this.prisma.scrapRequest.findMany({
       where: status ? { status } : {},
-      include: { category: true, seller: true },
+      include: {
+        category: true,
+        media: true,
+        quotes: {
+          where: { status: { not: 'SUPERSEDED' } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
-    return {
-      requests: rows.map((r) => ({
-        id: r.id,
-        sellerId: r.sellerId,
-        sellerDisplayName: r.seller.displayName ?? r.seller.email,
-        category: {
-          id: r.category.id,
-          name: r.category.name,
-          minPricePerKgVnd: r.category.minPricePerKgVnd,
-          maxPricePerKgVnd: r.category.maxPricePerKgVnd,
-          active: r.category.active,
-        },
-        estimatedWeightKg: r.estimatedWeightKg,
-        note: r.note,
-        status: r.status,
-        createdAt: r.createdAt.toISOString(),
-        mediaDownloadPath: `/media/${r.mediaAssetId}/content`,
-      })),
-    };
+    return { requests: rows.map(toScrapRequestDto) };
   }
 
   async adminQuote(

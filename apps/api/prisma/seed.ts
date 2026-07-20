@@ -153,33 +153,41 @@ async function main() {
 
     for (const d of DEMO_LISTINGS) {
       const mediaId = `seed-media-${d.n}`;
-      let media = await prisma.mediaAsset.findUnique({ where: { id: mediaId } });
-      if (!media) {
-        const raw = await sharp({
-          create: { width: 64, height: 64, channels: 3, background: d.color },
-        })
-          .png()
-          .toBuffer();
-        const processed = await processImageUpload(raw, 'image/png', `demo-${d.n}.png`);
-        const objectKey = `media/${seller.id}/${mediaId}.${extensionForMime(processed.contentType)}`;
-        await storage.putObject({
-          key: objectKey,
-          body: processed.buffer,
+      // Always (re)write the file and reconcile the record: the metadata row can
+      // survive a wiped storage dir, so gating the write on "record missing"
+      // leaves a listing pointing at a file that no longer exists.
+      const raw = await sharp({
+        create: { width: 64, height: 64, channels: 3, background: d.color },
+      })
+        .png()
+        .toBuffer();
+      const processed = await processImageUpload(raw, 'image/png', `demo-${d.n}.png`);
+      const objectKey = `media/${seller.id}/${mediaId}.${extensionForMime(processed.contentType)}`;
+      await storage.putObject({
+        key: objectKey,
+        body: processed.buffer,
+        contentType: processed.contentType,
+      });
+      const media = await prisma.mediaAsset.upsert({
+        where: { id: mediaId },
+        create: {
+          id: mediaId,
+          ownerId: seller.id,
+          objectKey,
           contentType: processed.contentType,
-        });
-        media = await prisma.mediaAsset.create({
-          data: {
-            id: mediaId,
-            ownerId: seller.id,
-            objectKey,
-            contentType: processed.contentType,
-            byteSize: processed.byteSize,
-            width: processed.width,
-            height: processed.height,
-            originalName: `demo-${d.n}.png`,
-          },
-        });
-      }
+          byteSize: processed.byteSize,
+          width: processed.width,
+          height: processed.height,
+          originalName: `demo-${d.n}.png`,
+        },
+        update: {
+          objectKey,
+          contentType: processed.contentType,
+          byteSize: processed.byteSize,
+          width: processed.width,
+          height: processed.height,
+        },
+      });
 
       const category = categories.get(d.categoryName);
       if (!category) throw new Error(`Seed category missing: ${d.categoryName}`);

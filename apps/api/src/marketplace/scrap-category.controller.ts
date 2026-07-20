@@ -9,7 +9,8 @@ export class ScrapCategoryController {
   /** Transparent pricing: anyone can see the published bands before submitting. */
   @Public()
   @Get()
-  list() {
-    return this.categories.listActive();
+  async list() {
+    // Wrapped like the request/listing lists so clients parse one shape.
+    return { categories: await this.categories.listActive() };
   }
 }
