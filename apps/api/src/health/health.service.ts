@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { HealthStatus } from '@greencity/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class HealthService {
+  private readonly logger = new Logger(HealthService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -30,7 +32,11 @@ export class HealthService {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
       return 'up';
-    } catch {
+    } catch (err) {
+      // TEMP diagnostic: surface the real DB error in logs (revert after diagnosis).
+      this.logger.error(
+        `healthcheck database ping failed: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+      );
       return 'down';
     }
   }
@@ -39,7 +45,11 @@ export class HealthService {
     try {
       await this.prisma.$queryRaw`SELECT PostGIS_Version()`;
       return 'up';
-    } catch {
+    } catch (err) {
+      // TEMP diagnostic: surface the real PostGIS error in logs (revert after diagnosis).
+      this.logger.error(
+        `healthcheck postgis ping failed: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+      );
       return 'down';
     }
   }
