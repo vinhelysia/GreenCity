@@ -33,9 +33,8 @@ export class HealthService {
       await this.prisma.$queryRaw`SELECT 1`;
       return 'up';
     } catch (err) {
-      // TEMP diagnostic: surface the real DB error in logs (revert after diagnosis).
-      this.logger.error(
-        `healthcheck database ping failed: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+      this.logger.warn(
+        `database readiness check failed: ${err instanceof Error ? err.message : String(err)}`,
       );
       return 'down';
     }
@@ -43,12 +42,21 @@ export class HealthService {
 
   private async pingPostgis(): Promise<'up' | 'down'> {
     try {
-      await this.prisma.$queryRaw`SELECT PostGIS_Version()`;
-      return 'up';
+      // Check the catalog rather than calling postgis_version() unqualified.
+      // Managed Postgres (e.g. Supabase) installs PostGIS in the "extensions"
+      // schema, which is not on the app role's search_path, so an unqualified
+      // call fails with SQLSTATE 42883 even though the extension IS installed.
+      const rows = await this.prisma.$queryRaw<Array<{ extversion: string }>>`
+        SELECT extversion FROM pg_extension WHERE extname = 'postgis'
+      `;
+      if (rows.length > 0) {
+        return 'up';
+      }
+      this.logger.warn('PostGIS readiness check: extension not installed');
+      return 'down';
     } catch (err) {
-      // TEMP diagnostic: surface the real PostGIS error in logs (revert after diagnosis).
-      this.logger.error(
-        `healthcheck postgis ping failed: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`,
+      this.logger.warn(
+        `PostGIS readiness check failed: ${err instanceof Error ? err.message : String(err)}`,
       );
       return 'down';
     }
