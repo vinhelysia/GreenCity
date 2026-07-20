@@ -54,7 +54,10 @@ async function bootstrap() {
     credentials: true,
   });
 
-  const port = env.API_PORT ?? env.PORT ?? 3001;
+  // PORT wins so a host that injects it (Render, Heroku) is honoured; API_PORT
+  // has a default, so it must come second or PORT would never be used. Local
+  // dev leaves PORT unset and gets API_PORT (3001).
+  const port = env.PORT ?? env.API_PORT ?? 3001;
   await app.listen(port);
 
   Logger.log(`API listening on http://localhost:${port}`, 'Bootstrap');

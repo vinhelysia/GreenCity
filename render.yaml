@@ -1,0 +1,40 @@
+# Render Blueprint for the GreenCity API (NestJS).
+# Web (Next.js) deploys separately on Vercel; the DB is Supabase PostgreSQL+PostGIS.
+#
+# One-time before/after creating this service:
+#   1. Create the service from this repo (Render reads this file).
+#   2. Set DATABASE_URL to the Supabase Session-pooler URL (Dashboard → Environment).
+#   3. Run migrations + seed ONCE against Supabase from your machine
+#      (pnpm --filter api exec prisma migrate deploy; pnpm --filter api db:seed) —
+#      this service does not migrate on deploy.
+#   4. After Vercel gives the web a domain, set CORS_ORIGINS to it (exact origin,
+#      no trailing slash) or every cookie-auth request returns 403 INVALID_ORIGIN.
+services:
+  - type: web
+    name: greencity-api
+    runtime: node
+    plan: free
+    region: singapore # closest free region to the Supabase Tokyo database
+    rootDir: . # repo root — pnpm workspace install needs it, not apps/api
+    # Explicit build so it does not depend on the install prepare hook:
+    # shared package, Prisma client, then the Nest build.
+    buildCommand: >-
+      corepack enable &&
+      pnpm install --frozen-lockfile &&
+      pnpm --filter @greencity/shared build &&
+      pnpm --filter api exec prisma generate &&
+      pnpm --filter api build
+    startCommand: pnpm --filter api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      # PORT is injected by Render; main.ts prefers it over API_PORT.
+      - key: DATABASE_URL
+        sync: false # secret — set in the Render dashboard, never commit
+      - key: CORS_ORIGINS
+        sync: false # the Vercel web origin — set after the web deploy
+      - key: DEMO_PASSWORD
+        sync: false # if you re-seed from here; a public default is unsafe on a shared DB
