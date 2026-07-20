@@ -58,9 +58,9 @@ async function bootstrap() {
   // has a default, so it must come second or PORT would never be used. Local
   // dev leaves PORT unset and gets API_PORT (3001).
   const port = env.PORT ?? env.API_PORT ?? 3001;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
-  Logger.log(`API listening on http://localhost:${port}`, 'Bootstrap');
+  Logger.log(`API listening on 0.0.0.0:${port}`, 'Bootstrap');
   Logger.log(
     `Storage=${env.STORAGE_DRIVER} Mail=${env.MAIL_DRIVER} (GET /health is readiness)`,
     'Bootstrap',
