@@ -1,7 +1,7 @@
 /**
  * Idempotent local demo seed. Local demo only — never run against a shared or
- * production database; the three accounts below share one publicly-known
- * password constant.
+ * production database; the three accounts below share one operator-supplied
+ * seed-only password.
  *
  * Reuses the real PasswordService (same argon2 params as login), the real
  * image pipeline, and the real object storage service so uploaded demo
@@ -16,8 +16,6 @@ import { extensionForMime, processImageUpload } from '../src/media/image-pipelin
 import { LocalObjectStorage } from '../src/storage/local-object-storage';
 import { loadEnv } from '../src/config/env';
 import { findRuntimeRoot, repoRootEnvPath, resolveFromRepoRoot } from '../src/config/paths';
-
-const DEMO_PASSWORD = 'GreenCity-Demo-2026'; // local demo only — not for production use
 
 const CATEGORIES = [
   { name: 'Chai nhựa PET', minPricePerKgVnd: 1000, maxPricePerKgVnd: 1500 },
@@ -55,6 +53,11 @@ function loadCanonicalEnv(): void {
 async function main() {
   loadCanonicalEnv();
   const env = loadEnv();
+  const demoPassword = process.env.DEMO_PASSWORD;
+  if (!demoPassword || demoPassword.length < 12) {
+    throw new Error('DEMO_PASSWORD must be at least 12 characters for db:seed');
+  }
+
   if (env.STORAGE_DRIVER !== 'local') {
     // ponytail: seed only drives the local filesystem driver; add S3 support
     // if a seeded environment ever needs it.
@@ -68,7 +71,7 @@ async function main() {
   );
 
   try {
-    const passwordHash = await passwords.hash(DEMO_PASSWORD);
+    const passwordHash = await passwords.hash(demoPassword);
 
     const admin = await prisma.user.upsert({
       where: { email: 'admin@greencity.demo' },
@@ -79,7 +82,7 @@ async function main() {
         roles: ['ADMIN'],
         status: 'ACTIVE',
       },
-      update: { roles: ['ADMIN'], status: 'ACTIVE' },
+      update: { passwordHash, roles: ['ADMIN'], status: 'ACTIVE' },
     });
     const seller = await prisma.user.upsert({
       where: { email: 'seller@greencity.demo' },
@@ -90,7 +93,7 @@ async function main() {
         roles: ['USER'],
         status: 'ACTIVE',
       },
-      update: { status: 'ACTIVE' },
+      update: { passwordHash, status: 'ACTIVE' },
     });
     const buyer = await prisma.user.upsert({
       where: { email: 'buyer@greencity.demo' },
@@ -101,7 +104,7 @@ async function main() {
         roles: ['USER'],
         status: 'ACTIVE',
       },
-      update: { status: 'ACTIVE' },
+      update: { passwordHash, status: 'ACTIVE' },
     });
 
     const categories = new Map<string, { id: string; name: string }>();
@@ -118,8 +121,14 @@ async function main() {
       categories.set(c.name, row);
     }
 
+    const now = new Date();
     const existingSub = await prisma.subscription.findFirst({
-      where: { userId: buyer.id, status: 'ACTIVE' },
+      where: {
+        userId: buyer.id,
+        status: 'ACTIVE',
+        startsAt: { lte: now },
+        expiresAt: { gt: now },
+      },
     });
     if (!existingSub) {
       await prisma.subscription.create({

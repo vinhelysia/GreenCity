@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { AuthContext } from '../src/authz/auth-context';
 import { ScrapRequestService } from '../src/marketplace/scrap-request.service';
 import { ListingService } from '../src/marketplace/listing.service';
@@ -8,6 +10,17 @@ import { ListingService } from '../src/marketplace/listing.service';
  * seller cannot reserve their own listing. No database involved.
  */
 describe('marketplace unit', () => {
+  it('keeps demo seed credentials and subscriptions safe', () => {
+    const source = readFileSync(
+      resolve(__dirname, '../prisma/seed.ts'),
+      'utf8',
+    );
+    expect(source).not.toMatch(/const DEMO_PASSWORD\s*=\s*['"`]/);
+    expect(source).toContain('process.env.DEMO_PASSWORD');
+    expect(source).toContain('startsAt: { lte: now }');
+    expect(source).toContain('expiresAt: { gt: now }');
+  });
+
   it('rejects an admin quote outside the published price band', async () => {
     const prisma = {
       scrapRequest: {

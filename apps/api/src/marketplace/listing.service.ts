@@ -38,8 +38,8 @@ export class ListingService {
   }
 
   async getPhoto(id: string): Promise<{ contentType: string; body: Buffer }> {
-    const listing = await this.prisma.marketplaceListing.findUnique({
-      where: { id },
+    const listing = await this.prisma.marketplaceListing.findFirst({
+      where: { id, status: 'AVAILABLE' },
     });
     if (!listing) {
       throw new NotFoundException({

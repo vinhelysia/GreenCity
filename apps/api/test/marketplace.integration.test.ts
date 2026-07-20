@@ -247,6 +247,12 @@ describe('Marketplace integration', () => {
       .set('Cookie', subscribedBuyerCookie);
     expect(reserveRes.status).toBe(201);
 
+    const reservedPhoto = await request(app.getHttpServer()).get(
+      `/marketplace/listings/${listingId}/photo`,
+    );
+    expect(reservedPhoto.status).toBe(404);
+    expect(reservedPhoto.body.error.code).toBe('LISTING_NOT_AVAILABLE');
+
     const completeRes = await request(app.getHttpServer())
       .post(`/admin/listings/${listingId}/complete`)
       .set('Origin', 'http://localhost:3000')
