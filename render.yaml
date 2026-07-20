@@ -20,7 +20,7 @@ services:
     # shared package, Prisma client, then the Nest build.
     buildCommand: >-
       corepack enable &&
-      pnpm install --frozen-lockfile &&
+      pnpm install --frozen-lockfile --prod=false &&
       pnpm --filter @greencity/shared build &&
       pnpm --filter api exec prisma generate &&
       pnpm --filter api build
