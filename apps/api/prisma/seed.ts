@@ -14,6 +14,8 @@ import { PrismaClient } from '@prisma/client';
 import { PasswordService } from '../src/auth/password.service';
 import { extensionForMime, processImageUpload } from '../src/media/image-pipeline';
 import { LocalObjectStorage } from '../src/storage/local-object-storage';
+import { SupabaseObjectStorage } from '../src/storage/supabase-object-storage';
+import type { ObjectStorage } from '../src/storage/storage.types';
 import { loadEnv } from '../src/config/env';
 import { findRuntimeRoot, repoRootEnvPath, resolveFromRepoRoot } from '../src/config/paths';
 
@@ -58,17 +60,24 @@ async function main() {
   // password on an ADMIN account would let anyone tamper with the demo mid-pitch.
   const demoPassword = process.env.DEMO_PASSWORD ?? 'GreenCity-Demo-2026';
 
-  if (env.STORAGE_DRIVER !== 'local') {
-    // ponytail: seed only drives the local filesystem driver; add S3 support
-    // if a seeded environment ever needs it.
-    throw new Error('db:seed only supports STORAGE_DRIVER=local');
+  // Seed the same object store the API will read from. Local for dev; supabase
+  // when seeding a deploy so listing images land in persistent shared storage.
+  if (env.STORAGE_DRIVER === 's3') {
+    throw new Error('db:seed supports STORAGE_DRIVER=local or supabase (not the s3 stub)');
   }
 
   const prisma = new PrismaClient();
   const passwords = new PasswordService();
-  const storage = new LocalObjectStorage(
-    resolveFromRepoRoot(env.STORAGE_LOCAL_DIR, findRuntimeRoot()),
-  );
+  const storage: ObjectStorage =
+    env.STORAGE_DRIVER === 'supabase'
+      ? new SupabaseObjectStorage({
+          url: env.SUPABASE_URL ?? '',
+          serviceKey: env.SUPABASE_SERVICE_KEY ?? '',
+          bucket: env.SUPABASE_STORAGE_BUCKET,
+        })
+      : new LocalObjectStorage(
+          resolveFromRepoRoot(env.STORAGE_LOCAL_DIR, findRuntimeRoot()),
+        );
 
   try {
     const passwordHash = await passwords.hash(demoPassword);

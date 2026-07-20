@@ -3,6 +3,7 @@ import { findRuntimeRoot, resolveFromRepoRoot } from '../config/paths';
 import { loadEnv } from '../config/env';
 import { LocalObjectStorage } from './local-object-storage';
 import { S3ObjectStorageStub } from './s3-object-storage.stub';
+import { SupabaseObjectStorage } from './supabase-object-storage';
 import { OBJECT_STORAGE } from './storage.types';
 
 @Global()
@@ -12,6 +13,13 @@ import { OBJECT_STORAGE } from './storage.types';
       provide: OBJECT_STORAGE,
       useFactory: () => {
         const env = loadEnv();
+        if (env.STORAGE_DRIVER === 'supabase') {
+          return new SupabaseObjectStorage({
+            url: env.SUPABASE_URL ?? '',
+            serviceKey: env.SUPABASE_SERVICE_KEY ?? '',
+            bucket: env.SUPABASE_STORAGE_BUCKET,
+          });
+        }
         if (env.STORAGE_DRIVER === 's3') {
           return new S3ObjectStorageStub({
             endpoint: env.S3_ENDPOINT,

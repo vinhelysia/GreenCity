@@ -38,3 +38,13 @@ services:
         sync: false # the Vercel web origin — set after the web deploy
       - key: DEMO_PASSWORD
         sync: false # if you re-seed from here; a public default is unsafe on a shared DB
+      # Images must persist across restarts, which the ephemeral free disk cannot
+      # do — use Supabase Storage. Create a private bucket "greencity-media" first.
+      - key: STORAGE_DRIVER
+        value: supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false # service_role key — secret
+      - key: SUPABASE_STORAGE_BUCKET
+        value: greencity-media

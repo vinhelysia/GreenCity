@@ -12,7 +12,7 @@ export interface PutObjectResult {
 }
 
 export interface ObjectStorage {
-  readonly driver: 'local' | 's3';
+  readonly driver: 'local' | 's3' | 'supabase';
   putObject(input: PutObjectInput): Promise<PutObjectResult>;
   /**
    * Returns a path or temporary URL for internal use only.
