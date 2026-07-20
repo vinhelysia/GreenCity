@@ -17,6 +17,8 @@ const REQUIRED_ROUTES = [
   "app/cho-online/page.tsx",
   "app/dang-nhap/page.tsx",
   "app/dang-ky/page.tsx",
+  "app/ban-phe-lieu/page.tsx",
+  "app/admin/bao-gia/page.tsx",
   "app/loading.tsx",
   "app/error.tsx",
   "app/not-found.tsx",
@@ -36,7 +38,11 @@ const REQUIRED_COMPONENTS = [
   "components/feature-unavailable.tsx",
   "components/page-header.tsx",
   "components/skip-link.tsx",
+  "components/sell-scrap-view.tsx",
+  "components/admin-quote-queue.tsx",
+  "components/marketplace-listings.tsx",
   "lib/api.ts",
+  "lib/format.ts",
 ];
 
 const FORBIDDEN_SOURCE_PATTERNS = [
@@ -123,6 +129,25 @@ if (
 }
 if (!login.includes("useAuth") && !/fetch\s*\(/.test(login)) {
   failures.push("login-form must invoke auth login (useAuth or fetch)");
+}
+
+// Marketplace: every fetch path must be same-origin /api/* (never a direct
+// API host). FORBIDDEN_SOURCE_PATTERNS above already bans localhost:3001,
+// NEXT_PUBLIC_API_URL and absolute-URL fetch() across all source files; this
+// additionally checks the agreed marketplace paths are actually present.
+const MARKETPLACE_API_PATHS = [
+  "/api/scrap-categories",
+  "/api/marketplace/listings",
+  "/api/marketplace/listings/${",
+  "/api/scrap-requests",
+  "/api/subscriptions/me",
+  "/api/media/upload",
+  "/api/admin/scrap-requests",
+];
+for (const path of MARKETPLACE_API_PATHS) {
+  if (!apiLib.includes(path)) {
+    failures.push(`lib/api.ts missing same-origin marketplace path: ${path}`);
+  }
 }
 
 const browserVerify = readFileSync(
