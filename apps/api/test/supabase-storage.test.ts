@@ -53,6 +53,18 @@ describe('SupabaseObjectStorage', () => {
     expect(headers['Content-Type']).toBe('image/jpeg');
   });
 
+  it('sends new secret keys as apikey instead of an invalid bearer token', async () => {
+    const store = new SupabaseObjectStorage({
+      ...config,
+      serviceKey: 'sb_secret_example',
+    });
+    await store.getObject('media/x.jpg');
+
+    const headers = calls[0]!.init.headers as Record<string, string>;
+    expect(headers.apikey).toBe('sb_secret_example');
+    expect(headers.Authorization).toBeUndefined();
+  });
+
   it('rejects path-unsafe keys before any network call', async () => {
     const store = new SupabaseObjectStorage(config);
     await expect(store.getObject('../secret')).rejects.toThrow('traversal');

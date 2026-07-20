@@ -54,6 +54,9 @@ export class SupabaseObjectStorage implements ObjectStorage {
   }
 
   private authHeaders(): Record<string, string> {
+    if (this.serviceKey.startsWith('sb_secret_')) {
+      return { apikey: this.serviceKey };
+    }
     return { Authorization: `Bearer ${this.serviceKey}` };
   }
 
