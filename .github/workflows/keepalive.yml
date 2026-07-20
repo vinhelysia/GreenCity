@@ -1,0 +1,48 @@
+name: Keepalive
+
+# Pings the Render API health endpoint on a schedule so the free-tier instance
+# does not spin down (Render sleeps a free service after ~15 minutes of no
+# traffic, adding a ~50s cold start to the next request).
+#
+# NOTE on GitHub Actions minutes: scheduled runs are free/unlimited on PUBLIC
+# repositories. On a PRIVATE repo they count against the free 2,000 min/month
+# (each run bills a 1-minute minimum, so ~103 runs/day ≈ ~3,000 min/month, which
+# exceeds the free tier). If this repo is private, either make it public, raise
+# the interval, or use an external uptime pinger instead.
+#
+# GitHub's scheduler can be delayed by several minutes under load, so the 14-min
+# interval is a best-effort target rather than a guarantee.
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch: {}
+
+# Never let two pings overlap; a queued run supersedes an in-flight one.
+concurrency:
+  group: keepalive
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Ping API health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Curl /health (with retries for cold start)
+        run: |
+          set -euo pipefail
+          url="https://greencity-api.onrender.com/health"
+          # A sleeping instance can take ~50s to wake, so retry with backoff.
+          code=$(curl -sS -o /tmp/health.json -w '%{http_code}' \
+            --connect-timeout 15 --max-time 90 \
+            --retry 5 --retry-delay 15 --retry-all-errors \
+            "$url" || true)
+          echo "HTTP $code"
+          cat /tmp/health.json || true
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::warning::Keepalive ping did not return 200 (got $code)"
+          fi
