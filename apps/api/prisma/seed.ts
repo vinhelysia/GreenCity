@@ -53,10 +53,10 @@ function loadCanonicalEnv(): void {
 async function main() {
   loadCanonicalEnv();
   const env = loadEnv();
-  const demoPassword = process.env.DEMO_PASSWORD;
-  if (!demoPassword || demoPassword.length < 12) {
-    throw new Error('DEMO_PASSWORD must be at least 12 characters for db:seed');
-  }
+  // Local demo default so `pnpm db:seed` runs with zero setup. Override with
+  // DEMO_PASSWORD on any shared/deployed database, where a publicly-known
+  // password on an ADMIN account would let anyone tamper with the demo mid-pitch.
+  const demoPassword = process.env.DEMO_PASSWORD ?? 'GreenCity-Demo-2026';
 
   if (env.STORAGE_DRIVER !== 'local') {
     // ponytail: seed only drives the local filesystem driver; add S3 support

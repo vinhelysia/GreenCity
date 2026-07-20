@@ -181,6 +181,7 @@ const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   MEDIA_NOT_OWNED: "Không tìm thấy dữ liệu.",
   CATEGORY_NOT_FOUND: "Không tìm thấy dữ liệu.",
   SCRAP_REQUEST_NOT_FOUND: "Không tìm thấy dữ liệu.",
+  MEDIA_ALREADY_USED: "Ảnh này đã dùng cho một yêu cầu khác. Hãy chọn ảnh khác.",
 };
 
 /** Localize a marketplace ApiError. Falls back to the server message. */

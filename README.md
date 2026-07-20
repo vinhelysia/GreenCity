@@ -2,7 +2,9 @@
 
 GreenCity is a pnpm monorepo for a recycling marketplace + cleanup platform (API + web).
 
-**Phase 0 only — no marketplace features yet.** Scaffold: NestJS API, Next.js web, Prisma (`User` / `Session`), native local PostgreSQL + PostGIS, local filesystem storage, console mail.
+Working today: email/password auth (Argon2id, opaque DB-backed sessions), and a scrap-marketplace vertical slice — sellers submit scrap with a photo, admins quote within a published price band, sellers accept, listings go live, and subscribed buyers reserve (one winner per listing, enforced transactionally). Stack: NestJS API, Next.js web, Prisma, native local PostgreSQL + PostGIS, local filesystem storage, console mail.
+
+Not implemented, and not faked: real payment, buyer subscription billing, seller reward payout, and the cleanup-report workflow.
 
 **Docker is not required for local development.**
 
@@ -35,7 +37,23 @@ pnpm db:postgis   # after PostGIS binaries are installed into PostgreSQL
 pnpm db:generate  # no live DB required
 pnpm db:migrate
 pnpm db:verify    # SELECT 1 + PostGIS_Version()
+
+pnpm --filter api db:seed   # demo accounts, categories, sample listings
 ```
+
+### Demo accounts (local only)
+
+`pnpm --filter api db:seed` is idempotent and creates three accounts, all with
+password `GreenCity-Demo-2026`:
+
+| Email | Role | For |
+|-------|------|-----|
+| `admin@greencity.demo` | ADMIN | Quoting queue at `/admin/bao-gia` |
+| `seller@greencity.demo` | USER | Submitting scrap at `/ban-phe-lieu` |
+| `buyer@greencity.demo` | USER + demo subscription | Reserving at `/cho-online` |
+
+Local demo only. On any shared or deployed database, set a `DEMO_PASSWORD`
+env var before seeding — the default above is public.
 
 ### Install PostGIS on Windows (once per machine)
 

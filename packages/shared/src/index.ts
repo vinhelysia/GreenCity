@@ -370,5 +370,8 @@ export const MARKETPLACE_ERROR_CODES = [
   "LISTING_NOT_AVAILABLE",
   "SUBSCRIPTION_REQUIRED",
   "CANNOT_RESERVE_OWN_LISTING",
+  // A photo can back only one scrap request (MediaAsset.mediaAssetId is unique
+  // at the DB level); resubmitting the same asset returns this.
+  "MEDIA_ALREADY_USED",
 ] as const;
 export type MarketplaceErrorCode = (typeof MARKETPLACE_ERROR_CODES)[number];
