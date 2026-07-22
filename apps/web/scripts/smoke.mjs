@@ -44,6 +44,7 @@ const REQUIRED_COMPONENTS = [
   "components/marketplace-listings.tsx",
   "components/cleanup-report-view.tsx",
   "components/admin-cleanup-queue.tsx",
+  "components/home-highlights.tsx",
   "lib/api.ts",
   "lib/format.ts",
 ];

@@ -21,6 +21,10 @@ import {
   type CreateCleanupReport,
   CleanupReportListSchema,
   type CleanupReportList,
+  HomeStatsSchema,
+  type HomeStats,
+  PublicCleanupReportListSchema,
+  type PublicCleanupReportList,
 } from "@greencity/shared";
 
 export type ParsedApiError = ApiError["error"];
@@ -402,4 +406,24 @@ export async function rejectCleanupReport(
   return apiFetch<unknown>(`/api/admin/cleanup-reports/${id}/reject`, {
     method: "POST",
   });
+}
+
+// ─── Homepage public stats & reports ─────────────────────────────────────────
+
+export async function fetchHomeStats(): Promise<ApiResult<HomeStats>> {
+  const result = await apiFetch<unknown>("/api/stats");
+  if (!result.ok) return result;
+  const parsed = HomeStatsSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+export async function fetchPublicCleanupReports(): Promise<
+  ApiResult<PublicCleanupReportList>
+> {
+  const result = await apiFetch<unknown>("/api/cleanup-reports/public");
+  if (!result.ok) return result;
+  const parsed = PublicCleanupReportListSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
 }

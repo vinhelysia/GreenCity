@@ -1,5 +1,6 @@
 import { APP_NAME } from "@greencity/shared";
 import { EmptyState } from "@/components/empty-state";
+import { HomeHighlights } from "@/components/home-highlights";
 import { Section } from "@/components/section";
 
 /**
@@ -24,10 +25,12 @@ export default function HomePage() {
           <strong className="font-medium text-ink">
             đóng góp dọn dẹp điểm rác
           </strong>
-          . Trang này là khung giao diện công khai — nội dung biên tập và dữ liệu
-          vận hành sẽ được gắn khi hệ thống sẵn sàng.
+          . Chợ phế liệu và hệ thống báo cáo dọn dẹp điểm rác hiện đã đi vào
+          hoạt động.
         </p>
       </header>
+
+      <HomeHighlights />
 
       <Section id="quang-cao" title="Quảng cáo">
         <div
