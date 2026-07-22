@@ -12,5 +12,6 @@ module.exports = {
   testMatch: [
     '<rootDir>/test/phase1.integration.test.ts',
     '<rootDir>/test/marketplace.integration.test.ts',
+    '<rootDir>/test/cleanup.integration.test.ts',
   ],
 };
