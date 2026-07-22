@@ -46,3 +46,7 @@ data/
 uploads/
 tmp/
 temp/
+
+# User-owned local tooling — never part of the product repo
+.agents/
+blender/
