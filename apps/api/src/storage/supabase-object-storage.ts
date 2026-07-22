@@ -71,9 +71,7 @@ export class SupabaseObjectStorage implements ObjectStorage {
       body: Buffer.from(input.body),
     });
     if (!res.ok) {
-      throw new Error(
-        `Supabase putObject failed (${res.status}): ${await bodyPreview(res)}`,
-      );
+      throw new Error(`Supabase putObject failed (${res.status})`);
     }
     return { key: input.key, uri: `supabase://${this.bucket}/${input.key}` };
   }
@@ -89,9 +87,7 @@ export class SupabaseObjectStorage implements ObjectStorage {
       headers: this.authHeaders(),
     });
     if (!res.ok) {
-      throw new Error(
-        `Supabase getObject failed (${res.status}): ${await bodyPreview(res)}`,
-      );
+      throw new Error(`Supabase getObject failed (${res.status})`);
     }
     return Buffer.from(await res.arrayBuffer());
   }
@@ -103,17 +99,7 @@ export class SupabaseObjectStorage implements ObjectStorage {
     });
     // A missing object is already in the desired state.
     if (!res.ok && res.status !== 404) {
-      throw new Error(
-        `Supabase deleteObject failed (${res.status}): ${await bodyPreview(res)}`,
-      );
+      throw new Error(`Supabase deleteObject failed (${res.status})`);
     }
-  }
-}
-
-async function bodyPreview(res: Response): Promise<string> {
-  try {
-    return (await res.text()).slice(0, 200);
-  } catch {
-    return '<no body>';
   }
 }
