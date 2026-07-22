@@ -18,6 +18,9 @@ import {
   MediaAssetPublicSchema,
   type MediaAssetPublic,
   type CreateQuoteRequest,
+  type CreateCleanupReport,
+  CleanupReportListSchema,
+  type CleanupReportList,
 } from "@greencity/shared";
 
 export type ParsedApiError = ApiError["error"];
@@ -182,6 +185,8 @@ const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   CATEGORY_NOT_FOUND: "Không tìm thấy dữ liệu.",
   SCRAP_REQUEST_NOT_FOUND: "Không tìm thấy dữ liệu.",
   MEDIA_ALREADY_USED: "Ảnh này đã dùng cho một yêu cầu khác. Hãy chọn ảnh khác.",
+  CLEANUP_REPORT_NOT_FOUND: "Không tìm thấy dữ liệu báo cáo.",
+  CLEANUP_REPORT_NOT_PENDING: "Báo cáo không còn ở trạng thái chờ duyệt.",
 };
 
 /** Localize a marketplace ApiError. Falls back to the server message. */
@@ -347,5 +352,54 @@ export async function postAdminQuote(
   return apiFetch<unknown>(`/api/admin/scrap-requests/${id}/quote`, {
     method: "POST",
     body: JSON.stringify(body),
+  });
+}
+
+// ─── Cleanup reports ─────────────────────────────────────────────────────────
+
+export async function postCleanupReport(
+  body: CreateCleanupReport,
+): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>("/api/cleanup-reports", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchMyCleanupReports(): Promise<
+  ApiResult<CleanupReportList>
+> {
+  const result = await apiFetch<unknown>("/api/cleanup-reports/mine");
+  if (!result.ok) return result;
+  const parsed = CleanupReportListSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+export async function fetchAdminCleanupReports(): Promise<
+  ApiResult<CleanupReportList>
+> {
+  const result = await apiFetch<unknown>(
+    "/api/admin/cleanup-reports?status=SUBMITTED",
+  );
+  if (!result.ok) return result;
+  const parsed = CleanupReportListSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+export async function verifyCleanupReport(
+  id: string,
+): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/admin/cleanup-reports/${id}/verify`, {
+    method: "POST",
+  });
+}
+
+export async function rejectCleanupReport(
+  id: string,
+): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/admin/cleanup-reports/${id}/reject`, {
+    method: "POST",
   });
 }

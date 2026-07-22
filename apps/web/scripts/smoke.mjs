@@ -19,6 +19,7 @@ const REQUIRED_ROUTES = [
   "app/dang-ky/page.tsx",
   "app/ban-phe-lieu/page.tsx",
   "app/admin/bao-gia/page.tsx",
+  "app/admin/dong-gop/page.tsx",
   "app/loading.tsx",
   "app/error.tsx",
   "app/not-found.tsx",
@@ -41,6 +42,8 @@ const REQUIRED_COMPONENTS = [
   "components/sell-scrap-view.tsx",
   "components/admin-quote-queue.tsx",
   "components/marketplace-listings.tsx",
+  "components/cleanup-report-view.tsx",
+  "components/admin-cleanup-queue.tsx",
   "lib/api.ts",
   "lib/format.ts",
 ];

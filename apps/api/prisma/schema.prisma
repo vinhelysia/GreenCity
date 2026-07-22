@@ -41,6 +41,7 @@ model User {
   marketplaceListings MarketplaceListing[]
   reservations        Reservation[]
   subscriptions       Subscription[]
+  cleanupReports      CleanupReport[]
 }
 
 model Session {
@@ -93,6 +94,7 @@ model MediaAsset {
 
   /// One scrap request may claim a media asset as its single required photo.
   scrapRequest ScrapRequest?
+  cleanupReport CleanupReport?
 
   @@index([ownerId])
 }
@@ -270,4 +272,30 @@ model Subscription {
   createdAt DateTime           @default(now())
 
   @@index([userId, status])
+}
+
+enum CleanupReportStatus {
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+model CleanupReport {
+  id           String              @id @default(cuid())
+  reporterId   String
+  reporter     User                @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  description  String
+  addressLine  String?
+  ward         String?
+  district     String?
+  city         String?
+  mediaAssetId String              @unique
+  media        MediaAsset          @relation(fields: [mediaAssetId], references: [id])
+  status       CleanupReportStatus @default(SUBMITTED)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  verifiedAt   DateTime?
+
+  @@index([reporterId])
+  @@index([status])
 }

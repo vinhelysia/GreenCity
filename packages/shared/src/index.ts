@@ -375,3 +375,47 @@ export const MARKETPLACE_ERROR_CODES = [
   "MEDIA_ALREADY_USED",
 ] as const;
 export type MarketplaceErrorCode = (typeof MARKETPLACE_ERROR_CODES)[number];
+
+// ─── Cleanup reports ─────────────────────────────────────────────────────────
+
+export const CleanupReportStatusSchema = z.enum([
+  "SUBMITTED",
+  "VERIFIED",
+  "REJECTED",
+]);
+export type CleanupReportStatus = z.infer<typeof CleanupReportStatusSchema>;
+
+export const CreateCleanupReportSchema = z.object({
+  description: z.string().trim().min(10).max(1000),
+  mediaAssetId: z.string().min(1),
+  addressLine: z.string().trim().max(240).optional(),
+  ward: z.string().trim().max(120).optional(),
+  district: z.string().trim().max(120).optional(),
+  city: z.string().trim().max(120).optional(),
+});
+export type CreateCleanupReport = z.infer<typeof CreateCleanupReportSchema>;
+
+export const CleanupReportSchema = z.object({
+  id: z.string(),
+  reporterId: z.string(),
+  description: z.string(),
+  addressLine: z.string().nullable(),
+  ward: z.string().nullable(),
+  district: z.string().nullable(),
+  city: z.string().nullable(),
+  media: MediaAssetPublicSchema,
+  status: CleanupReportStatusSchema,
+  createdAt: z.string(),
+});
+export type CleanupReportDto = z.infer<typeof CleanupReportSchema>;
+
+export const CleanupReportListSchema = z.object({
+  reports: z.array(CleanupReportSchema),
+});
+export type CleanupReportList = z.infer<typeof CleanupReportListSchema>;
+
+export const CLEANUP_ERROR_CODES = [
+  "CLEANUP_REPORT_NOT_FOUND",
+  "CLEANUP_REPORT_NOT_PENDING",
+] as const;
+export type CleanupErrorCode = (typeof CLEANUP_ERROR_CODES)[number];

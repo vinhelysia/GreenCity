@@ -15,6 +15,7 @@ import { MarketplaceModule } from './marketplace/marketplace.module';
 import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { StorageModule } from './storage/storage.module';
+import { CleanupModule } from './cleanup/cleanup.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { StorageModule } from './storage/storage.module';
     MediaModule,
     LocationModule,
     MarketplaceModule,
+    CleanupModule,
   ],
   providers: [
     {
