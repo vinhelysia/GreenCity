@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -9,14 +10,25 @@ import type {
   CleanupReportList,
   CleanupReportStatus,
   CreateCleanupReport,
+  PublicCleanupReportList,
 } from '@greencity/shared';
 import type { AuthContext } from '../authz/auth-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { toCleanupReportDto } from './cleanup.mapper';
+import {
+  OBJECT_STORAGE,
+  type ObjectStorage,
+} from '../storage/storage.types';
+import {
+  toCleanupReportDto,
+  toPublicCleanupReportDto,
+} from './cleanup.mapper';
 
 @Injectable()
 export class CleanupService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+  ) {}
 
   async submit(
     auth: AuthContext,
@@ -70,6 +82,48 @@ export class CleanupService {
       orderBy: { createdAt: 'desc' },
     });
     return { reports: rows.map(toCleanupReportDto) };
+  }
+
+  async listPublicVerified(): Promise<PublicCleanupReportList> {
+    const rows = await this.prisma.cleanupReport.findMany({
+      where: { status: 'VERIFIED' },
+      orderBy: { verifiedAt: 'desc' },
+      take: 12,
+    });
+    return { reports: rows.map(toPublicCleanupReportDto) };
+  }
+
+  async getPublicPhoto(
+    id: string,
+  ): Promise<{ contentType: string; body: Buffer }> {
+    const report = await this.prisma.cleanupReport.findFirst({
+      where: { id, status: 'VERIFIED' },
+    });
+    if (!report) {
+      throw new NotFoundException({
+        code: 'CLEANUP_REPORT_NOT_FOUND',
+        message: 'Cleanup report not found',
+      });
+    }
+    const asset = await this.prisma.mediaAsset.findUnique({
+      where: { id: report.mediaAssetId },
+    });
+    if (!asset || asset.deletedAt) {
+      throw new NotFoundException({
+        code: 'CLEANUP_REPORT_NOT_FOUND',
+        message: 'Cleanup report not found',
+      });
+    }
+    let body: Buffer;
+    try {
+      body = await this.storage.getObject(asset.objectKey);
+    } catch {
+      throw new NotFoundException({
+        code: 'CLEANUP_REPORT_NOT_FOUND',
+        message: 'Cleanup report not found',
+      });
+    }
+    return { contentType: asset.contentType, body };
   }
 
   async adminList(status?: CleanupReportStatus): Promise<CleanupReportList> {

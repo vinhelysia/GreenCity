@@ -101,6 +101,33 @@ describe('Cleanup report integration', () => {
     return res.body.id;
   }
 
+  async function submitReport(
+    description: string,
+    location: {
+      addressLine?: string;
+      ward?: string;
+      district?: string;
+      city?: string;
+    } = {},
+  ): Promise<string> {
+    const mediaAssetId = await uploadPhoto(reporterCookie);
+    const res = await request(app.getHttpServer())
+      .post('/cleanup-reports')
+      .set('Origin', 'http://localhost:3000')
+      .set('Cookie', reporterCookie)
+      .send({ description, mediaAssetId, ...location });
+    expect(res.status).toBe(201);
+    return res.body.id;
+  }
+
+  async function reviewReport(id: string, action: 'verify' | 'reject') {
+    const res = await request(app.getHttpServer())
+      .post(`/admin/cleanup-reports/${id}/${action}`)
+      .set('Origin', 'http://localhost:3000')
+      .set('Cookie', adminCookie);
+    expect(res.status).toBe(201);
+  }
+
   it('submits a report with owned photo, lists in mine, and admin verifies it', async () => {
     const mediaId = await uploadPhoto(reporterCookie);
 
@@ -222,5 +249,75 @@ describe('Cleanup report integration', () => {
       .set('Cookie', adminCookie);
     expect(secondVerifyRes.status).toBe(409);
     expect(secondVerifyRes.body.error.code).toBe('CLEANUP_REPORT_NOT_PENDING');
+  });
+
+  it('publicly lists only verified reports with an exact anonymized DTO', async () => {
+    const submittedId = await submitReport('Public feed submitted report');
+    const verifiedId = await submitReport('Public feed verified report', {
+      addressLine: '456 Exact Private Street',
+      ward: 'Private Ward',
+      district: 'Public District',
+      city: 'Public City',
+    });
+    const rejectedId = await submitReport('Public feed rejected report');
+    await reviewReport(verifiedId, 'verify');
+    await reviewReport(rejectedId, 'reject');
+
+    const stored = await prisma.cleanupReport.findUniqueOrThrow({
+      where: { id: verifiedId },
+    });
+    expect(stored.reporterId).toBeTruthy();
+    expect(stored.addressLine).toBe('456 Exact Private Street');
+    expect(stored.ward).toBe('Private Ward');
+
+    const res = await request(app.getHttpServer()).get('/cleanup-reports/public');
+    expect(res.status).toBe(200);
+    const ids = res.body.reports.map((report: { id: string }) => report.id);
+    expect(ids).toContain(verifiedId);
+    expect(ids).not.toContain(submittedId);
+    expect(ids).not.toContain(rejectedId);
+
+    const report = res.body.reports.find(
+      (candidate: { id: string }) => candidate.id === verifiedId,
+    );
+    expect(Object.keys(report).sort()).toEqual(
+      ['city', 'description', 'district', 'id', 'photoPath', 'verifiedAt'].sort(),
+    );
+    expect(report).toMatchObject({
+      id: verifiedId,
+      description: 'Public feed verified report',
+      city: 'Public City',
+      district: 'Public District',
+      photoPath: `/cleanup-reports/${verifiedId}/photo`,
+    });
+    expect(report.verifiedAt).toEqual(expect.any(String));
+    expect(report).not.toHaveProperty('reporterId');
+    expect(report).not.toHaveProperty('addressLine');
+    expect(report).not.toHaveProperty('ward');
+    expect(report).not.toHaveProperty('media');
+  });
+
+  it('publicly streams photos only for verified reports', async () => {
+    const verifiedId = await submitReport('Verified public photo report');
+    const submittedId = await submitReport('Submitted private photo report');
+    await reviewReport(verifiedId, 'verify');
+
+    const verifiedPhoto = await request(app.getHttpServer()).get(
+      `/cleanup-reports/${verifiedId}/photo`,
+    );
+    expect(verifiedPhoto.status).toBe(200);
+    expect(verifiedPhoto.headers['content-type']).toMatch(/^image\//);
+    expect(verifiedPhoto.headers['content-length']).toBe(
+      String(verifiedPhoto.body.length),
+    );
+    expect(verifiedPhoto.headers['content-disposition']).toBe('inline');
+    expect(verifiedPhoto.headers['x-content-type-options']).toBe('nosniff');
+    expect(verifiedPhoto.headers['cache-control']).toBe('public, max-age=300');
+
+    const submittedPhoto = await request(app.getHttpServer()).get(
+      `/cleanup-reports/${submittedId}/photo`,
+    );
+    expect(submittedPhoto.status).toBe(404);
+    expect(submittedPhoto.body.error.code).toBe('CLEANUP_REPORT_NOT_FOUND');
   });
 });
