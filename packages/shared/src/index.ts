@@ -414,6 +414,46 @@ export const CleanupReportListSchema = z.object({
 });
 export type CleanupReportList = z.infer<typeof CleanupReportListSchema>;
 
+// ─── Homepage: public read models ────────────────────────────────────────────
+
+/**
+ * A VERIFIED cleanup report shown publicly on the homepage. Deliberately
+ * anonymized: NO reporterId, NO street address (addressLine), NO ward — only a
+ * coarse city/district, the description, a public photo path, and when it was
+ * verified. A public dump site is not private, but the reporter's identity and
+ * precise location must never appear in a public feed.
+ */
+export const PublicCleanupReportSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  city: z.string().nullable(),
+  district: z.string().nullable(),
+  /** Same-origin public photo path, e.g. /cleanup-reports/:id/photo. */
+  photoPath: z.string(),
+  verifiedAt: z.string(),
+});
+export type PublicCleanupReport = z.infer<typeof PublicCleanupReportSchema>;
+
+export const PublicCleanupReportListSchema = z.object({
+  reports: z.array(PublicCleanupReportSchema),
+});
+export type PublicCleanupReportList = z.infer<
+  typeof PublicCleanupReportListSchema
+>;
+
+/**
+ * Homepage impact numbers. Every field is a REAL aggregate count from the
+ * database — never a fabricated or inflated figure. Small honest numbers on a
+ * demo dataset are fine.
+ */
+export const HomeStatsSchema = z.object({
+  availableListings: z.number().int().nonnegative(),
+  verifiedCleanupReports: z.number().int().nonnegative(),
+  /** Sum of estimatedWeightKg across all marketplace listings. */
+  scrapWeightKg: z.number().nonnegative(),
+});
+export type HomeStats = z.infer<typeof HomeStatsSchema>;
+
 export const CLEANUP_ERROR_CODES = [
   "CLEANUP_REPORT_NOT_FOUND",
   "CLEANUP_REPORT_NOT_PENDING",
