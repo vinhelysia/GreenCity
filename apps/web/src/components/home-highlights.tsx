@@ -88,51 +88,57 @@ export function HomeHighlights() {
       {/* 1. Impact Strip */}
       <section
         aria-labelledby="impact-stats-heading"
-        className="min-w-0 rounded-md border border-edge bg-paper-2 p-4 sm:p-6"
+        className="min-w-0 rounded-lg border border-rule bg-paper-2 px-5 py-6 sm:px-7 sm:py-7"
       >
-        <h2 id="impact-stats-heading" className="sr-only">
-          Thống kê tác động
+        <h2
+          id="impact-stats-heading"
+          className="font-display text-xs font-semibold uppercase tracking-widest text-accent"
+        >
+          Tác động đến nay
         </h2>
-        <div role="status" aria-live="polite">
+        <div role="status" aria-live="polite" className="mt-5">
           {statsState.status === "loading" ? (
             <div
               aria-hidden="true"
-              className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+              className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-4"
             >
-              <div className="skeleton h-20 w-full" />
-              <div className="skeleton h-20 w-full" />
-              <div className="skeleton h-20 w-full" />
+              <div className="skeleton h-16 w-full" />
+              <div className="skeleton h-16 w-full" />
+              <div className="skeleton h-16 w-full" />
             </div>
           ) : statsState.status === "error" ? (
             <p role="alert" className="text-sm leading-relaxed text-red-800">
               {statsState.message}
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div className="min-w-0 text-center sm:text-left">
-                <p className="font-display text-2xl font-bold tracking-tight text-accent sm:text-3xl">
-                  {viFormatter.format(statsState.data.availableListings)}
-                </p>
-                <p className="mt-1 text-sm font-medium text-muted">
-                  tin đang bán
-                </p>
-              </div>
-              <div className="min-w-0 text-center sm:text-left">
-                <p className="font-display text-2xl font-bold tracking-tight text-accent sm:text-3xl">
-                  {viFormatter.format(statsState.data.verifiedCleanupReports)}
-                </p>
-                <p className="mt-1 text-sm font-medium text-muted">
-                  điểm rác đã dọn
-                </p>
-              </div>
-              <div className="min-w-0 text-center sm:text-left">
-                <p className="font-display text-2xl font-bold tracking-tight text-accent sm:text-3xl">
-                  {viFormatter.format(statsState.data.scrapWeightKg)}
-                </p>
-                <p className="mt-1 text-sm font-medium text-muted">
-                  kg phế liệu
-                </p>
-              </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-4">
+              {[
+                {
+                  value: statsState.data.availableListings,
+                  label: "tin đang bán",
+                },
+                {
+                  value: statsState.data.verifiedCleanupReports,
+                  label: "điểm rác đã dọn",
+                },
+                {
+                  value: statsState.data.scrapWeightKg,
+                  label: "kg phế liệu",
+                },
+              ].map((tile) => (
+                <div key={tile.label} className="min-w-0">
+                  <p className="font-display text-4xl font-bold leading-none tracking-tight text-accent [overflow-wrap:anywhere] sm:text-5xl">
+                    {viFormatter.format(tile.value)}
+                  </p>
+                  <span
+                    aria-hidden="true"
+                    className="mt-3 block h-1 w-8 rounded-full bg-highlight"
+                  />
+                  <p className="mt-3 text-sm font-medium text-muted">
+                    {tile.label}
+                  </p>
+                </div>
+              ))}
             </div>
           )}
         </div>

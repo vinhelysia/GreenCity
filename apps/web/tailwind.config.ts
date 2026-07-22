@@ -7,11 +7,15 @@ const config: Config = {
       colors: {
         paper: "var(--color-paper)",
         "paper-2": "var(--color-paper-2)",
+        "paper-3": "var(--color-paper-3)",
         rule: "var(--color-rule)",
         edge: "var(--color-edge)",
         muted: "var(--color-muted)",
         ink: "var(--color-ink)",
         accent: "var(--color-accent)",
+        "accent-deep": "var(--color-accent-deep)",
+        highlight: "var(--color-highlight)",
+        "highlight-soft": "var(--color-highlight-soft)",
       },
       fontFamily: {
         display: [

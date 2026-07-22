@@ -1,9 +1,10 @@
-/* Hallmark · genre: editorial · macrostructure: stacked-wireframe-document
- * theme: Garden · tone: civic-editorial · anchor hue: leaf-green ~150
- * nav: N9 edge-aligned mast · footer: Ft1 mast-headed
- * enrichment: none (typography + honest placeholders)
+/* Hallmark · redesign: confident-leaf (evolution of Garden, in-place)
+ * genre: editorial · tone: civic-editorial · anchor hue: leaf-green ~150
+ * moves: deeper accent (chroma 0.13→0.16) · deeper ink for contrast ·
+ *        warm amber highlight (marks/underlines only, never text) ·
+ *        confident impact band with oversized numbers
  * fonts: Bricolage Grotesque + Be Vietnam Pro
- * pre-emit critique: P4 H5 E4 S5 R5 V4
+ * pre-emit critique: P5 H5 E4 S4 R5 V4
  */
 @tailwind base;
 @tailwind components;
@@ -14,14 +15,19 @@
 
   --header-height: 3.5rem;
 
-  /* Garden tokens — OKLCH, leaf-green anchor ~150. No mid-render improvisation. */
-  --color-paper: oklch(97.5% 0.008 150);
-  --color-paper-2: oklch(94% 0.012 150);
-  --color-rule: oklch(88% 0.014 150);
-  --color-edge: oklch(58% 0.03 150);
-  --color-muted: oklch(40% 0.03 155);
-  --color-ink: oklch(22% 0.025 155);
-  --color-accent: oklch(48% 0.13 152);
+  /* Confident-leaf tokens — OKLCH, leaf-green anchor ~150 + warm amber pop. */
+  --color-paper: oklch(98% 0.006 150);
+  --color-paper-2: oklch(95.5% 0.011 150);
+  --color-paper-3: oklch(92.5% 0.017 150);
+  --color-rule: oklch(87% 0.017 150);
+  --color-edge: oklch(52% 0.04 150);
+  --color-muted: oklch(42% 0.03 155);
+  --color-ink: oklch(18% 0.02 155);
+  --color-accent: oklch(44% 0.16 150);
+  --color-accent-deep: oklch(34% 0.15 150);
+  /* Warm amber — decorative marks/underlines/bands only, never as text on paper. */
+  --color-highlight: oklch(68% 0.15 68);
+  --color-highlight-soft: oklch(94% 0.05 80);
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
