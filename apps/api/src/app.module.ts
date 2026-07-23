@@ -14,6 +14,7 @@ import { MailModule } from './mail/mail.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { MediaModule } from './media/media.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PointsModule } from './points/points.module';
 import { StorageModule } from './storage/storage.module';
 import { CleanupModule } from './cleanup/cleanup.module';
 import { StatsModule } from './stats/stats.module';
@@ -45,6 +46,7 @@ import { StatsModule } from './stats/stats.module';
     LocationModule,
     MarketplaceModule,
     CleanupModule,
+    PointsModule,
     StatsModule,
   ],
   providers: [

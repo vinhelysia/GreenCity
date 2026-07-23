@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthzModule } from '../authz/authz.module';
+import { PointsModule } from '../points/points.module';
 import { StorageModule } from '../storage/storage.module';
 import { AdminController } from './admin.controller';
 import { ListingController } from './listing.controller';
@@ -12,7 +13,7 @@ import { SubscriptionController } from './subscription.controller';
 import { SubscriptionService } from './subscription.service';
 
 @Module({
-  imports: [AuthzModule, StorageModule],
+  imports: [AuthzModule, StorageModule, PointsModule],
   controllers: [
     ScrapCategoryController,
     ScrapRequestController,

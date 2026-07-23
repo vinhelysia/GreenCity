@@ -100,8 +100,9 @@ export function HomeHighlights() {
           {statsState.status === "loading" ? (
             <div
               aria-hidden="true"
-              className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-4"
+              className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4"
             >
+              <div className="skeleton h-16 w-full" />
               <div className="skeleton h-16 w-full" />
               <div className="skeleton h-16 w-full" />
               <div className="skeleton h-16 w-full" />
@@ -111,7 +112,7 @@ export function HomeHighlights() {
               {statsState.message}
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 sm:gap-4">
               {[
                 {
                   value: statsState.data.availableListings,
@@ -124,6 +125,10 @@ export function HomeHighlights() {
                 {
                   value: statsState.data.scrapWeightKg,
                   label: "kg phế liệu",
+                },
+                {
+                  value: statsState.data.totalPointsAwarded,
+                  label: "điểm thưởng đã trao",
                 },
               ].map((tile) => (
                 <div key={tile.label} className="min-w-0">

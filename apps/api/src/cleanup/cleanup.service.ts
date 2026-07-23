@@ -13,6 +13,7 @@ import type {
   PublicCleanupReportList,
 } from '@greencity/shared';
 import type { AuthContext } from '../authz/auth-context';
+import { PointsService } from '../points/points.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   OBJECT_STORAGE,
@@ -28,6 +29,7 @@ export class CleanupService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
+    private readonly points: PointsService,
   ) {}
 
   async submit(
@@ -136,31 +138,35 @@ export class CleanupService {
   }
 
   async adminVerify(id: string): Promise<CleanupReportDto> {
-    const res = await this.prisma.cleanupReport.updateMany({
-      where: { id, status: 'SUBMITTED' },
-      data: { status: 'VERIFIED', verifiedAt: new Date() },
-    });
-
-    if (res.count === 0) {
-      const existing = await this.prisma.cleanupReport.findUnique({
-        where: { id },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const res = await tx.cleanupReport.updateMany({
+        where: { id, status: 'SUBMITTED' },
+        data: { status: 'VERIFIED', verifiedAt: new Date() },
       });
-      if (!existing) {
-        throw new NotFoundException({
-          code: 'CLEANUP_REPORT_NOT_FOUND',
-          message: 'Cleanup report not found',
+      if (res.count === 0) {
+        const existing = await tx.cleanupReport.findUnique({
+          where: { id },
+        });
+        if (!existing) {
+          throw new NotFoundException({
+            code: 'CLEANUP_REPORT_NOT_FOUND',
+            message: 'Cleanup report not found',
+          });
+        }
+        throw new ConflictException({
+          code: 'CLEANUP_REPORT_NOT_PENDING',
+          message: 'Cleanup report is not pending',
         });
       }
-      throw new ConflictException({
-        code: 'CLEANUP_REPORT_NOT_PENDING',
-        message: 'Cleanup report is not pending',
-      });
-    }
 
-    const updated = await this.prisma.cleanupReport.findUniqueOrThrow({
-      where: { id },
-      include: { media: true },
+      const report = await tx.cleanupReport.findUniqueOrThrow({
+        where: { id },
+        include: { media: true },
+      });
+      await this.points.awardCleanupVerified(tx, report);
+      return report;
     });
+
     return toCleanupReportDto(updated);
   }
 

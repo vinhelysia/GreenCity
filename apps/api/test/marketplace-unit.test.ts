@@ -125,6 +125,7 @@ describe('marketplace unit', () => {
       {} as never,
       subscriptions as never,
       { record: jest.fn() } as never,
+      {} as never,
     );
     const auth = {
       user: { id: 'seller-1' },
@@ -149,6 +150,7 @@ describe('marketplace unit', () => {
       {} as never,
       subscriptions as never,
       { record: jest.fn() } as never,
+      {} as never,
     );
     const auth = {
       user: { id: 'buyer-1' },

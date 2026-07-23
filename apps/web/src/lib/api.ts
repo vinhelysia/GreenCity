@@ -25,6 +25,8 @@ import {
   type HomeStats,
   PublicCleanupReportListSchema,
   type PublicCleanupReportList,
+  PointsBalanceSchema,
+  type PointsBalance,
 } from "@greencity/shared";
 
 export type ParsedApiError = ApiError["error"];
@@ -300,6 +302,15 @@ export async function fetchSubscriptionState(): Promise<
   const result = await apiFetch<unknown>("/api/subscriptions/me");
   if (!result.ok) return result;
   const parsed = SubscriptionStateSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+/** GET /api/points/me — reward points balance and ledger entries. */
+export async function fetchMyPoints(): Promise<ApiResult<PointsBalance>> {
+  const result = await apiFetch<unknown>("/api/points/me");
+  if (!result.ok) return result;
+  const parsed = PointsBalanceSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
   return { ok: true, data: parsed.data, status: result.status };
 }

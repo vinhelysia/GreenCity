@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import type { MarketplaceListingList } from '@greencity/shared';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext } from '../authz/auth-context';
+import { PointsService } from '../points/points.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   OBJECT_STORAGE,
@@ -24,6 +25,7 @@ export class ListingService {
     @Inject(OBJECT_STORAGE) private readonly storage: ObjectStorage,
     private readonly subscriptions: SubscriptionService,
     private readonly audit: AuditService,
+    private readonly points: PointsService,
   ) {}
 
   /** Buyer-facing browse. viewerId is resolved from an optional session cookie. */
@@ -147,16 +149,29 @@ export class ListingService {
     id: string,
     requestId?: string,
   ): Promise<{ ok: true }> {
-    const update = await this.prisma.marketplaceListing.updateMany({
-      where: { id, status: 'RESERVED' },
-      data: { status: 'COMPLETED' },
-    });
-    if (update.count === 0) {
-      throw new ConflictException({
-        code: 'LISTING_NOT_AVAILABLE',
-        message: 'Listing is not reserved',
+    await this.prisma.$transaction(async (tx) => {
+      const update = await tx.marketplaceListing.updateMany({
+        where: { id, status: 'RESERVED' },
+        data: { status: 'COMPLETED' },
       });
-    }
+      if (update.count === 0) {
+        throw new ConflictException({
+          code: 'LISTING_NOT_AVAILABLE',
+          message: 'Listing is not reserved',
+        });
+      }
+
+      const listing = await tx.marketplaceListing.findUniqueOrThrow({
+        where: { id },
+        select: {
+          id: true,
+          sellerId: true,
+          estimatedWeightKg: true,
+          sellerPricePerKgVnd: true,
+        },
+      });
+      await this.points.awardListingCompleted(tx, listing);
+    });
 
     await this.audit.record({
       actorId: auth.user.id,

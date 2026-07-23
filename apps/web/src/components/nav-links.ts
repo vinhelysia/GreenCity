@@ -10,6 +10,7 @@ export const NAV_LINKS = [
   { href: "/ban-phe-lieu", label: "Bán phế liệu" },
   { href: "/dong-gop", label: "Đóng góp" },
   { href: "/cho-online", label: "Chợ online" },
+  { href: "/diem-thuong", label: "Điểm thưởng" },
 ] as const;
 
 export type NavHref = (typeof NAV_LINKS)[number]["href"];

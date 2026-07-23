@@ -21,7 +21,11 @@ describe('CleanupService public photo', () => {
     const storage = {
       getObject: jest.fn().mockRejectedValue(new Error('object missing')),
     };
-    const service = new CleanupService(prisma as never, storage as never);
+    const service = new CleanupService(
+      prisma as never,
+      storage as never,
+      {} as never,
+    );
 
     await expect(service.getPublicPhoto('report-1')).rejects.toMatchObject({
       status: 404,
@@ -53,7 +57,11 @@ describe('CleanupService public photo', () => {
       },
     };
     const storage = { getObject: jest.fn() };
-    const service = new CleanupService(prisma as never, storage as never);
+    const service = new CleanupService(
+      prisma as never,
+      storage as never,
+      {} as never,
+    );
 
     await expect(service.getPublicPhoto('report-1')).rejects.toMatchObject({
       status: 404,
