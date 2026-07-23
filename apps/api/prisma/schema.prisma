@@ -42,6 +42,7 @@ model User {
   reservations        Reservation[]
   subscriptions       Subscription[]
   cleanupReports      CleanupReport[]
+  pointEntries        PointEntry[]
 }
 
 model Session {
@@ -298,4 +299,29 @@ model CleanupReport {
 
   @@index([reporterId])
   @@index([status])
+}
+
+enum PointReason {
+  LISTING_COMPLETED
+  CLEANUP_VERIFIED
+}
+
+/// Append-only rewards ledger. There is no balance column on purpose: a balance
+/// is SUM(delta) over a user's rows, so points can never drift away from the
+/// events that granted them, and an award is never lost to a lost update.
+/// referenceId is the granting record (listing id / cleanup report id), and
+/// @@unique([reason, referenceId]) is what makes awarding idempotent — the
+/// conditional status update in the service is the mechanism that serializes a
+/// transition, this constraint is the backstop that survives a logic regression.
+model PointEntry {
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delta       Int
+  reason      PointReason
+  referenceId String
+  createdAt   DateTime    @default(now())
+
+  @@unique([reason, referenceId])
+  @@index([userId, createdAt])
 }

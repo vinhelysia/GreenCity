@@ -451,6 +451,8 @@ export const HomeStatsSchema = z.object({
   verifiedCleanupReports: z.number().int().nonnegative(),
   /** Sum of estimatedWeightKg across all marketplace listings. */
   scrapWeightKg: z.number().nonnegative(),
+  /** Sum of every positive ledger delta ever awarded, across all users. */
+  totalPointsAwarded: z.number().int().nonnegative(),
 });
 export type HomeStats = z.infer<typeof HomeStatsSchema>;
 
@@ -459,3 +461,30 @@ export const CLEANUP_ERROR_CODES = [
   "CLEANUP_REPORT_NOT_PENDING",
 ] as const;
 export type CleanupErrorCode = (typeof CLEANUP_ERROR_CODES)[number];
+
+/**
+ * Reward points. The ledger is append-only: a balance is always SUM(delta) over
+ * a user's entries, never a stored column, so every point traces back to the
+ * event that granted it. Points are internal to GreenCity — they are not money,
+ * not a currency, and redemption is deliberately out of scope.
+ */
+export const PointReasonSchema = z.enum([
+  "LISTING_COMPLETED",
+  "CLEANUP_VERIFIED",
+]);
+export type PointReason = z.infer<typeof PointReasonSchema>;
+
+export const PointEntrySchema = z.object({
+  id: z.string().min(1),
+  /** Positive for an award. Negative deltas are reserved for future redemption. */
+  delta: z.number().int(),
+  reason: PointReasonSchema,
+  occurredAt: z.string().datetime(),
+});
+export type PointEntry = z.infer<typeof PointEntrySchema>;
+
+export const PointsBalanceSchema = z.object({
+  balance: z.number().int(),
+  entries: z.array(PointEntrySchema),
+});
+export type PointsBalance = z.infer<typeof PointsBalanceSchema>;
