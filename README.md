@@ -4,7 +4,7 @@ GreenCity is a pnpm monorepo for a recycling marketplace + cleanup platform (API
 
 Working today: email/password auth (Argon2id, opaque DB-backed sessions), and a scrap-marketplace vertical slice — sellers submit scrap with a photo, admins quote within a published price band, sellers accept, listings go live, and subscribed buyers reserve (one winner per listing, enforced transactionally). Stack: NestJS API, Next.js web, Prisma, native local PostgreSQL + PostGIS, local filesystem storage, console mail.
 
-Not implemented, and not faked: real payment, buyer subscription billing, seller reward payout, and the cleanup-report workflow.
+Not implemented, and not faked: real payment, buyer subscription billing, seller reward payout, cleanup assignment, field collection, before/after evidence, and completion verification.
 
 **Docker is not required for local development.**
 

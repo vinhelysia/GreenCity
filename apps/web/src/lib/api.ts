@@ -42,6 +42,7 @@ export async function apiFetch<T>(
   // boundary — only string bodies (JSON.stringify output) get the JSON header.
   const hasJsonBody = typeof init?.body === "string";
   let res: Response;
+  let text: string;
   try {
     res = await fetch(path, {
       ...init,
@@ -52,8 +53,9 @@ export async function apiFetch<T>(
         ...init?.headers,
       },
     });
+    text = await res.text();
   } catch {
-    // fetch rejects on a dropped connection or DNS failure. Without this the
+    // Fetch and body consumption can both fail when a connection drops.
     // rejection propagates to the caller, whose submit handler never clears its
     // pending state, so the form stays stuck on "đang gửi" with no way out.
     return {
@@ -67,7 +69,6 @@ export async function apiFetch<T>(
   }
 
   let body: unknown = null;
-  const text = await res.text();
   if (text) {
     try {
       body = JSON.parse(text) as unknown;

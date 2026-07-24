@@ -491,11 +491,14 @@ describe('Phase 1 integration', () => {
     expect(deleteAttempt.status).toBe(404);
   });
 
-  it('rate limits login and registration by socket IP before handlers', async () => {
+  it("rate limits by Render's first client IP and ignores appended spoofed hops", async () => {
     const oldLimit = process.env.AUTH_LOGIN_RATE_LIMIT;
+    const oldTrustProxy = process.env.TRUST_PROXY;
     process.env.AUTH_LOGIN_RATE_LIMIT = '2';
+    process.env.TRUST_PROXY = '1';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     const rateApp = moduleRef.createNestApplication();
+    rateApp.getHttpAdapter().getInstance().set('trust proxy', 1);
     rateApp.use(requestIdMiddleware);
     rateApp.use(cookieParser());
     rateApp.useGlobalFilters(new ApiExceptionFilter());
@@ -510,7 +513,10 @@ describe('Phase 1 integration', () => {
             await request(rateApp.getHttpServer())
               .post('/auth/register')
               .set('Origin', 'http://localhost:3000')
-              .set('X-Forwarded-For', `203.0.113.${i + 1}`)
+              .set(
+                'X-Forwarded-For',
+                `203.0.113.10, 198.51.100.${i + 1}`,
+              )
               .send({})
           ).status,
         );
@@ -519,7 +525,10 @@ describe('Phase 1 integration', () => {
             await request(rateApp.getHttpServer())
               .post('/auth/login')
               .set('Origin', 'http://localhost:3000')
-              .set('X-Forwarded-For', `198.51.100.${i + 1}`)
+              .set(
+                'X-Forwarded-For',
+                `198.51.100.10, 203.0.113.${i + 1}`,
+              )
               .send({ email: email(`rate-${i}`), password: 'password-123' })
           ).status,
         );
@@ -531,6 +540,8 @@ describe('Phase 1 integration', () => {
       await rateApp.close();
       if (oldLimit === undefined) delete process.env.AUTH_LOGIN_RATE_LIMIT;
       else process.env.AUTH_LOGIN_RATE_LIMIT = oldLimit;
+      if (oldTrustProxy === undefined) delete process.env.TRUST_PROXY;
+      else process.env.TRUST_PROXY = oldTrustProxy;
     }
   });
 });

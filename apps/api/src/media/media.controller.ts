@@ -80,9 +80,4 @@ export class MediaController {
     res.send(body);
   }
 
-  // No delete route on purpose. Nothing in the product deletes media yet, and
-  // deleting it safely needs an atomic claim between "is this still referenced"
-  // and "mark it gone" that is not worth building for a feature no screen uses.
-  // MediaService.softDelete keeps the reference guard and row-first ordering for
-  // whenever a real delete flow is designed; it is simply not exposed.
 }
