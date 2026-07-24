@@ -33,6 +33,15 @@ Kiểm nhanh bằng `curl -s https://greencity-api.onrender.com/stats` →
 | Tài khoản | `admin@` · `seller@` · `buyer@` (đều `@greencity.demo`) |
 | Mật khẩu | `DEMO_PASSWORD` trong `.env.supabase.local` — **không nằm trong repo** |
 
+Trang quản trị **không nằm trong thanh điều hướng** — phải gõ thẳng địa chỉ, nên **mở sẵn tab
+trước khi lên**:
+
+| Việc | Địa chỉ |
+|---|---|
+| Xác nhận giao dịch (khoảnh khắc chốt) | `/admin/giao-dich` |
+| Duyệt báo cáo điểm rác | `/admin/dong-gop` |
+| Báo giá cho tin đăng | `/admin/bao-gia` |
+
 `buyer@` đã có gói đang hoạt động (điều kiện để đặt giữ) và cũng là người gửi báo cáo rác.
 
 ## 3. Kịch bản 5 phút
@@ -42,8 +51,8 @@ Kiểm nhanh bằng `curl -s https://greencity-api.onrender.com/stats` →
 | 0:00 | Trang chủ — chỉ vào dải số liệu thật | — |
 | 0:30 | Đăng tin bán phế liệu (`/ban-phe-lieu`) | `seller@` |
 | 1:30 | Đặt giữ một tin trên `/cho-online` — nêu rõ **không thấy danh tính người bán** | `buyer@` |
-| 2:30 | **Khoảnh khắc chốt**: bấm hoàn tất → mở `/diem-thuong` thấy điểm nhảy từ 0 | `admin@` rồi `seller@` |
-| 3:30 | Xác minh báo cáo rác đang chờ → người báo được +50 | `admin@` |
+| 2:30 | **Khoảnh khắc chốt**: `/admin/giao-dich` → bấm **Hoàn tất giao dịch** → mở `/diem-thuong` thấy điểm nhảy từ 0 | `admin@` rồi `seller@` |
+| 3:30 | `/admin/dong-gop` → xác minh báo cáo đang chờ → người báo được +50 | `admin@` |
 | 4:15 | Chốt vòng lặp: điểm đổi qua Dịch vụ công cộng TPHCM (định hướng) | — |
 
 Cách tính điểm: **1 điểm cho mỗi 1.000đ người bán nhận** (tối thiểu 1), và **50 điểm** cho mỗi
