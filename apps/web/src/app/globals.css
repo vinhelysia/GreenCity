@@ -1,10 +1,16 @@
-/* Hallmark · redesign: confident-leaf (evolution of Garden, in-place)
- * genre: editorial · tone: civic-editorial · anchor hue: leaf-green ~150
- * moves: deeper accent (chroma 0.13→0.16) · deeper ink for contrast ·
- *        warm amber highlight (marks/underlines only, never text) ·
- *        confident impact band with oversized numbers
+/* Hallmark · macrostructure: Narrative Workflow · genre: editorial
+ * tone: civic-editorial · anchor hue: leaf-green ~150 · theme: confident-leaf (kept)
+ * previous shape: uniform ruled stack — every section identically padded, one
+ *   card shell for every kind of content, four empty editorial slots closing
+ *   the page. Structure changed; palette deliberately unchanged.
+ * moves: five numbered stages as the page's spine (the sequence is real) ·
+ *        section rhythm alternates ruled / open / full-bleed band ·
+ *        cards differentiate by content — photo-led for cleanup evidence,
+ *        type-led for listings, unbordered for stages ·
+ *        tabular-nums on every figure · documentary photography, no stock
+ * motion: none added (no motion library in this project)
  * fonts: Bricolage Grotesque + Be Vietnam Pro
- * pre-emit critique: P5 H5 E4 S4 R5 V4
+ * pre-emit critique: P5 H5 E4 S5 R4 V4
  */
 @tailwind base;
 @tailwind components;
@@ -82,6 +88,16 @@ body {
   transform: translateY(0.75rem);
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Full-bleed tint that never widens the layout. Viewport units are wrong here:
+ * `50vw` counts the scrollbar, so `margin-inline: calc(50% - 50vw)` hangs the
+ * band a scrollbar-width past both page edges. Painting the tint with a spread
+ * shadow keeps the element's box exactly as wide as its container — only the
+ * paint bleeds, and the root `overflow-x: clip` trims it at the viewport. */
+.band-bleed {
+  box-shadow: 0 0 0 100vmax var(--color-paper-2);
+  clip-path: inset(0 -100vmax);
 }
 
 /* Placeholder editorial blocks — dashed, clearly not real content. */

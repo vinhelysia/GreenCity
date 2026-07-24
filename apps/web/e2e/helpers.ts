@@ -2,7 +2,7 @@ import { expect, type Page, type ConsoleMessage, type Request } from "@playwrigh
 
 /** Public routes with expected visible h1 text. */
 export const ROUTES = [
-  { path: "/", h1: "GreenCity — tái chế và làm sạch thành phố" },
+  { path: "/", h1: "Rác có người mua. Điểm rác có người dọn." },
   { path: "/thung-rac", h1: "Thùng rác" },
   { path: "/dich-vu", h1: "Dịch vụ" },
   { path: "/dong-gop", h1: "Đóng góp" },

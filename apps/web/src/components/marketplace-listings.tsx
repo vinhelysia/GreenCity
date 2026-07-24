@@ -133,24 +133,35 @@ function ListingCard({
   }
 
   return (
-    <li className="flex min-w-0 flex-col overflow-hidden rounded-md border border-edge bg-paper">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={`/api/marketplace/listings/${listing.id}/photo`}
-        alt=""
-        className="h-40 w-full object-cover"
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 p-4">
-        <p className="font-medium text-ink">{listing.categoryName}</p>
-        <p className="text-sm text-muted">{listing.estimatedWeightKg}kg</p>
-        <p className="text-sm text-muted">
-          {formatVnd(listing.buyerPricePerKgVnd)}/kg
-        </p>
-        <p className="text-sm font-medium text-ink">
-          Ước tính: {formatVnd(listing.estimatedTotalVnd)}
-        </p>
+    <li className="flex min-w-0 flex-col rounded-md border border-edge bg-paper p-4">
+      {/* Type-led: the material and the price are what a buyer scans. The photo
+          supports that decision rather than filling a banner above it. */}
+      <div className="flex min-w-0 items-start gap-4">
+        <div className="aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-md border border-edge bg-paper-3 sm:w-28">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`/api/marketplace/listings/${listing.id}/photo`}
+            alt=""
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-display text-lg font-semibold tracking-tight text-ink">
+            {listing.categoryName}
+          </h3>
+          <p className="mt-1 text-sm tabular-nums text-muted">
+            {listing.estimatedWeightKg}kg ·{" "}
+            {formatVnd(listing.buyerPricePerKgVnd)}/kg
+          </p>
+          <p className="mt-2 font-display text-xl font-bold tabular-nums text-ink">
+            {formatVnd(listing.estimatedTotalVnd)}
+          </p>
+        </div>
+      </div>
 
-        <div className="mt-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="mt-4">
           {listing.isOwn ? (
             <span className="inline-flex items-center rounded-sm border border-edge bg-paper-2 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-muted">
               Tin của bạn

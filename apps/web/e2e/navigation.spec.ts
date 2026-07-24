@@ -1,11 +1,14 @@
 import { test, expect } from "@playwright/test";
 import {
   NAV_LINKS,
+  ROUTES,
   attachRuntimeGuards,
   assertCleanRuntime,
   mainNav,
   menuToggle,
 } from "./helpers";
+
+const HOME_H1 = ROUTES[0].h1;
 
 test.describe("Desktop navigation", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
@@ -43,7 +46,7 @@ test.describe("Desktop navigation", () => {
     await page.waitForURL("**/cho-online");
     await page.goBack();
     await page.waitForURL((url) => url.pathname === "/");
-    await expect(page.locator("h1")).toContainText("GreenCity");
+    await expect(page.locator("h1")).toHaveText(HOME_H1);
     await page.goForward();
     await page.waitForURL("**/cho-online");
     await expect(page.locator("h1")).toHaveText("Chợ online");

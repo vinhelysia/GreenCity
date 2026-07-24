@@ -14,6 +14,9 @@
  */
 import { config as loadDotenv } from 'dotenv';
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { PrismaClient } from '@prisma/client';
 import { PasswordService } from '../src/auth/password.service';
@@ -63,15 +66,71 @@ const DEMO_LISTINGS = [
   },
 ] as const;
 
-/// Left in SUBMITTED so a rehearsal always has one report to verify on camera.
-const DEMO_CLEANUP = {
-  n: 1,
-  description: 'Bãi rác tự phát ven kênh, đã thu gom và phân loại',
-  ward: 'Phường 5',
-  district: 'Quận Bình Thạnh',
-  city: 'TP. Hồ Chí Minh',
-  color: { r: 120, g: 144, b: 156 },
-} as const;
+/// Report 1 stays SUBMITTED so a rehearsal always has one to verify on camera;
+/// the rest are VERIFIED so the public feed shows a real cleaned-up history.
+/// Each description matches what its photograph actually shows — a caption that
+/// disagrees with its image reads as fabricated, which is worse than no photo.
+const DEMO_CLEANUPS = [
+  {
+    n: 1,
+    status: 'SUBMITTED',
+    description:
+      'Bãi rác tự phát ven kênh, đổ tràn ngay dưới biển cấm đổ rác của phường',
+    ward: 'Phường Chánh Hưng',
+    district: 'Quận 8',
+    color: { r: 120, g: 144, b: 156 },
+  },
+  {
+    n: 2,
+    status: 'VERIFIED',
+    description:
+      'Rác thải sinh hoạt và xà bần dồn dọc lối đi bộ ven sông, lấn hết mặt đường',
+    ward: 'Phường 22',
+    district: 'Quận Bình Thạnh',
+    color: { r: 141, g: 110, b: 99 },
+  },
+  {
+    n: 3,
+    status: 'VERIFIED',
+    description: 'Rác vương vãi hai bên vỉa hè khu dân cư, cạnh lòng đường',
+    ward: 'Phường Tân Phú',
+    district: 'Thành phố Thủ Đức',
+    color: { r: 96, g: 125, b: 139 },
+  },
+  {
+    n: 4,
+    status: 'VERIFIED',
+    description: 'Túi rác chất đống sát chân tường ven đường trước khu chung cư',
+    ward: 'Phường Tân Thới Nhất',
+    district: 'Quận 12',
+    color: { r: 109, g: 133, b: 116 },
+  },
+] as const;
+
+const CLEANUP_CITY = 'TP. Hồ Chí Minh';
+
+/**
+ * Real photographs live in a gitignored folder (they are third-party press
+ * images). When one is present it is used; otherwise the original flat-colour
+ * tile is generated, so a fresh clone and CI both still seed successfully.
+ */
+async function demoPhoto(
+  fileName: string,
+  fallbackColor: { r: number; g: number; b: number },
+): Promise<Buffer> {
+  const path = resolve(dirname(fileURLToPath(import.meta.url)), 'seed-assets', fileName);
+  if (existsSync(path)) {
+    // Downscale here rather than shipping a 2560px original: the API streams
+    // these bytes on every card render.
+    return sharp(await readFile(path))
+      .resize(1280, 960, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 82 })
+      .toBuffer();
+  }
+  return sharp({ create: { width: 64, height: 64, channels: 3, background: fallbackColor } })
+    .png()
+    .toBuffer();
+}
 
 function loadCanonicalEnv(): void {
   const repoRoot = findRuntimeRoot();
@@ -185,9 +244,9 @@ async function main() {
     // and the reward moment could only ever be shown once. Scoped to seed-owned
     // ids by design — anything a real user created is left untouched.
     const seedListingIds = DEMO_LISTINGS.map((d) => `seed-listing-${d.n}`);
-    const seedCleanupId = `seed-cleanup-report-${DEMO_CLEANUP.n}`;
+    const seedCleanupIds = DEMO_CLEANUPS.map((c) => `seed-cleanup-report-${c.n}`);
     await prisma.pointEntry.deleteMany({
-      where: { referenceId: { in: [...seedListingIds, seedCleanupId] } },
+      where: { referenceId: { in: [...seedListingIds, ...seedCleanupIds] } },
     });
     await prisma.reservation.deleteMany({
       where: { listingId: { in: seedListingIds } },
@@ -283,14 +342,10 @@ async function main() {
       });
     }
 
-    {
-      const mediaId = `seed-cleanup-media-${DEMO_CLEANUP.n}`;
-      const raw = await sharp({
-        create: { width: 64, height: 64, channels: 3, background: DEMO_CLEANUP.color },
-      })
-        .png()
-        .toBuffer();
-      const processed = await processImageUpload(raw, 'image/png', `demo-cleanup-${DEMO_CLEANUP.n}.png`);
+    for (const c of DEMO_CLEANUPS) {
+      const mediaId = `seed-cleanup-media-${c.n}`;
+      const raw = await demoPhoto(`photo-${c.n}.jpg`, c.color);
+      const processed = await processImageUpload(raw, 'image/jpeg', `demo-cleanup-${c.n}.jpg`);
       const objectKey = `media/${buyer.id}/${mediaId}.${extensionForMime(processed.contentType)}`;
       await storage.putObject({
         key: objectKey,
@@ -307,7 +362,7 @@ async function main() {
           byteSize: processed.byteSize,
           width: processed.width,
           height: processed.height,
-          originalName: `demo-cleanup-${DEMO_CLEANUP.n}.png`,
+          originalName: `demo-cleanup-${c.n}.jpg`,
         },
         update: {
           objectKey,
@@ -318,25 +373,28 @@ async function main() {
         },
       });
 
+      const verifiedAt = c.status === 'VERIFIED' ? new Date() : null;
       await prisma.cleanupReport.upsert({
-        where: { id: seedCleanupId },
+        where: { id: `seed-cleanup-report-${c.n}` },
         create: {
-          id: seedCleanupId,
+          id: `seed-cleanup-report-${c.n}`,
           reporterId: buyer.id,
-          description: DEMO_CLEANUP.description,
-          ward: DEMO_CLEANUP.ward,
-          district: DEMO_CLEANUP.district,
-          city: DEMO_CLEANUP.city,
+          description: c.description,
+          ward: c.ward,
+          district: c.district,
+          city: CLEANUP_CITY,
           mediaAssetId: media.id,
-          status: 'SUBMITTED',
+          status: c.status,
+          verifiedAt,
         },
-        update: { status: 'SUBMITTED', verifiedAt: null },
+        update: { status: c.status, verifiedAt },
       });
     }
 
+    const submitted = DEMO_CLEANUPS.filter((c) => c.status === 'SUBMITTED').length;
     // eslint-disable-next-line no-console
     console.log(
-      `Seeded: admin=${admin.email} seller=${seller.email} buyer=${buyer.email}, ${CATEGORIES.length} categories, ${DEMO_LISTINGS.length} listings (all AVAILABLE), 1 cleanup report (SUBMITTED), seed reward points cleared`,
+      `Seeded: admin=${admin.email} seller=${seller.email} buyer=${buyer.email}, ${CATEGORIES.length} categories, ${DEMO_LISTINGS.length} listings (all AVAILABLE), ${DEMO_CLEANUPS.length} cleanup reports (${submitted} SUBMITTED), seed reward points cleared`,
     );
   } finally {
     await prisma.$disconnect();

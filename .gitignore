@@ -50,3 +50,8 @@ temp/
 # User-owned local tooling — never part of the product repo
 .agents/
 blender/
+
+# Demo photographs are third-party press images: kept out of the public repo,
+# uploaded to object storage by the seed. Without them the seed falls back to
+# generated placeholders, so a fresh clone still seeds.
+apps/api/prisma/seed-assets/
