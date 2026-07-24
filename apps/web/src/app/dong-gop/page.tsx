@@ -14,8 +14,9 @@ export default function DongGopPage() {
         title="Đóng góp"
         description={
           <p>
-            Báo cáo điểm rác thải tự phát để ban quản lý xác minh và tiến hành
-            dọn dẹp.
+            Báo cáo điểm rác thải tự phát để ban quản lý xác minh, rồi chuyển
+            thông tin tới đơn vị vệ sinh phụ trách. GreenCity ghi nhận và xác
+            minh, chưa trực tiếp điều phối thu gom.
           </p>
         }
       />

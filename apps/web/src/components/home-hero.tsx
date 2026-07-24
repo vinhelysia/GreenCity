@@ -43,7 +43,7 @@ export function HomeHero() {
           id="hero-heading"
           className="font-display text-3xl font-semibold leading-tight tracking-tight text-ink [overflow-wrap:anywhere] sm:text-4xl md:text-[2.75rem]"
         >
-          Rác có người mua. Điểm rác có người dọn.
+          Rác có người mua. Điểm rác có người báo.
         </h1>
         <p className="mt-5 max-w-prose text-base leading-relaxed text-muted sm:text-lg">
           GreenCity nối hai việc vốn rời nhau: bán phế liệu tái chế theo giá

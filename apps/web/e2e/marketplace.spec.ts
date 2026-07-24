@@ -95,6 +95,18 @@ test("seller submits, admin quotes, seller accepts, buyer reserves", async ({ pa
 
   // 3. Seeded admin quotes within the band.
   await login(page, "admin@greencity.demo", DEMO_PASSWORD);
+
+  // The admin screens live outside the public nav, so the only way in is the
+  // admin-only header link. Prove it appears and lands on an admin screen,
+  // otherwise an admin has no route to the queues but typing URLs.
+  const adminLink = page.getByTestId("header-admin");
+  await expect(adminLink).toBeVisible();
+  await adminLink.click();
+  await page.waitForURL("**/admin/**");
+  await expect(
+    page.getByRole("navigation", { name: "Khu vực quản trị" }),
+  ).toBeVisible();
+
   await page.goto("/admin/bao-gia", { waitUntil: "networkidle" });
   const adminRow = page.locator("li").filter({ hasText: `${WEIGHT}kg` }).first();
   await expect(adminRow).toBeVisible({ timeout: 15_000 });

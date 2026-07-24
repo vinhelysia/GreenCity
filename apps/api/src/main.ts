@@ -29,6 +29,11 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
+  // Behind Render's proxy, req.ip is the proxy unless Express is told how many
+  // hops to trust. A specific hop count (never `true`) so X-Forwarded-For can't
+  // be spoofed past the trusted proxies. 0 locally = trust nothing.
+  app.getHttpAdapter().getInstance().set('trust proxy', env.TRUST_PROXY);
+
   app.use(requestIdMiddleware);
   app.use(cookieParser());
   app.useGlobalFilters(new ApiExceptionFilter());

@@ -70,6 +70,13 @@ const EnvSchema = z.object({
   /** Login rate limit: max attempts per IP per window. */
   AUTH_LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
   AUTH_LOGIN_RATE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
+  /**
+   * Proxy hops in front of the API. 0 for local (no proxy) so a spoofed
+   * X-Forwarded-For is never trusted; 1 on Render, whose edge sits one hop in
+   * front — without it every request keys the rate limiter on the proxy's IP,
+   * so all users share one bucket. See NestJS security/rate-limiting docs.
+   */
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

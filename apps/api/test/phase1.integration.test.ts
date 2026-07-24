@@ -481,16 +481,14 @@ describe('Phase 1 integration', () => {
       .set('Cookie', cookie);
     expect(invalid.status).toBe(400);
 
-    const deleted = await request(app.getHttpServer())
+    // Deleting media is intentionally not exposed: safe deletion needs an
+    // atomic reference-claim not worth building for a feature no screen uses,
+    // so the route is gone and the request 404s at routing.
+    const deleteAttempt = await request(app.getHttpServer())
       .delete(`/media/${up.body.id}`)
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', cookie);
-    expect(deleted.status).toBe(200);
-    const duplicateDelete = await request(app.getHttpServer())
-      .delete(`/media/${up.body.id}`)
-      .set('Origin', 'http://localhost:3000')
-      .set('Cookie', cookie);
-    expect(duplicateDelete.status).toBe(404);
+    expect(deleteAttempt.status).toBe(404);
   });
 
   it('rate limits login and registration by socket IP before handlers', async () => {

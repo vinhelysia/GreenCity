@@ -1,6 +1,5 @@
 import {
   Controller,
-  Delete,
   Get,
   Param,
   Post,
@@ -81,13 +80,9 @@ export class MediaController {
     res.send(body);
   }
 
-  @Delete(':id')
-  async remove(
-    @CurrentUser() auth: AuthContext,
-    @Param('id') id: string,
-    @Req() req: Request,
-  ) {
-    await this.media.softDelete(auth, id, getRequestId(req));
-    return { ok: true };
-  }
+  // No delete route on purpose. Nothing in the product deletes media yet, and
+  // deleting it safely needs an atomic claim between "is this still referenced"
+  // and "mark it gone" that is not worth building for a feature no screen uses.
+  // MediaService.softDelete keeps the reference guard and row-first ordering for
+  // whenever a real delete flow is designed; it is simply not exposed.
 }

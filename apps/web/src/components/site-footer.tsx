@@ -11,7 +11,7 @@ export function SiteFooter() {
           <p className="font-display text-base font-semibold text-ink">{APP_NAME}</p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             Nơi bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát
-            để được xác minh dọn dẹp.
+            để được ghi nhận, xác minh.
           </p>
         </div>
         <nav aria-label="Liên kết chân trang">

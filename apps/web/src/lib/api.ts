@@ -41,15 +41,30 @@ export async function apiFetch<T>(
   // FormData (media upload) must keep the browser-generated multipart
   // boundary — only string bodies (JSON.stringify output) get the JSON header.
   const hasJsonBody = typeof init?.body === "string";
-  const res = await fetch(path, {
-    ...init,
-    credentials: "include",
-    headers: {
-      Accept: "application/json",
-      ...(hasJsonBody ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      ...init,
+      credentials: "include",
+      headers: {
+        Accept: "application/json",
+        ...(hasJsonBody ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    // fetch rejects on a dropped connection or DNS failure. Without this the
+    // rejection propagates to the caller, whose submit handler never clears its
+    // pending state, so the form stays stuck on "đang gửi" with no way out.
+    return {
+      ok: false,
+      status: 0,
+      error: {
+        code: "NETWORK_ERROR",
+        message: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+      },
+    };
+  }
 
   let body: unknown = null;
   const text = await res.text();

@@ -20,13 +20,23 @@ const body = Be_Vietnam_Pro({
   display: "swap",
 });
 
+const APP_DESCRIPTION =
+  "Bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát để được ghi nhận, xác minh.";
+
 export const metadata: Metadata = {
   title: {
     default: APP_NAME,
     template: `%s · ${APP_NAME}`,
   },
-  description:
-    "Bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát để được ghi nhận, xác minh.",
+  description: APP_DESCRIPTION,
+  // A readable card when the link is pasted into chat or a submission form.
+  openGraph: {
+    title: APP_NAME,
+    description: APP_DESCRIPTION,
+    siteName: APP_NAME,
+    locale: "vi_VN",
+    type: "website",
+  },
 };
 
 export default function RootLayout({

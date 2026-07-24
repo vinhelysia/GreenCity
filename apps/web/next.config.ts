@@ -22,6 +22,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Cheap, always-safe response headers. A full CSP is deliberately left for
+  // after the contest — it needs per-source tuning and can break the app if
+  // rushed — but these four cost nothing and close the easy findings.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

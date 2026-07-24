@@ -31,6 +31,10 @@ services:
         value: "20"
       - key: NODE_ENV
         value: production
+      # Render's edge is one proxy hop in front of the app; without this the
+      # rate limiter keys every request on the proxy IP (one shared bucket).
+      - key: TRUST_PROXY
+        value: "1"
       # PORT is injected by Render; main.ts prefers it over API_PORT.
       - key: DATABASE_URL
         sync: false # secret — set in the Render dashboard, never commit
