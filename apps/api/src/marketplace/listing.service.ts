@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { MarketplaceListingList } from '@greencity/shared';
+import type { ListingStatus, MarketplaceListingList } from '@greencity/shared';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext } from '../authz/auth-context';
 import { PointsService } from '../points/points.service';
@@ -37,6 +37,19 @@ export class ListingService {
       orderBy: { createdAt: 'desc' },
     });
     return { listings: rows.map((row) => toListingDto(row, viewerId)) };
+  }
+
+  /**
+   * Admin queue. Unlike the buyer-facing browse this can list any status —
+   * completing a sale needs the RESERVED ones, which never appear on the market.
+   */
+  async adminList(status?: ListingStatus): Promise<MarketplaceListingList> {
+    const rows = await this.prisma.marketplaceListing.findMany({
+      where: status ? { status } : {},
+      orderBy: { createdAt: 'desc' },
+    });
+    // No viewer: an admin is acting on the listing, not shopping for it.
+    return { listings: rows.map((row) => toListingDto(row, null)) };
   }
 
   async getPhoto(id: string): Promise<{ contentType: string; body: Buffer }> {

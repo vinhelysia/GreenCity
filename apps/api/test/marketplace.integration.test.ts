@@ -253,16 +253,42 @@ describe('Marketplace integration', () => {
     expect(reservedPhoto.status).toBe(404);
     expect(reservedPhoto.body.error.code).toBe('LISTING_NOT_AVAILABLE');
 
+    // The admin queue is the only way to reach a reserved listing from the UI:
+    // it never appears in the buyer-facing browse, so completing a sale would
+    // otherwise be unreachable outside a hand-written request.
+    const queued = await request(app.getHttpServer())
+      .get('/admin/listings?status=RESERVED')
+      .set('Cookie', adminCookie);
+    expect(queued.status).toBe(200);
+    expect(
+      queued.body.listings.some((l: { id: string }) => l.id === listingId),
+    ).toBe(true);
+
     const completeRes = await request(app.getHttpServer())
       .post(`/admin/listings/${listingId}/complete`)
       .set('Origin', 'http://localhost:3000')
       .set('Cookie', adminCookie);
     expect(completeRes.status).toBe(201);
 
+    const queuedAfter = await request(app.getHttpServer())
+      .get('/admin/listings?status=RESERVED')
+      .set('Cookie', adminCookie);
+    expect(
+      queuedAfter.body.listings.some((l: { id: string }) => l.id === listingId),
+    ).toBe(false);
+
     const gone = await request(app.getHttpServer()).get('/marketplace/listings');
     expect(
       gone.body.listings.some((l: { id: string }) => l.id === listingId),
     ).toBe(false);
+  });
+
+  it('rejects a non-admin caller on the admin listings queue with 403', async () => {
+    const userReg = await register('plain-user-listings');
+    const res = await request(app.getHttpServer())
+      .get('/admin/listings?status=RESERVED')
+      .set('Cookie', cookieFrom(userReg));
+    expect(res.status).toBe(403);
   });
 
   it('rejects a non-admin caller on the admin quote endpoint with 403', async () => {

@@ -403,6 +403,25 @@ export async function fetchAdminCleanupReports(): Promise<
   return { ok: true, data: parsed.data, status: result.status };
 }
 
+/** Reserved listings only: those are the ones an admin can still complete. */
+export async function fetchAdminReservedListings(): Promise<
+  ApiResult<MarketplaceListingList>
+> {
+  const result = await apiFetch<unknown>("/api/admin/listings?status=RESERVED");
+  if (!result.ok) return result;
+  const parsed = MarketplaceListingListSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+export async function completeListing(
+  id: string,
+): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/admin/listings/${id}/complete`, {
+    method: "POST",
+  });
+}
+
 export async function verifyCleanupReport(
   id: string,
 ): Promise<ApiResult<unknown>> {
