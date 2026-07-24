@@ -230,11 +230,14 @@ export function HomeHighlights() {
               description="Các điểm rác được người dân báo cáo và ban quản lý xác minh dọn dẹp sẽ xuất hiện tại đây."
             />
           ) : (
-            <ul className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {/* The hero already shows the newest report, so start after it —
-                  unless it is the only one, where repeating beats an empty grid. */}
+            <ul className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">
+              {/* Two columns and two reports: at the counts this feed actually
+                  carries, a third slot sits empty, and a half-filled row reads
+                  as missing content rather than as breathing room. The hero
+                  already shows the newest, so start after it, unless it is the
+                  only one where repeating beats an empty grid. */}
               {(cleanupState.data.length > 1
-                ? cleanupState.data.slice(1, 4)
+                ? cleanupState.data.slice(1, 3)
                 : cleanupState.data
               ).map((report) => {
                 const place = [report.district, report.city]

@@ -64,6 +64,13 @@ const DEMO_LISTINGS = [
     pricePerKgVnd: 6000,
     color: { r: 96, g: 125, b: 139 },
   },
+  {
+    n: 5,
+    categoryName: 'Chai thủy tinh',
+    weightKg: 15,
+    pricePerKgVnd: 800,
+    color: { r: 84, g: 110, b: 92 },
+  },
 ] as const;
 
 /// Report 1 stays SUBMITTED so a rehearsal always has one to verify on camera;
