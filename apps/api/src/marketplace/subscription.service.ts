@@ -19,7 +19,7 @@ export class SubscriptionService {
       orderBy: { expiresAt: 'desc' },
     });
     if (active) {
-      return { eligible: true, subscription: toSubscriptionDto(active) };
+      return { eligible: true, subscription: toSubscriptionDto(active), checkoutAvailable: false };
     }
 
     const latest = await this.prisma.subscription.findFirst({
@@ -29,6 +29,7 @@ export class SubscriptionService {
     return {
       eligible: false,
       subscription: latest ? toSubscriptionDto(latest) : null,
+      checkoutAvailable: false,
     };
   }
 

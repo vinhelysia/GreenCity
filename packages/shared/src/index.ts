@@ -351,8 +351,46 @@ export type Subscription = z.infer<typeof SubscriptionSchema>;
 export const SubscriptionStateSchema = z.object({
   eligible: z.boolean(),
   subscription: SubscriptionSchema.nullable(),
+  checkoutAvailable: z.boolean().default(false),
 });
 export type SubscriptionState = z.infer<typeof SubscriptionStateSchema>;
+
+// ─── Payment contracts ───────────────────────────────────────────────────────
+
+export const SubscriptionPaymentStatusSchema = z.enum([
+  "PENDING",
+  "PAID",
+  "FAILED",
+]);
+export type SubscriptionPaymentStatus = z.infer<
+  typeof SubscriptionPaymentStatusSchema
+>;
+
+export const CreateSubscriptionPaymentResponseSchema = z.object({
+  paymentId: z.string(),
+  payUrl: z.string().url(),
+});
+export type CreateSubscriptionPaymentResponse = z.infer<
+  typeof CreateSubscriptionPaymentResponseSchema
+>;
+
+export const SubscriptionPaymentStatusResponseSchema = z.object({
+  id: z.string(),
+  status: SubscriptionPaymentStatusSchema,
+  amountVnd: z.number().int(),
+  paidAt: z.string().nullable(),
+});
+export type SubscriptionPaymentStatusResponse = z.infer<
+  typeof SubscriptionPaymentStatusResponseSchema
+>;
+
+export const PAYMENT_ERROR_CODES = [
+  "PAYMENT_NOT_CONFIGURED",
+  "PAYMENT_PROVIDER_UNAVAILABLE",
+  "PAYMENT_PROVIDER_REJECTED",
+  "PAYMENT_NOT_FOUND",
+] as const;
+export type PaymentErrorCode = (typeof PAYMENT_ERROR_CODES)[number];
 
 // ─── Marketplace: error codes ────────────────────────────────────────────────
 

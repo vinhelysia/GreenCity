@@ -41,6 +41,7 @@ model User {
   marketplaceListings MarketplaceListing[]
   reservations        Reservation[]
   subscriptions       Subscription[]
+  subscriptionPayments SubscriptionPayment[]
   cleanupReports      CleanupReport[]
   pointEntries        PointEntry[]
 }
@@ -271,6 +272,34 @@ model Subscription {
   expiresAt DateTime
   note      String?
   createdAt DateTime           @default(now())
+  payment   SubscriptionPayment?
+
+  @@index([userId, status])
+}
+
+enum SubscriptionPaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+/// One-time buyer subscription payment (50,000 VND / 30 days).
+model SubscriptionPayment {
+  id                String                    @id @default(cuid())
+  userId            String
+  user              User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountVnd         Int                       @default(50000)
+  durationDays      Int                       @default(30)
+  status            SubscriptionPaymentStatus @default(PENDING)
+  momoOrderId       String                    @unique
+  momoRequestId     String                    @unique
+  momoTransactionId String?                   @unique
+  momoResultCode    Int?
+  paidAt            DateTime?
+  subscriptionId    String?                   @unique
+  subscription      Subscription?             @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
 
   @@index([userId, status])
 }
