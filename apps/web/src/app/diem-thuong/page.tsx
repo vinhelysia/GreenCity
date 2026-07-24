@@ -17,7 +17,7 @@ type LoadState<T> =
 
 const REASON_LABELS: Record<string, string> = {
   LISTING_COMPLETED: "Hoàn tất giao dịch bán phế liệu",
-  CLEANUP_VERIFIED: "Điểm rác được xác minh đã dọn",
+  CLEANUP_VERIFIED: "Báo cáo điểm rác được xác minh",
 };
 
 export default function DiemThuongPage() {

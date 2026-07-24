@@ -102,7 +102,15 @@ describe('audit regressions', () => {
     );
   });
 
-  it('does not mark metadata deleted when storage deletion fails', async () => {
+  /**
+   * This used to assert the opposite: the object was deleted first, and a
+   * storage failure left the row untouched. That guarded the harmless failure
+   * and left the damaging one open — storage deletes, the update then fails,
+   * and a live record points at a file that is gone, which serves a broken
+   * image forever. deletedAt is what stops the file being served, so the row
+   * leads and an unreachable object is the acceptable residue.
+   */
+  it('keeps the delete applied for readers when storage deletion fails', async () => {
     const asset = {
       id: 'asset',
       ownerId: 'owner',
@@ -112,8 +120,11 @@ describe('audit regressions', () => {
     const prisma = {
       mediaAsset: {
         findFirst: jest.fn().mockResolvedValue(asset),
-        update: jest.fn(),
+        update: jest.fn().mockResolvedValue({ ...asset, deletedAt: new Date() }),
       },
+      marketplaceListing: { count: jest.fn().mockResolvedValue(0) },
+      cleanupReport: { count: jest.fn().mockResolvedValue(0) },
+      scrapRequest: { count: jest.fn().mockResolvedValue(0) },
     };
     const storage = {
       driver: 'local',
@@ -130,9 +141,40 @@ describe('audit regressions', () => {
       sessionId: 'session',
     } as AuthContext;
 
-    await expect(service.softDelete(auth, asset.id)).rejects.toThrow(
-      'storage down',
+    await expect(service.softDelete(auth, asset.id)).resolves.toBeUndefined();
+    expect(prisma.mediaAsset.update).toHaveBeenCalled();
+  });
+
+  it('refuses to delete media that a submission still points at', async () => {
+    const asset = {
+      id: 'asset',
+      ownerId: 'owner',
+      objectKey: 'media/owner/asset.jpg',
+      deletedAt: null,
+    };
+    const prisma = {
+      mediaAsset: {
+        findFirst: jest.fn().mockResolvedValue(asset),
+        update: jest.fn(),
+      },
+      marketplaceListing: { count: jest.fn().mockResolvedValue(1) },
+      cleanupReport: { count: jest.fn().mockResolvedValue(0) },
+      scrapRequest: { count: jest.fn().mockResolvedValue(0) },
+    };
+    const storage = { driver: 'local', deleteObject: jest.fn() };
+    const service = new MediaService(
+      prisma as never,
+      storage as never,
+      { record: jest.fn() } as never,
     );
+    const auth = {
+      user: { id: 'owner' },
+      roles: ['USER'],
+      sessionId: 'session',
+    } as AuthContext;
+
+    await expect(service.softDelete(auth, asset.id)).rejects.toThrow();
     expect(prisma.mediaAsset.update).not.toHaveBeenCalled();
+    expect(storage.deleteObject).not.toHaveBeenCalled();
   });
 });

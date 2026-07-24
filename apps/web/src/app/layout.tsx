@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: `%s · ${APP_NAME}`,
   },
   description:
-    "Bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát để được xác minh dọn dẹp.",
+    "Bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát để được ghi nhận, xác minh.",
 };
 
 export default function RootLayout({

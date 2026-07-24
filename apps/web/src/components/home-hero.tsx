@@ -47,7 +47,7 @@ export function HomeHero() {
         </h1>
         <p className="mt-5 max-w-prose text-base leading-relaxed text-muted sm:text-lg">
           GreenCity nối hai việc vốn rời nhau: bán phế liệu tái chế theo giá
-          niêm yết và báo điểm rác tự phát để được xác minh dọn dẹp. Làm xong
+          niêm yết và báo điểm rác tự phát để được ghi nhận, xác minh. Làm xong
           việc nào bạn cũng được cộng điểm thưởng.
         </p>
 
@@ -82,7 +82,7 @@ export function HomeHero() {
         <figcaption className="mt-2 text-xs leading-relaxed text-muted">
           {report ? (
             <>
-              Điểm rác đã được xác minh dọn
+              Điểm rác do người dân báo, đã được xác minh
               {place ? <> tại {place}</> : null}.
             </>
           ) : (

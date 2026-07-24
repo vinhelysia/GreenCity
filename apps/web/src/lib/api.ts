@@ -13,8 +13,6 @@ import {
   type MarketplaceListingList,
   SubscriptionStateSchema,
   type SubscriptionState,
-  ReservationSchema,
-  type Reservation,
   MediaAssetPublicSchema,
   type MediaAssetPublic,
   type CreateQuoteRequest,
@@ -327,18 +325,19 @@ export async function fetchMarketplaceListings(): Promise<
 }
 
 /** POST /api/marketplace/listings/:id/reserve */
+/**
+ * The endpoint answers `{ ok, reservationId }` and the caller only needs to
+ * know whether it worked, so nothing is parsed out of the body. It used to
+ * read a `reservation` object that this route has never returned, which failed
+ * validation and showed the buyer an error on a reservation that had in fact
+ * been created.
+ */
 export async function reserveListing(
   id: string,
-): Promise<ApiResult<Reservation>> {
-  const result = await apiFetch<unknown>(
-    `/api/marketplace/listings/${id}/reserve`,
-    { method: "POST" },
-  );
-  if (!result.ok) return result;
-  const body = result.data as { reservation?: unknown } | null;
-  const parsed = ReservationSchema.safeParse(body?.reservation);
-  if (!parsed.success) return invalidResponse(result.status);
-  return { ok: true, data: parsed.data, status: result.status };
+): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/marketplace/listings/${id}/reserve`, {
+    method: "POST",
+  });
 }
 
 /**

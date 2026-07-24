@@ -27,8 +27,27 @@ export function HeaderLoginLink() {
 
   if (status === "authenticated" && user) {
     const label = user.displayName?.trim() || user.email;
+    const isAdmin = user.roles.includes("ADMIN");
     return (
       <div className="flex min-w-0 items-center gap-2">
+        {/* Admin screens are not in the public nav and an admin had no way to
+            reach them but to type the URL. Shown only to admins; the routes
+            are guarded server-side regardless. */}
+        {isAdmin ? (
+          <Link
+            href="/admin/giao-dich"
+            data-testid="header-admin"
+            aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+            className={[
+              "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md px-2 py-2 text-sm font-medium transition-colors duration-quick ease-out sm:px-3",
+              pathname.startsWith("/admin")
+                ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+                : "text-muted hover:text-ink",
+            ].join(" ")}
+          >
+            Quản trị
+          </Link>
+        ) : null}
         <span
           className="hidden max-w-[10rem] truncate text-sm text-muted sm:inline"
           title={user.email}

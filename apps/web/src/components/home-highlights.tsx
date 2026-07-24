@@ -68,7 +68,7 @@ export function HomeHighlights() {
       if (!res.ok) {
         setCleanupState({
           status: "error",
-          message: "Chưa có báo cáo điểm rác đã dọn.",
+          message: "Chưa có báo cáo điểm rác nào được xác minh.",
         });
       } else {
         setCleanupState({ status: "ready", data: res.data.reports });
@@ -114,7 +114,7 @@ export function HomeHighlights() {
                 },
                 {
                   value: statsState.data.verifiedCleanupReports,
-                  label: "điểm rác đã dọn",
+                  label: "điểm rác đã xác minh",
                 },
                 { value: statsState.data.scrapWeightKg, label: "kg phế liệu" },
                 {
@@ -209,9 +209,9 @@ export function HomeHighlights() {
       {/* Cleanup leads with the photograph — here the image IS the evidence. */}
       <Section
         id="diem-rac-da-don"
-        title="Điểm rác đã được dọn"
+        title="Điểm rác đã được xác minh"
         tone="ruled"
-        lede="Người dân gửi ảnh, ban quản lý xác minh. Chỉ báo cáo đã xác minh mới hiện ở đây."
+        lede="Người dân gửi ảnh, ban quản lý đối chiếu và xác nhận là có thật. Việc thu gom do đơn vị vệ sinh của địa phương thực hiện, GreenCity chưa điều phối phần đó."
         className="mt-12 sm:mt-16"
       >
         <div role="status" aria-live="polite" className="min-w-0">
@@ -228,8 +228,8 @@ export function HomeHighlights() {
             cleanupState.data.length === 0 ? (
             <EmptyState
               testId="public-cleanup-reports-empty"
-              title="Chưa có báo cáo điểm rác đã dọn"
-              description="Các điểm rác được người dân báo cáo và ban quản lý xác minh dọn dẹp sẽ xuất hiện tại đây."
+              title="Chưa có báo cáo nào được xác minh"
+              description="Báo cáo điểm rác sau khi được ban quản lý xác minh là có thật sẽ xuất hiện tại đây."
             />
           ) : (
             <ul className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">

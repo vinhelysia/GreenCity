@@ -98,8 +98,11 @@ for (const label of [
   }
 }
 
+// The homepage used to close on four empty editorial slots, and this check
+// pinned them in place. They were replaced by sections that carry real
+// content, so it now pins those instead.
 const home = readFileSync(join(srcRoot, "app/page.tsx"), "utf8");
-for (const section of ["Quảng cáo", "Tin tức", "Thế giới", "Dự án"]) {
+for (const section of ["HomeHero", "HomeHighlights", "HomeLoop", "cach-tinh-diem"]) {
   if (!home.includes(section)) {
     failures.push(`homepage missing section: ${section}`);
   }

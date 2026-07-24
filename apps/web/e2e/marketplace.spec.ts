@@ -138,5 +138,12 @@ test("seller submits, admin quotes, seller accepts, buyer reserves", async ({ pa
   // The reservation is created: this is the end-to-end proof the flow works.
   expect((await reserveResp).status()).toBe(201);
 
+  // A 201 alone is not proof the buyer was told it worked. Checking only the
+  // response let a bug ship where the reservation succeeded while the row
+  // showed an error, so assert what the buyer ends up looking at. On success
+  // the list reloads and the listing leaves the market; on that failure the
+  // reload never ran and the card stayed put next to an error.
+  await expect(listingCard).toHaveCount(0, { timeout: 15_000 });
+
   assertCleanRuntime(issues, "marketplace");
 });

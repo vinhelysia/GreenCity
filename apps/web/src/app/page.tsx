@@ -49,7 +49,7 @@ export default function HomePage() {
                 50 điểm
               </dt>
               <dd className="mt-1 text-sm leading-relaxed text-muted">
-                Cho mỗi điểm rác được ban quản lý xác minh là đã dọn.
+                Cho mỗi báo cáo điểm rác được ban quản lý xác minh là có thật.
               </dd>
             </div>
           </dl>
