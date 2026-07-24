@@ -127,8 +127,9 @@ async function demoPhoto(
       .jpeg({ quality: 82 })
       .toBuffer();
   }
-  return sharp({ create: { width: 64, height: 64, channels: 3, background: fallbackColor } })
-    .png()
+  // JPEG in both branches so callers can declare one content type either way.
+  return sharp({ create: { width: 640, height: 480, channels: 3, background: fallbackColor } })
+    .jpeg({ quality: 82 })
     .toBuffer();
 }
 
@@ -257,12 +258,10 @@ async function main() {
       // Always (re)write the file and reconcile the record: the metadata row can
       // survive a wiped storage dir, so gating the write on "record missing"
       // leaves a listing pointing at a file that no longer exists.
-      const raw = await sharp({
-        create: { width: 64, height: 64, channels: 3, background: d.color },
-      })
-        .png()
-        .toBuffer();
-      const processed = await processImageUpload(raw, 'image/png', `demo-${d.n}.png`);
+      // Drop a `listing-<n>.jpg` into seed-assets/ to give this listing a real
+      // photograph; without one it stays the flat category tile.
+      const raw = await demoPhoto(`listing-${d.n}.jpg`, d.color);
+      const processed = await processImageUpload(raw, 'image/jpeg', `demo-${d.n}.jpg`);
       const objectKey = `media/${seller.id}/${mediaId}.${extensionForMime(processed.contentType)}`;
       await storage.putObject({
         key: objectKey,
@@ -279,7 +278,7 @@ async function main() {
           byteSize: processed.byteSize,
           width: processed.width,
           height: processed.height,
-          originalName: `demo-${d.n}.png`,
+          originalName: `demo-${d.n}.jpg`,
         },
         update: {
           objectKey,
