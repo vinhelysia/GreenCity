@@ -1,7 +1,12 @@
 /**
- * Idempotent local demo seed. Local demo only — never run against a shared or
- * production database; the three accounts below share one operator-supplied
- * seed-only password.
+ * Idempotent demo seed, safe to re-run: it restores the demo start state
+ * (every seeded listing back to AVAILABLE, the seeded cleanup report back to
+ * SUBMITTED, seeded reward points cleared) so the pitch can be rehearsed as
+ * many times as needed. Resetting is scoped to seed-owned ids — rows a real
+ * user created are never touched.
+ *
+ * The three accounts below share one operator-supplied seed-only password;
+ * always set DEMO_PASSWORD when seeding anything shared or deployed.
  *
  * Reuses the real PasswordService (same argon2 params as login), the real
  * image pipeline, and the real object storage service so uploaded demo
@@ -42,7 +47,31 @@ const DEMO_LISTINGS = [
     pricePerKgVnd: 18000,
     color: { r: 158, g: 158, b: 158 },
   },
+  {
+    n: 3,
+    categoryName: 'Giấy carton',
+    weightKg: 12,
+    pricePerKgVnd: 3000,
+    color: { r: 141, g: 110, b: 99 },
+  },
+  {
+    n: 4,
+    categoryName: 'Sắt vụn',
+    weightKg: 8,
+    pricePerKgVnd: 6000,
+    color: { r: 96, g: 125, b: 139 },
+  },
 ] as const;
+
+/// Left in SUBMITTED so a rehearsal always has one report to verify on camera.
+const DEMO_CLEANUP = {
+  n: 1,
+  description: 'Bãi rác tự phát ven kênh, đã thu gom và phân loại',
+  ward: 'Phường 5',
+  district: 'Quận Bình Thạnh',
+  city: 'TP. Hồ Chí Minh',
+  color: { r: 120, g: 144, b: 156 },
+} as const;
 
 function loadCanonicalEnv(): void {
   const repoRoot = findRuntimeRoot();
@@ -151,6 +180,19 @@ async function main() {
       });
     }
 
+    // Reset to the demo start state so the pitch can be rehearsed repeatedly:
+    // a listing completed during a run-through would otherwise stay COMPLETED
+    // and the reward moment could only ever be shown once. Scoped to seed-owned
+    // ids by design — anything a real user created is left untouched.
+    const seedListingIds = DEMO_LISTINGS.map((d) => `seed-listing-${d.n}`);
+    const seedCleanupId = `seed-cleanup-report-${DEMO_CLEANUP.n}`;
+    await prisma.pointEntry.deleteMany({
+      where: { referenceId: { in: [...seedListingIds, seedCleanupId] } },
+    });
+    await prisma.reservation.deleteMany({
+      where: { listingId: { in: seedListingIds } },
+    });
+
     for (const d of DEMO_LISTINGS) {
       const mediaId = `seed-media-${d.n}`;
       // Always (re)write the file and reconcile the record: the metadata row can
@@ -235,13 +277,66 @@ async function main() {
           mediaAssetId: media.id,
           status: 'AVAILABLE',
         },
-        update: {},
+        // Status is reset (not left alone) so re-seeding restores a sellable
+        // marketplace after a rehearsal consumed a listing.
+        update: { status: 'AVAILABLE' },
+      });
+    }
+
+    {
+      const mediaId = `seed-cleanup-media-${DEMO_CLEANUP.n}`;
+      const raw = await sharp({
+        create: { width: 64, height: 64, channels: 3, background: DEMO_CLEANUP.color },
+      })
+        .png()
+        .toBuffer();
+      const processed = await processImageUpload(raw, 'image/png', `demo-cleanup-${DEMO_CLEANUP.n}.png`);
+      const objectKey = `media/${buyer.id}/${mediaId}.${extensionForMime(processed.contentType)}`;
+      await storage.putObject({
+        key: objectKey,
+        body: processed.buffer,
+        contentType: processed.contentType,
+      });
+      const media = await prisma.mediaAsset.upsert({
+        where: { id: mediaId },
+        create: {
+          id: mediaId,
+          ownerId: buyer.id,
+          objectKey,
+          contentType: processed.contentType,
+          byteSize: processed.byteSize,
+          width: processed.width,
+          height: processed.height,
+          originalName: `demo-cleanup-${DEMO_CLEANUP.n}.png`,
+        },
+        update: {
+          objectKey,
+          contentType: processed.contentType,
+          byteSize: processed.byteSize,
+          width: processed.width,
+          height: processed.height,
+        },
+      });
+
+      await prisma.cleanupReport.upsert({
+        where: { id: seedCleanupId },
+        create: {
+          id: seedCleanupId,
+          reporterId: buyer.id,
+          description: DEMO_CLEANUP.description,
+          ward: DEMO_CLEANUP.ward,
+          district: DEMO_CLEANUP.district,
+          city: DEMO_CLEANUP.city,
+          mediaAssetId: media.id,
+          status: 'SUBMITTED',
+        },
+        update: { status: 'SUBMITTED', verifiedAt: null },
       });
     }
 
     // eslint-disable-next-line no-console
     console.log(
-      `Seeded: admin=${admin.email} seller=${seller.email} buyer=${buyer.email}, ${CATEGORIES.length} categories, ${DEMO_LISTINGS.length} listings`,
+      `Seeded: admin=${admin.email} seller=${seller.email} buyer=${buyer.email}, ${CATEGORIES.length} categories, ${DEMO_LISTINGS.length} listings (all AVAILABLE), 1 cleanup report (SUBMITTED), seed reward points cleared`,
     );
   } finally {
     await prisma.$disconnect();
