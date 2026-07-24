@@ -15,6 +15,7 @@ import { LocationModule } from './location/location.module';
 import { MailModule } from './mail/mail.module';
 import { MarketplaceModule } from './marketplace/marketplace.module';
 import { MediaModule } from './media/media.module';
+import { PaymentModule } from './payment/payment.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PointsModule } from './points/points.module';
 import { StorageModule } from './storage/storage.module';
@@ -69,6 +70,7 @@ function rateLimitTracker(req: TrackerRequest): string {
     MediaModule,
     LocationModule,
     MarketplaceModule,
+    PaymentModule,
     CleanupModule,
     PointsModule,
     StatsModule,

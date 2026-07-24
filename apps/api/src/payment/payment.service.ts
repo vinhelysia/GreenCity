@@ -1,6 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
+import {
+  CreateSubscriptionPaymentResponseSchema,
+  SubscriptionPaymentStatusResponseSchema,
+  type CreateSubscriptionPaymentResponse,
+  type SubscriptionPaymentStatusResponse,
+} from '@greencity/shared';
+import { AuditService } from '../audit/audit.service';
+import { loadEnv } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { createMomoPayment } from './momo-client';
+import { resolveMomoCheckoutConfig } from './momo-config';
 
 export interface VerifiedPaymentNotification {
   partnerCode: string;
@@ -22,7 +38,93 @@ export interface ProcessNotificationResult {
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
+
+  /**
+   * Starts a checkout: the PENDING row is written before MoMo is called and is
+   * left PENDING however that call ends — no delete, no FAILED. A timeout is
+   * ambiguous: MoMo may have accepted the order and a valid IPN may still
+   * arrive. Marking the row FAILED here would make processVerifiedNotification
+   * treat that later IPN as a duplicate and silently drop paid access.
+   */
+  async startCheckout(
+    userId: string,
+    requestId?: string,
+  ): Promise<CreateSubscriptionPaymentResponse> {
+    const config = resolveMomoCheckoutConfig(loadEnv());
+    if (!config) {
+      // Which value is missing is never disclosed — see resolveMomoCheckoutConfig.
+      throw new ServiceUnavailableException({
+        code: 'PAYMENT_NOT_CONFIGURED',
+        message: 'Payment checkout is not configured',
+      });
+    }
+
+    const payment = await this.createPendingPayment({
+      userId,
+      // Server-generated and PII-free: MoMo echoes both back on the IPN, and a
+      // UUID already satisfies its orderId charset (<=200) / requestId (<=50).
+      momoOrderId: randomUUID(),
+      momoRequestId: randomUUID(),
+    });
+
+    await this.audit.record({
+      actorId: userId,
+      action: 'subscription_payment.create',
+      targetType: 'SubscriptionPayment',
+      targetId: payment.id,
+      requestId,
+      // Server-set plan only; nothing from the request, the provider, or a secret.
+      metadata: {
+        amountVnd: payment.amountVnd,
+        durationDays: payment.durationDays,
+      },
+    });
+
+    const created = await createMomoPayment(config, {
+      orderId: payment.momoOrderId,
+      requestId: payment.momoRequestId,
+      // Read back from the row, never from the request: the client cannot
+      // influence what it is charged.
+      amount: payment.amountVnd,
+      // ponytail: ASCII on purpose — orderInfo is part of the signed payload,
+      // and diacritics there only buy encoding bugs.
+      orderInfo: 'GreenCity - goi thanh vien 30 ngay',
+    });
+
+    return CreateSubscriptionPaymentResponseSchema.parse({
+      paymentId: payment.id,
+      payUrl: created.payUrl,
+    });
+  }
+
+  /**
+   * Owner-only. Ownership is part of the lookup, so another user's payment and
+   * a nonexistent one produce the identical 404 — nothing distinguishes them.
+   */
+  async getPaymentStatus(
+    userId: string,
+    paymentId: string,
+  ): Promise<SubscriptionPaymentStatusResponse> {
+    const payment = await this.prisma.subscriptionPayment.findFirst({
+      where: { id: paymentId, userId },
+      select: { id: true, status: true, amountVnd: true, paidAt: true },
+    });
+    if (!payment) {
+      throw new NotFoundException({
+        code: 'PAYMENT_NOT_FOUND',
+        message: 'Payment not found',
+      });
+    }
+    // The schema is the whitelist: no provider ids, result codes, or owner.
+    return SubscriptionPaymentStatusResponseSchema.parse({
+      ...payment,
+      paidAt: payment.paidAt?.toISOString() ?? null,
+    });
+  }
 
   async createPendingPayment(input: {
     userId: string;

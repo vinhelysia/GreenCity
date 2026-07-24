@@ -16,5 +16,6 @@ module.exports = {
     '<rootDir>/test/stats.integration.test.ts',
     '<rootDir>/test/points.integration.test.ts',
     '<rootDir>/test/payment-activation.integration.test.ts',
+    '<rootDir>/test/payment-checkout.integration.test.ts',
   ],
 };
