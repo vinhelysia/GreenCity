@@ -1,6 +1,32 @@
 import { z } from 'zod';
 
 /**
+ * A blank value in .env means "not configured". Without this, `KEY=` would be
+ * an empty string and fail its own validator, so half-filled optional config
+ * would block startup.
+ */
+const blankAsUnset = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
+
+/**
+ * Public base URL used to build callback/redirect links. Same parse-with-URL
+ * approach as CORS_ORIGINS below; https only, because these are handed to a
+ * third party — http stays allowed on loopback so local dev still works.
+ */
+const publicUrl = z.string().refine((v) => {
+  try {
+    const url = new URL(v);
+    return (
+      url.protocol === 'https:' ||
+      (url.protocol === 'http:' &&
+        (url.hostname === 'localhost' || url.hostname === '127.0.0.1'))
+    );
+  } catch {
+    return false;
+  }
+}, 'must be an https:// URL (http:// allowed only for localhost / 127.0.0.1)');
+
+/**
  * Process-env validation. Fails fast when DATABASE_URL is missing/invalid.
  * Does not embed real credentials — see .env.example for placeholders only.
  */
@@ -75,6 +101,18 @@ const EnvSchema = z.object({
    * Disabled locally; this flag is not an Express numeric hop count.
    */
   TRUST_PROXY: z.coerce.number().int().min(0).max(1).default(0),
+  /**
+   * MoMo payment — every key is optional, so the API boots with none, some, or
+   * all of them set. Completeness is the payment module's call, not startup's;
+   * validation here must never hint at which credential is missing.
+   */
+  MOMO_ENV: blankAsUnset(z.enum(['sandbox', 'production'])),
+  MOMO_PARTNER_CODE: z.string().optional(),
+  MOMO_ACCESS_KEY: z.string().optional(),
+  MOMO_SECRET_KEY: z.string().optional(),
+  /** Public bases for MoMo redirect (web) and IPN (api) links. */
+  PUBLIC_API_URL: blankAsUnset(publicUrl),
+  PUBLIC_WEB_URL: blankAsUnset(publicUrl),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;
