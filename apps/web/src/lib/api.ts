@@ -180,7 +180,7 @@ function invalidResponse(status: number): ApiResult<never> {
  */
 const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   SUBSCRIPTION_REQUIRED:
-    "Bạn cần gói người mua để đặt giữ. Gói demo — chưa xử lý thanh toán.",
+    "Bạn cần gói người mua để đặt giữ. Đây là gói demo, chưa xử lý thanh toán.",
   LISTING_NOT_AVAILABLE: "Tin này vừa được người khác đặt giữ.",
   CANNOT_RESERVE_OWN_LISTING: "Đây là tin đăng của bạn.",
   QUOTE_OUT_OF_PUBLISHED_RANGE: "Giá phải nằm trong khoảng đã công khai.",

@@ -15,8 +15,7 @@ export default function DangNhapPage() {
         title="Đăng nhập"
         description={
           <p>
-            Dùng email và mật khẩu đã đăng ký. Phiên được lưu bằng cookie bảo mật
-            (HttpOnly) — trình duyệt gửi kèm mỗi lần gọi API. Chưa có tài khoản?{" "}
+            Dùng email và mật khẩu bạn đã đăng ký. Chưa có tài khoản?{" "}
             <Link
               href="/dang-ky"
               className="font-medium text-accent underline-offset-4 hover:underline"

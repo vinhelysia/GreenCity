@@ -10,7 +10,7 @@ const STAGES = [
   {
     n: 1,
     title: "Người bán đăng phế liệu",
-    body: "Chụp một ảnh, chọn loại, ước khối lượng. Không cần định giá — đó là việc của bước sau.",
+    body: "Chụp một ảnh, chọn loại, ước khối lượng. Không cần tự định giá, việc đó ở bước sau.",
   },
   {
     n: 2,
@@ -30,7 +30,7 @@ const STAGES = [
   {
     n: 5,
     title: "Người bán nhận điểm",
-    body: "Điểm vào sổ ngay khi giao dịch hoàn tất, và truy được về đúng giao dịch đã sinh ra nó.",
+    body: "Điểm vào sổ ngay khi giao dịch hoàn tất, luôn truy được về đúng giao dịch đã sinh ra nó.",
   },
 ] as const;
 

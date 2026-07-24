@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   ChangeEvent,
   FormEvent,
@@ -16,6 +15,7 @@ import {
 } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { SignInRequired } from "@/components/sign-in-required";
 import {
   checkAuthExpiry,
   fetchMyCleanupReports,
@@ -59,20 +59,9 @@ export function CleanupReportView() {
 
   if (authStatus === "unauthenticated") {
     return (
-      <EmptyState
+      <SignInRequired
         testId="cleanup-login-required"
-        title="Cần đăng nhập để gửi báo cáo"
-        description={
-          <p>
-            <Link
-              href="/dang-nhap"
-              className="font-medium text-accent underline-offset-4 hover:underline"
-            >
-              Đăng nhập
-            </Link>{" "}
-            để gửi báo cáo điểm rác và theo dõi trạng thái.
-          </p>
-        }
+        action="gửi báo cáo điểm rác"
       />
     );
   }

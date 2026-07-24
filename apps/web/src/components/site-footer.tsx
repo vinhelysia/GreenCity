@@ -10,8 +10,8 @@ export function SiteFooter() {
         <div className="min-w-0 max-w-sm">
           <p className="font-display text-base font-semibold text-ink">{APP_NAME}</p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Nền tảng tái chế phế liệu và đóng góp làm sạch thành phố. Giao diện
-            công khai đang được xây dựng — chưa có giao dịch hay báo cáo thật.
+            Nơi bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát
+            để được xác minh dọn dẹp.
           </p>
         </div>
         <nav aria-label="Liên kết chân trang">

@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = {
   title: "Dịch vụ",
-  description: "Tổng quan dịch vụ GreenCity — vỏ giao diện, chưa có thương mại.",
+  description:
+    "Tổng quan dịch vụ GreenCity. Phần này mới là khung giao diện, chưa mở đăng ký.",
 };
 
 export default function DichVuPage() {
@@ -14,9 +15,9 @@ export default function DichVuPage() {
         title="Dịch vụ"
         description={
           <p>
-            GreenCity dự kiến giới thiệu các dịch vụ liên quan tái chế phế liệu
-            và hỗ trợ dọn dẹp. Trang này là khung tổng quan — chưa mở đăng ký
-            dịch vụ, báo giá hay thanh toán.
+            GreenCity dự kiến mở thêm các dịch vụ quanh việc tái chế phế liệu và
+            hỗ trợ dọn dẹp. Trang này mới là khung tổng quan. Chưa đăng ký dịch
+            vụ, chưa báo giá và chưa thanh toán được.
           </p>
         }
       />

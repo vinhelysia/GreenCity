@@ -198,8 +198,8 @@ function ListingCard({
                 Đặt giữ
               </button>
               <p className="mt-1.5">
-                Bạn cần gói người mua để đặt giữ. Gói demo — chưa xử lý thanh
-                toán.
+                Bạn cần gói người mua để đặt giữ. Đây là gói demo, chưa xử lý
+                thanh toán.
               </p>
             </div>
           )}

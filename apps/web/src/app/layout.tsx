@@ -23,10 +23,10 @@ const body = Be_Vietnam_Pro({
 export const metadata: Metadata = {
   title: {
     default: APP_NAME,
-    template: `%s — ${APP_NAME}`,
+    template: `%s · ${APP_NAME}`,
   },
   description:
-    "GreenCity — nền tảng tái chế phế liệu và đóng góp làm sạch thành phố. Giao diện công khai giai đoạn nền tảng.",
+    "Bán phế liệu tái chế theo giá niêm yết và báo điểm rác tự phát để được xác minh dọn dẹp.",
 };
 
 export default function RootLayout({

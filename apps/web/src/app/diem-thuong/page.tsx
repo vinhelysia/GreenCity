@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { PointsBalance } from "@greencity/shared";
+import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Section } from "@/components/section";
+import { SignInRequired } from "@/components/sign-in-required";
 import { fetchMyPoints } from "@/lib/api";
 
 type LoadState<T> =
@@ -18,11 +20,15 @@ const REASON_LABELS: Record<string, string> = {
 };
 
 export default function DiemThuongPage() {
+  const { status: authStatus } = useAuth();
   const [pointsState, setPointsState] = useState<LoadState<PointsBalance>>({
     status: "loading",
   });
 
   useEffect(() => {
+    // Signed-out visitors get the sign-in panel below, not a failed request:
+    // asking anyway would surface the API's own 401 text to the reader.
+    if (authStatus !== "authenticated") return;
     let cancelled = false;
 
     void (async () => {
@@ -31,7 +37,7 @@ export default function DiemThuongPage() {
       if (!res.ok) {
         setPointsState({
           status: "error",
-          message: res.error.message || "Không thể tải thông tin điểm thưởng.",
+          message: "Không tải được điểm thưởng. Bạn thử tải lại trang nhé.",
         });
       } else {
         setPointsState({ status: "ready", data: res.data });
@@ -41,7 +47,7 @@ export default function DiemThuongPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authStatus]);
 
   const viFormatter = new Intl.NumberFormat("vi-VN");
 
@@ -49,11 +55,17 @@ export default function DiemThuongPage() {
     <div className="min-w-0 space-y-8">
       <PageHeader
         title="Điểm thưởng của tôi"
-        description="Theo dõi số dư điểm thưởng và lịch sử tích điểm từ các hoạt động."
+        description="Số dư điểm thưởng của bạn và lịch sử từng lần được cộng."
       />
 
+      {authStatus === "unauthenticated" ? (
+        <SignInRequired
+          testId="points-login-required"
+          action="xem điểm thưởng"
+        />
+      ) : (
       <div role="status" aria-live="polite" className="min-w-0 space-y-8">
-        {pointsState.status === "loading" ? (
+        {authStatus === "loading" || pointsState.status === "loading" ? (
           <>
             <section
               aria-labelledby="balance-heading"
@@ -141,6 +153,7 @@ export default function DiemThuongPage() {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }

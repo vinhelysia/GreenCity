@@ -59,11 +59,11 @@ export default function HomePage() {
               Điểm thưởng không phải tiền và không mua bán được. Sổ điểm{" "}
               <strong className="font-medium text-ink">chỉ ghi thêm</strong>:
               không có ô số dư nào để sửa, nên mỗi điểm luôn truy ngược được về
-              đúng việc đã sinh ra nó, và một việc chỉ được cộng đúng một lần.
+              đúng việc đã sinh ra nó. Một việc cũng chỉ được cộng đúng một lần.
             </p>
             <p className="mt-3">
-              Hướng quy đổi điểm sang dịch vụ công cộng của thành phố đang ở giai
-              đoạn đề xuất — chưa mở trên hệ thống này.
+              Hướng quy đổi điểm sang dịch vụ công cộng của thành phố mới ở giai
+              đoạn đề xuất. Hệ thống này chưa mở việc đổi điểm.
             </p>
             <Link
               href="/diem-thuong"

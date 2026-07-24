@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   ChangeEvent,
   FormEvent,
@@ -17,6 +16,7 @@ import {
 } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { SignInRequired } from "@/components/sign-in-required";
 import {
   acceptScrapRequestQuote,
   checkAuthExpiry,
@@ -153,20 +153,9 @@ export function SellScrapView() {
           Đang kiểm tra đăng nhập…
         </p>
       ) : authStatus === "unauthenticated" ? (
-        <EmptyState
+        <SignInRequired
           testId="sell-scrap-login-required"
-          title="Cần đăng nhập để gửi yêu cầu"
-          description={
-            <p>
-              <Link
-                href="/dang-nhap"
-                className="font-medium text-accent underline-offset-4 hover:underline"
-              >
-                Đăng nhập
-              </Link>{" "}
-              để gửi yêu cầu bán phế liệu và theo dõi báo giá.
-            </p>
-          }
+          action="bán phế liệu"
         />
       ) : (
         <>

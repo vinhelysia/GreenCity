@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 export const metadata: Metadata = {
   title: "Thùng rác",
   description:
-    "Khu vực hướng dẫn và tra cứu thùng rác — đang phát triển, chưa có bản đồ hay API.",
+    "Hướng dẫn phân loại và tra cứu thùng rác công cộng. Đang làm, chưa có bản đồ.",
 };
 
 export default function ThungRacPage() {
@@ -26,9 +26,9 @@ export default function ThungRacPage() {
         title="Tính năng đang phát triển"
         description={
           <p>
-            Chưa có dữ liệu thùng rác, chưa tích hợp bản đồ, và không gọi API giả.
-            Nội dung thật sẽ xuất hiện sau khi hợp đồng backend và nguồn dữ liệu
-            địa điểm được chốt.
+            Chưa có dữ liệu thùng rác và chưa gắn bản đồ. Chúng tôi không dựng
+            dữ liệu giả để lấp chỗ trống, nên mục này sẽ trống cho tới khi có
+            nguồn dữ liệu địa điểm thật.
           </p>
         }
       />

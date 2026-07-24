@@ -89,7 +89,7 @@ export function HomeHighlights() {
         id="tac-dong"
         title="Tác động đến nay"
         tone="band"
-        lede="Số liệu đọc trực tiếp từ hệ thống đang chạy — không có con số nào được dựng sẵn."
+        lede="Số liệu đọc thẳng từ hệ thống đang chạy. Không có con số nào dựng sẵn."
       >
         <div role="status" aria-live="polite">
           {statsState.status === "loading" ? (

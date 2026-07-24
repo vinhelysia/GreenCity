@@ -5,7 +5,7 @@ import { MarketplaceListings } from "@/components/marketplace-listings";
 export const metadata: Metadata = {
   title: "Chợ online",
   description:
-    "Tin đăng phế liệu tái chế đang niêm yết giá cố định — người mua đã đăng ký gói có thể đặt giữ.",
+    "Phế liệu tái chế đang bán theo giá niêm yết. Người mua có gói thì đặt giữ được.",
 };
 
 export default function ChoOnlinePage() {
@@ -15,11 +15,9 @@ export default function ChoOnlinePage() {
         title="Chợ online"
         description={
           <p>
-            Chợ online là nơi người bán gửi phế liệu tái chế, GreenCity báo giá,
-            tin đăng niêm yết giá cố định, và người mua đã đăng ký gói có thể
-            đặt chỗ. Thanh toán và thưởng người bán diễn ra sau khi khối lượng
-            được xác nhận — theo quy trình backend, không phải trên giao diện
-            này.
+            Người bán gửi phế liệu, GreenCity báo giá theo khung công khai của
+            từng loại, rồi người mua có gói đặt giữ. Điểm thưởng cho người bán
+            chỉ được cộng sau khi ban quản lý xác nhận đã giao hàng xong.
           </p>
         }
       />
