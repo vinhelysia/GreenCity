@@ -7,6 +7,7 @@ import type {
   MarketplaceListing,
   PublicCleanupReport,
 } from "@greencity/shared";
+import { CountUp } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
 import { Section } from "@/components/section";
 import {
@@ -20,8 +21,6 @@ type LoadState<T> =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; data: T };
-
-const viFormatter = new Intl.NumberFormat("vi-VN");
 
 export function HomeHighlights() {
   const [statsState, setStatsState] = useState<LoadState<HomeStats>>({
@@ -124,8 +123,11 @@ export function HomeHighlights() {
                 },
               ].map((tile) => (
                 <div key={tile.label} className="min-w-0">
-                  <dd className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-accent [overflow-wrap:anywhere] sm:text-5xl">
-                    {viFormatter.format(tile.value)}
+                  <dd>
+                    <CountUp
+                      value={tile.value}
+                      className="block font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-accent [overflow-wrap:anywhere] sm:text-5xl"
+                    />
                   </dd>
                   <span
                     aria-hidden="true"

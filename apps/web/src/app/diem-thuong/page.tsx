@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { PointsBalance } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { CountUp } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Section } from "@/components/section";
@@ -109,9 +110,10 @@ export default function DiemThuongPage() {
                 Số dư điểm thưởng
               </h2>
               <div className="mt-3 flex items-baseline gap-2">
-                <p className="font-display text-4xl font-bold leading-none tracking-tight text-accent [overflow-wrap:anywhere] sm:text-5xl">
-                  {viFormatter.format(pointsState.data.balance)}
-                </p>
+                <CountUp
+                  value={pointsState.data.balance}
+                  className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-accent [overflow-wrap:anywhere] sm:text-5xl"
+                />
                 <span className="text-lg font-medium text-muted">điểm</span>
               </div>
             </section>
