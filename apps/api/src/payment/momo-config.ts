@@ -42,6 +42,26 @@ export const MOMO_REQUEST_TYPE = 'captureWallet';
 export const MOMO_IPN_PATH = '/payment-webhooks/momo';
 
 /**
+ * Shown to the payer inside the MoMo app, and echoed back on the IPN, where it
+ * is compared against this exact value. One constant for both sides: two copies
+ * of the literal would drift and the comparison would start rejecting genuine
+ * callbacks.
+ *
+ * ponytail: ASCII on purpose — it is part of the signed payload, and diacritics
+ * there only buy encoding bugs.
+ */
+export const MOMO_ORDER_INFO = 'GreenCity - goi thanh vien 30 ngay';
+
+/**
+ * We send no opaque state to MoMo, so this is empty — but it is still signed
+ * and still echoed back, so the webhook compares it rather than ignoring it.
+ */
+export const MOMO_EXTRA_DATA = '';
+
+/** MoMo's own value for a wallet payment; the IPN must carry exactly this. */
+export const MOMO_ORDER_TYPE = 'momo_wallet';
+
+/**
  * Browser return path on the web app; MoMo appends its own query params.
  * ponytail: one constant, not an input — change this line if checkout ever
  * needs a dedicated result page instead of the marketplace it unlocks.

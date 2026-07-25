@@ -307,6 +307,29 @@ describe('createMomoPayment', () => {
     // signature rejection from MoMo.
     expect(sent.requestType).toBe('captureWallet');
     expect(MOMO_REQUEST_TYPE).toBe('captureWallet');
+    // One-step capture, stated explicitly: it is what makes a 9000 result money
+    // we hold rather than money merely authorised.
+    expect(sent.autoCapture).toBe(true);
+    // ...and it must stay out of the signed string, which the docs fix at ten
+    // fields. Signing it would make every request fail verification at MoMo.
+    expect(String(call.init.body)).toContain('"autoCapture":true');
+    expect(sent.signature).toBe(
+      signMomoPayload(
+        buildCreatePaymentRawSignature({
+          accessKey: config.accessKey,
+          amount: createInput.amount,
+          extraData: '',
+          ipnUrl: 'https://api.example.test/payment-webhooks/momo',
+          orderId: createInput.orderId,
+          orderInfo: createInput.orderInfo,
+          partnerCode: config.partnerCode,
+          redirectUrl: 'https://web.example.test/cho-online',
+          requestId: createInput.requestId,
+          requestType: MOMO_REQUEST_TYPE,
+        }),
+        SECRET,
+      ),
+    );
     expect(sent.ipnUrl).toBe('https://api.example.test/payment-webhooks/momo');
     expect(sent.redirectUrl).toBe('https://web.example.test/cho-online');
     expect(sent.signature).toMatch(/^[0-9a-f]{64}$/);

@@ -1,7 +1,8 @@
 import type { ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { AuthContext } from '../src/authz/auth-context';
 import { AuthService } from '../src/auth/auth.service';
-import { OriginGuard } from '../src/common/origin.guard';
+import { OriginGuard, SkipOriginCheck } from '../src/common/origin.guard';
 import { loadEnv } from '../src/config/env';
 import { MediaService } from '../src/media/media.service';
 import sharp from 'sharp';
@@ -41,7 +42,9 @@ describe('audit regressions', () => {
   );
 
   it('rejects multiple Origin headers', () => {
-    const guard = new OriginGuard();
+    // A real Reflector with no metadata on the context: the route under test
+    // has not opted out of the Origin check, which is the point.
+    const guard = new OriginGuard(new Reflector());
     const req = {
       method: 'POST',
       headers: { origin: 'http://localhost:3000' },
@@ -52,9 +55,50 @@ describe('audit regressions', () => {
     };
     const context = {
       switchToHttp: () => ({ getRequest: () => req }),
+      getHandler: () => function handler() {},
+      getClass: () => class Controller {},
     } as unknown as ExecutionContext;
 
     expect(() => guard.canActivate(context)).toThrow('Origin is not allowed');
+  });
+
+  it('honours SkipOriginCheck on the decorated route and nowhere else', () => {
+    class WebhookLike {
+      @SkipOriginCheck()
+      handle(): void {}
+    }
+    class OrdinaryLike {
+      handle(): void {}
+    }
+
+    const guard = new OriginGuard(new Reflector());
+    // The shape MoMo arrives in: unsafe method, no Origin, no session.
+    const req = {
+      method: 'POST',
+      headers: {},
+      headersDistinct: {},
+      cookies: {},
+    };
+    const contextFor = (target: object, handler: unknown) =>
+      ({
+        switchToHttp: () => ({ getRequest: () => req }),
+        getHandler: () => handler,
+        getClass: () => target,
+      }) as unknown as ExecutionContext;
+
+    expect(
+      guard.canActivate(
+        contextFor(WebhookLike, WebhookLike.prototype.handle),
+      ),
+    ).toBe(true);
+
+    // The exemption is opt-in: an identical request on any other route still
+    // fails, which is what keeps this from becoming an app-wide CSRF hole.
+    expect(() =>
+      guard.canActivate(
+        contextFor(OrdinaryLike, OrdinaryLike.prototype.handle),
+      ),
+    ).toThrow('Origin is not allowed');
   });
 
   it('removes a stored upload when the metadata write fails', async () => {

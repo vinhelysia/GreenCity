@@ -124,6 +124,11 @@ export async function createMomoPayment(
         requestType: MOMO_REQUEST_TYPE,
         extraData,
         lang: 'vi',
+        // One-step capture, stated rather than assumed: it decides whether a
+        // 9000 result is money we have or money merely authorised. Not part of
+        // the signature — the documented canonical string does not include it,
+        // and adding it there would break the hash.
+        autoCapture: true,
         signature,
       }),
     });

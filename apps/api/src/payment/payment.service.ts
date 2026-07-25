@@ -16,7 +16,11 @@ import { AuditService } from '../audit/audit.service';
 import { loadEnv } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { createMomoPayment } from './momo-client';
-import { resolveMomoCheckoutConfig } from './momo-config';
+import {
+  MOMO_EXTRA_DATA,
+  MOMO_ORDER_INFO,
+  resolveMomoCheckoutConfig,
+} from './momo-config';
 
 export interface VerifiedPaymentNotification {
   partnerCode: string;
@@ -28,8 +32,62 @@ export interface VerifiedPaymentNotification {
   message?: string;
 }
 
+/**
+ * What a MoMo resultCode means for the payment row.
+ *
+ * `0` is a completed payment. `9000` is an authorised one, which is the same
+ * thing here only because checkout sends autoCapture: true — on a two-step
+ * flow it would still need capturing, so the two must be read together.
+ *
+ * The in-flight codes are the reason this is not a boolean: MoMo sends a
+ * callback while the payer is still deciding, and treating that as failure
+ * would resolve the row before the real answer arrives, after which the
+ * genuine success IPN is discarded as a duplicate and paid access is lost.
+ */
+const PAID_RESULT_CODES = new Set([0, 9000]);
+
+/**
+ * The codes MoMo's result table marks final for a one-time wallet payment.
+ *
+ * Membership is explicit and the default below is PENDING, never FAILED,
+ * because FAILED is irreversible here: it takes the row out of the claimable
+ * state, so a success callback arriving afterwards is discarded as a duplicate
+ * and someone who paid silently loses access. Plenty of codes are documented
+ * final-status "no" — 10, 11, 20, 40, 43 and 47 among them — and resolving an
+ * unrecognised one as failure would bet a paid subscription on this list being
+ * exhaustive.
+ *
+ * Refund and disbursement codes (1080, 1081, 1088) are deliberately absent:
+ * they belong to flows this service does not run, and a payment IPN never
+ * carries them.
+ */
+const TERMINAL_FAILURE_RESULT_CODES = new Set([
+  98,
+  99,
+  1001, // insufficient funds
+  1002, // rejected by the issuer
+  1003, // cancelled after authorisation
+  1004, // amount exceeds the payer's limit
+  1005, // payment url / QR expired
+  1006, // payer denied the confirmation
+  1007,
+  1017,
+  1026,
+  4001,
+  4002,
+  4100,
+]);
+
+function classifyResultCode(code: number): 'PAID' | 'PENDING' | 'FAILED' {
+  if (PAID_RESULT_CODES.has(code)) return 'PAID';
+  if (TERMINAL_FAILURE_RESULT_CODES.has(code)) return 'FAILED';
+  // Everything else — in-flight (1000, 7000, 7002), non-final, or simply
+  // unknown to us — stays open. Fail closed: no access, but still claimable.
+  return 'PENDING';
+}
+
 export interface ProcessNotificationResult {
-  status: 'PAID' | 'FAILED' | 'IGNORED_MISMATCH' | 'DUPLICATE';
+  status: 'PAID' | 'PENDING' | 'FAILED' | 'IGNORED_MISMATCH' | 'DUPLICATE';
   paymentId?: string;
   subscriptionId?: string | null;
 }
@@ -90,9 +148,9 @@ export class PaymentService {
       // Read back from the row, never from the request: the client cannot
       // influence what it is charged.
       amount: payment.amountVnd,
-      // ponytail: ASCII on purpose — orderInfo is part of the signed payload,
-      // and diacritics there only buy encoding bugs.
-      orderInfo: 'GreenCity - goi thanh vien 30 ngay',
+      // Shared with the webhook, which compares the echoed values against these.
+      orderInfo: MOMO_ORDER_INFO,
+      extraData: MOMO_EXTRA_DATA,
     });
 
     return CreateSubscriptionPaymentResponseSchema.parse({
@@ -182,12 +240,26 @@ export class PaymentService {
             };
           }
 
+          const outcome = classifyResultCode(notification.resultCode);
+
+          if (outcome === 'PENDING') {
+            // The payer has not finished. Record the code but leave the row
+            // claimable, so the success IPN that follows can still take it.
+            // No transaction id is stored: that column is unique, and a
+            // placeholder would collide with the next in-flight callback.
+            await tx.subscriptionPayment.updateMany({
+              where: { id: payment.id, status: 'PENDING' },
+              data: { momoResultCode: notification.resultCode },
+            });
+            return { status: 'PENDING', paymentId: payment.id };
+          }
+
           const claimCount = await tx.subscriptionPayment.updateMany({
             where: { id: payment.id, status: 'PENDING' },
             data: {
-              status: notification.resultCode === 0 ? 'PAID' : 'FAILED',
+              status: outcome,
               momoTransactionId:
-                notification.resultCode === 0 ? notification.transId : null,
+                outcome === 'PAID' ? notification.transId : null,
               momoResultCode: notification.resultCode,
             },
           });
@@ -203,7 +275,7 @@ export class PaymentService {
             };
           }
 
-          if (notification.resultCode !== 0) {
+          if (outcome !== 'PAID') {
             return { status: 'FAILED', paymentId: payment.id };
           }
 
