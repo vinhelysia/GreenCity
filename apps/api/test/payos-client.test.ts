@@ -516,7 +516,6 @@ describe('createPayosPayment', () => {
   it.each([
     ['orderCode', { orderCode: 999 }],
     ['amount', { amount: 1 }],
-    ['description', { description: 'OTHER' }],
     ['currency', { currency: 'USD' }],
     ['status', { status: 'PAID' }],
   ])('rejects a response whose echoed %s is not ours', async (_f, override) => {
@@ -525,6 +524,19 @@ describe('createPayosPayment', () => {
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
       'PAYMENT_PROVIDER_UNAVAILABLE',
     );
+  });
+
+  it('accepts the signed description prefix payOS adds for this channel', async () => {
+    mockFetch(async () =>
+      okResponse(signedBody({ description: `CHANNEL ${PAYOS_DESCRIPTION}` })),
+    );
+
+    await expect(
+      createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+    ).resolves.toMatchObject({
+      payUrl: `https://pay.payos.vn/web/${LINK_ID}`,
+      providerPaymentId: LINK_ID,
+    });
   });
 
   it.each([

@@ -120,8 +120,8 @@ export class PaymentWebhookController {
     // than granting anything: the amount comparison downstream assumes VND.
     if (data.data.currency !== PAYOS_CURRENCY) return;
 
-    // orderCode, amount, description and paymentLinkId are matched against the
-    // stored row inside the transaction, which is also where duplicates and
+    // orderCode, amount and paymentLinkId are matched against the stored row
+    // inside the transaction, which is also where duplicates and
     // unknown orders are absorbed — all of them end here as 204.
     await this.payments.processVerifiedNotification({
       orderCode: String(data.data.orderCode),

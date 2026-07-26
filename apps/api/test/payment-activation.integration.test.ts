@@ -172,7 +172,6 @@ describe('Payment activation domain integration', () => {
 
   it.each([
     ['amount', { amount: 1 }],
-    ['description', { description: 'OTHER' }],
     ['paymentLinkId', { paymentLinkId: 'someone-elses-link' }],
   ])('grants nothing when the signed %s disagrees with the row', async (
     _field,
