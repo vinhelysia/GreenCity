@@ -26,7 +26,7 @@ export default function HomePage() {
               </div>
               <h2 className="mt-4 font-display text-xl font-bold text-ink">Bán phế liệu</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Đăng phế liệu tái chế dễ dàng. Nhận báo giá minh bạch theo khung giá chuẩn thị trường.
+                Đăng phế liệu tái chế dễ dàng. Nhận báo giá minh bạch theo khung giá công khai.
               </p>
             </div>
             <Link
