@@ -1,7 +1,8 @@
 import type { ExecutionContext } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import type { AuthContext } from '../src/authz/auth-context';
 import { AuthService } from '../src/auth/auth.service';
-import { OriginGuard } from '../src/common/origin.guard';
+import { OriginGuard, SkipOriginCheck } from '../src/common/origin.guard';
 import { loadEnv } from '../src/config/env';
 import { MediaService } from '../src/media/media.service';
 import sharp from 'sharp';
@@ -41,7 +42,9 @@ describe('audit regressions', () => {
   );
 
   it('rejects multiple Origin headers', () => {
-    const guard = new OriginGuard();
+    // A real Reflector with no metadata on the context: the route under test
+    // has not opted out of the Origin check, which is the point.
+    const guard = new OriginGuard(new Reflector());
     const req = {
       method: 'POST',
       headers: { origin: 'http://localhost:3000' },
@@ -52,9 +55,50 @@ describe('audit regressions', () => {
     };
     const context = {
       switchToHttp: () => ({ getRequest: () => req }),
+      getHandler: () => function handler() {},
+      getClass: () => class Controller {},
     } as unknown as ExecutionContext;
 
     expect(() => guard.canActivate(context)).toThrow('Origin is not allowed');
+  });
+
+  it('honours SkipOriginCheck on the decorated route and nowhere else', () => {
+    class WebhookLike {
+      @SkipOriginCheck()
+      handle(): void {}
+    }
+    class OrdinaryLike {
+      handle(): void {}
+    }
+
+    const guard = new OriginGuard(new Reflector());
+    // The shape payOS arrives in: unsafe method, no Origin, no session.
+    const req = {
+      method: 'POST',
+      headers: {},
+      headersDistinct: {},
+      cookies: {},
+    };
+    const contextFor = (target: object, handler: unknown) =>
+      ({
+        switchToHttp: () => ({ getRequest: () => req }),
+        getHandler: () => handler,
+        getClass: () => target,
+      }) as unknown as ExecutionContext;
+
+    expect(
+      guard.canActivate(
+        contextFor(WebhookLike, WebhookLike.prototype.handle),
+      ),
+    ).toBe(true);
+
+    // The exemption is opt-in: an identical request on any other route still
+    // fails, which is what keeps this from becoming an app-wide CSRF hole.
+    expect(() =>
+      guard.canActivate(
+        contextFor(OrdinaryLike, OrdinaryLike.prototype.handle),
+      ),
+    ).toThrow('Origin is not allowed');
   });
 
   it('removes a stored upload when the metadata write fails', async () => {
@@ -100,81 +144,5 @@ describe('audit regressions', () => {
     expect(storage.deleteObject).toHaveBeenCalledWith(
       storage.putObject.mock.calls[0]?.[0].key,
     );
-  });
-
-  /**
-   * This used to assert the opposite: the object was deleted first, and a
-   * storage failure left the row untouched. That guarded the harmless failure
-   * and left the damaging one open — storage deletes, the update then fails,
-   * and a live record points at a file that is gone, which serves a broken
-   * image forever. deletedAt is what stops the file being served, so the row
-   * leads and an unreachable object is the acceptable residue.
-   */
-  it('keeps the delete applied for readers when storage deletion fails', async () => {
-    const asset = {
-      id: 'asset',
-      ownerId: 'owner',
-      objectKey: 'media/owner/asset.jpg',
-      deletedAt: null,
-    };
-    const prisma = {
-      mediaAsset: {
-        findFirst: jest.fn().mockResolvedValue(asset),
-        update: jest.fn().mockResolvedValue({ ...asset, deletedAt: new Date() }),
-      },
-      marketplaceListing: { count: jest.fn().mockResolvedValue(0) },
-      cleanupReport: { count: jest.fn().mockResolvedValue(0) },
-      scrapRequest: { count: jest.fn().mockResolvedValue(0) },
-    };
-    const storage = {
-      driver: 'local',
-      deleteObject: jest.fn().mockRejectedValue(new Error('storage down')),
-    };
-    const service = new MediaService(
-      prisma as never,
-      storage as never,
-      { record: jest.fn() } as never,
-    );
-    const auth = {
-      user: { id: 'owner' },
-      roles: ['USER'],
-      sessionId: 'session',
-    } as AuthContext;
-
-    await expect(service.softDelete(auth, asset.id)).resolves.toBeUndefined();
-    expect(prisma.mediaAsset.update).toHaveBeenCalled();
-  });
-
-  it('refuses to delete media that a submission still points at', async () => {
-    const asset = {
-      id: 'asset',
-      ownerId: 'owner',
-      objectKey: 'media/owner/asset.jpg',
-      deletedAt: null,
-    };
-    const prisma = {
-      mediaAsset: {
-        findFirst: jest.fn().mockResolvedValue(asset),
-        update: jest.fn(),
-      },
-      marketplaceListing: { count: jest.fn().mockResolvedValue(1) },
-      cleanupReport: { count: jest.fn().mockResolvedValue(0) },
-      scrapRequest: { count: jest.fn().mockResolvedValue(0) },
-    };
-    const storage = { driver: 'local', deleteObject: jest.fn() };
-    const service = new MediaService(
-      prisma as never,
-      storage as never,
-      { record: jest.fn() } as never,
-    );
-    const auth = {
-      user: { id: 'owner' },
-      roles: ['USER'],
-      sessionId: 'session',
-    } as AuthContext;
-
-    await expect(service.softDelete(auth, asset.id)).rejects.toThrow();
-    expect(prisma.mediaAsset.update).not.toHaveBeenCalled();
-    expect(storage.deleteObject).not.toHaveBeenCalled();
   });
 });

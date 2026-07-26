@@ -77,10 +77,69 @@ if ($exists -ne "1") {
   Write-Host "Database $AppDb already exists"
 }
 
+# Ownership, not blanket grants. `GRANT ALL ON ALL TABLES IN SCHEMA public`
+# reaches PostGIS's own tables (spatial_ref_sys) as well as ours, and the
+# default-privilege grants that used to live here did the same thing to every
+# table the admin role would create later — including the extension's, on the
+# next PostGIS upgrade. Transferring ownership of the objects we actually
+# created gives the app role everything it needs.
+#
+# The REVOKEs are not decoration: they undo the defaults an earlier version of
+# this script installed, so rerunning setup repairs an already-affected
+# database. Revoking a default that was never granted is a no-op, so this stays
+# idempotent.
 $grantSql = @"
 ALTER DATABASE $AppDb OWNER TO $AppUser;
 GRANT ALL ON SCHEMA public TO $AppUser;
 ALTER SCHEMA public OWNER TO $AppUser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM $AppUser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM $AppUser;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TYPES FROM $AppUser;
+DO `$body`$
+DECLARE
+  r RECORD;
+BEGIN
+  -- Tables (incl. partitioned) and sequences. The pg_depend deptype='e' test
+  -- is what keeps extension-owned objects out: re-owning spatial_ref_sys
+  -- breaks the assumption that PostGIS owns its own catalogue, and a later
+  -- extension upgrade may refuse to touch it.
+  FOR r IN (
+    SELECT c.relname, c.relkind
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = 'public'
+    WHERE c.relkind IN ('r', 'p', 'S')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d
+        WHERE d.objid = c.oid
+          AND d.classid = 'pg_class'::regclass
+          AND d.deptype = 'e'
+      )
+  ) LOOP
+    IF r.relkind = 'S' THEN
+      EXECUTE format('ALTER SEQUENCE public.%I OWNER TO %I', r.relname, '$AppUser');
+    ELSE
+      EXECUTE format('ALTER TABLE public.%I OWNER TO %I', r.relname, '$AppUser');
+    END IF;
+  END LOOP;
+
+  -- Enum types. A migration applied by the admin role leaves its enums owned by
+  -- admin, and GRANT never conveys ALTER TYPE, so the next migration that adds
+  -- a value fails for the app role unless ownership moves too.
+  FOR r IN (
+    SELECT t.typname
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace AND n.nspname = 'public'
+    WHERE t.typtype = 'e'
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d
+        WHERE d.objid = t.oid
+          AND d.classid = 'pg_type'::regclass
+          AND d.deptype = 'e'
+      )
+  ) LOOP
+    EXECUTE format('ALTER TYPE public.%I OWNER TO %I', r.typname, '$AppUser');
+  END LOOP;
+END `$body`$;
 "@
 
 Invoke-Psql -PsqlPath $psql -Arguments @(

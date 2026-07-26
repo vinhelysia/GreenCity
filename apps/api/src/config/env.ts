@@ -1,6 +1,32 @@
 import { z } from 'zod';
 
 /**
+ * A blank value in .env means "not configured". Without this, `KEY=` would be
+ * an empty string and fail its own validator, so half-filled optional config
+ * would block startup.
+ */
+const blankAsUnset = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
+
+/**
+ * Public base URL used to build callback/redirect links. Same parse-with-URL
+ * approach as CORS_ORIGINS below; https only, because these are handed to a
+ * third party — http stays allowed on loopback so local dev still works.
+ */
+const publicUrl = z.string().refine((v) => {
+  try {
+    const url = new URL(v);
+    return (
+      url.protocol === 'https:' ||
+      (url.protocol === 'http:' &&
+        (url.hostname === 'localhost' || url.hostname === '127.0.0.1'))
+    );
+  } catch {
+    return false;
+  }
+}, 'must be an https:// URL (http:// allowed only for localhost / 127.0.0.1)');
+
+/**
  * Process-env validation. Fails fast when DATABASE_URL is missing/invalid.
  * Does not embed real credentials — see .env.example for placeholders only.
  */
@@ -71,12 +97,30 @@ const EnvSchema = z.object({
   AUTH_LOGIN_RATE_LIMIT: z.coerce.number().int().positive().default(10),
   AUTH_LOGIN_RATE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
   /**
-   * Proxy hops in front of the API. 0 for local (no proxy) so a spoofed
-   * X-Forwarded-For is never trusted; 1 on Render, whose edge sits one hop in
-   * front — without it every request keys the rate limiter on the proxy's IP,
-   * so all users share one bucket. See NestJS security/rate-limiting docs.
+   * Trust Render's first X-Forwarded-For address for rate-limit identity.
+   * Disabled locally; this flag is not an Express numeric hop count.
    */
-  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  TRUST_PROXY: z.coerce.number().int().min(0).max(1).default(0),
+  /**
+   * payOS payment — every key is optional, so the API boots with none, some, or
+   * all of them set. Completeness is the payment module's call, not startup's;
+   * validation here must never hint at which credential is missing.
+   *
+   * payOS has no sandbox, so there is no environment switch: the only host is
+   * the production one, and it is hard-coded in payos-config.ts rather than
+   * read from here.
+   */
+  PAYOS_CLIENT_ID: z.string().optional(),
+  PAYOS_API_KEY: z.string().optional(),
+  PAYOS_CHECKSUM_KEY: z.string().optional(),
+  /**
+   * Public bases for the payOS return link (web) and for reporting the webhook
+   * URL to register with payOS (api). The webhook address is configured once in
+   * the payOS channel, not sent per request, so PUBLIC_API_URL is not part of
+   * what makes checkout configured.
+   */
+  PUBLIC_API_URL: blankAsUnset(publicUrl),
+  PUBLIC_WEB_URL: blankAsUnset(publicUrl),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

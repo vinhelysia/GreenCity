@@ -41,6 +41,7 @@ model User {
   marketplaceListings MarketplaceListing[]
   reservations        Reservation[]
   subscriptions       Subscription[]
+  subscriptionPayments SubscriptionPayment[]
   cleanupReports      CleanupReport[]
   pointEntries        PointEntry[]
 }
@@ -271,6 +272,53 @@ model Subscription {
   expiresAt DateTime
   note      String?
   createdAt DateTime           @default(now())
+  payment   SubscriptionPayment?
+
+  @@index([userId, status])
+}
+
+enum SubscriptionPaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+/// Which gateway a row was created against. MOMO rows are historical: the MoMo
+/// integration was removed, so nothing can verify a MoMo callback any more.
+enum SubscriptionPaymentProvider {
+  MOMO
+  PAYOS
+}
+
+/// One-time buyer subscription payment (50,000 VND / 30 days).
+model SubscriptionPayment {
+  id           String                    @id @default(cuid())
+  userId       String
+  user         User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountVnd    Int                       @default(50000)
+  durationDays Int                       @default(30)
+  status       SubscriptionPaymentStatus @default(PENDING)
+
+  provider SubscriptionPaymentProvider @default(PAYOS)
+  /// payOS orderCode, stored as a decimal string. It is only narrowed to a
+  /// JavaScript number at the payOS API boundary, where the protocol demands an
+  /// integer; everywhere else it stays text so the column can also hold the
+  /// historical MoMo UUIDs without losing them.
+  providerOrderId       String  @unique
+  /// payOS paymentLinkId. Nullable because a create call that times out leaves
+  /// a claimable row behind with no id yet; a later signed webhook fills it in.
+  providerPaymentId     String? @unique
+  /// The bank reference. Unique, so one bank transaction cannot be replayed
+  /// onto a second payment.
+  providerTransactionId String? @unique
+  providerResultCode    String?
+  providerDescription   String?
+
+  paidAt         DateTime?
+  subscriptionId String?       @unique
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   @@index([userId, status])
 }

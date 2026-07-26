@@ -48,7 +48,10 @@ export type RuntimeIssues = {
  */
 export function attachRuntimeGuards(
   page: Page,
-  { allowConflict = false } = {},
+  {
+    allowConflict = false,
+    allowServiceUnavailable = false,
+  } = {},
 ): RuntimeIssues {
   const issues: RuntimeIssues = {
     consoleErrors: [],
@@ -67,6 +70,15 @@ export function attachRuntimeGuards(
       if (
         allowConflict &&
         /Failed to load resource:.*status of 409/i.test(text)
+      ) {
+        return;
+      }
+      // A test that deliberately makes the payment provider unavailable still
+      // gets Chromium's console entry for the 503; the assertion is about how
+      // the page recovers, not about the log line.
+      if (
+        allowServiceUnavailable &&
+        /Failed to load resource:.*status of 503/i.test(text)
       ) {
         return;
       }

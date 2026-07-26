@@ -45,6 +45,7 @@ const REQUIRED_COMPONENTS = [
   "components/cleanup-report-view.tsx",
   "components/admin-cleanup-queue.tsx",
   "components/home-highlights.tsx",
+  "components/buyer-pass-panel.tsx",
   "lib/api.ts",
   "lib/format.ts",
 ];
@@ -150,6 +151,8 @@ const MARKETPLACE_API_PATHS = [
   "/api/subscriptions/me",
   "/api/media/upload",
   "/api/admin/scrap-requests",
+  "/api/subscription-payments",
+  "/api/subscription-payments/${",
 ];
 for (const path of MARKETPLACE_API_PATHS) {
   if (!apiLib.includes(path)) {

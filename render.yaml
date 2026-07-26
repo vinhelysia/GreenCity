@@ -9,6 +9,14 @@
 #      this service does not migrate on deploy.
 #   4. After Vercel gives the web a domain, set CORS_ORIGINS to it (exact origin,
 #      no trailing slash) or every cookie-auth request returns 403 INVALID_ORIGIN.
+#
+# Operational note: if this service already existed before the PAYOS_*/
+# PUBLIC_*_URL keys below were added to this file, do not assume a Blueprint
+# sync/redeploy will prompt for or create them on Render's side — verify in
+# the Render Dashboard → Environment that they are actually present after
+# deploying, and add them by hand there if not. Leaving them unset is not a
+# startup error (checkout just stays PAYMENT_NOT_CONFIGURED), so this is easy
+# to miss silently.
 services:
   - type: web
     name: greencity-api
@@ -31,8 +39,8 @@ services:
         value: "20"
       - key: NODE_ENV
         value: production
-      # Render's edge is one proxy hop in front of the app; without this the
-      # rate limiter keys every request on the proxy IP (one shared bucket).
+      # Trust the first client IP that Render prepends to X-Forwarded-For.
+      # Later header values are untrusted and ignored by the rate-limit tracker.
       - key: TRUST_PROXY
         value: "1"
       # PORT is injected by Render; main.ts prefers it over API_PORT.
@@ -52,3 +60,21 @@ services:
         sync: false # service_role key — secret
       - key: SUPABASE_STORAGE_BUCKET
         value: greencity-media
+      # payOS buyer-pass checkout — entirely optional. Leaving any of these
+      # unset only disables checkout (PAYMENT_NOT_CONFIGURED); it is never a
+      # startup error. payOS publishes no sandbox, so there is no environment
+      # switch: the only host is production and it is hard-coded in the source.
+      - key: PAYOS_CLIENT_ID
+        sync: false
+      - key: PAYOS_API_KEY
+        sync: false # secret — set in the Render dashboard, never commit
+      - key: PAYOS_CHECKSUM_KEY
+        sync: false # secret — signs and verifies every payment; never commit
+      # PUBLIC_WEB_URL builds the payOS return link. PUBLIC_API_URL is not used
+      # per request — it only tells you the webhook address to register with
+      # payOS: <PUBLIC_API_URL>/payment-webhooks/payos
+      # https:// required in production.
+      - key: PUBLIC_API_URL
+        sync: false # this service's own public URL, e.g. https://greencity-api.onrender.com
+      - key: PUBLIC_WEB_URL
+        sync: false # the Vercel web origin — set after the web deploy

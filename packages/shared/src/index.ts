@@ -329,8 +329,8 @@ export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
  * USER/ADMIN/CLEANUP_PARTNER and this entity gates the behaviour instead.
  *
  * Carries no billing concepts on purpose: no plan tier, price, invoice, renewal
- * date or provider reference. Rows are seeded or created by an admin; there is
- * no self-serve purchase flow in this slice.
+ * date or provider reference — those live on SubscriptionPayment instead. Rows
+ * come from either a seeded/admin-created demo row or a paid buyer pass.
  *
  * Eligible means status is ACTIVE and startsAt <= now < expiresAt. Several rows
  * per user are allowed so history survives, and overlapping active rows are
@@ -342,7 +342,7 @@ export const SubscriptionSchema = z.object({
   status: SubscriptionStatusSchema,
   startsAt: z.string(),
   expiresAt: z.string(),
-  /** Demo labelling, e.g. "Demo subscription — no real payment processed". */
+  /** Optional demo/admin labelling only — a paid pass leaves this null. */
   note: z.string().nullable(),
 });
 export type Subscription = z.infer<typeof SubscriptionSchema>;
@@ -351,8 +351,46 @@ export type Subscription = z.infer<typeof SubscriptionSchema>;
 export const SubscriptionStateSchema = z.object({
   eligible: z.boolean(),
   subscription: SubscriptionSchema.nullable(),
+  checkoutAvailable: z.boolean().default(false),
 });
 export type SubscriptionState = z.infer<typeof SubscriptionStateSchema>;
+
+// ─── Payment contracts ───────────────────────────────────────────────────────
+
+export const SubscriptionPaymentStatusSchema = z.enum([
+  "PENDING",
+  "PAID",
+  "FAILED",
+]);
+export type SubscriptionPaymentStatus = z.infer<
+  typeof SubscriptionPaymentStatusSchema
+>;
+
+export const CreateSubscriptionPaymentResponseSchema = z.object({
+  paymentId: z.string(),
+  payUrl: z.string().url(),
+});
+export type CreateSubscriptionPaymentResponse = z.infer<
+  typeof CreateSubscriptionPaymentResponseSchema
+>;
+
+export const SubscriptionPaymentStatusResponseSchema = z.object({
+  id: z.string(),
+  status: SubscriptionPaymentStatusSchema,
+  amountVnd: z.number().int(),
+  paidAt: z.string().nullable(),
+});
+export type SubscriptionPaymentStatusResponse = z.infer<
+  typeof SubscriptionPaymentStatusResponseSchema
+>;
+
+export const PAYMENT_ERROR_CODES = [
+  "PAYMENT_NOT_CONFIGURED",
+  "PAYMENT_PROVIDER_UNAVAILABLE",
+  "PAYMENT_PROVIDER_REJECTED",
+  "PAYMENT_NOT_FOUND",
+] as const;
+export type PaymentErrorCode = (typeof PAYMENT_ERROR_CODES)[number];
 
 // ─── Marketplace: error codes ────────────────────────────────────────────────
 
