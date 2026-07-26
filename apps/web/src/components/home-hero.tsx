@@ -1,18 +1,18 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { PublicCleanupReport } from "@greencity/shared";
 import { fetchPublicCleanupReports } from "@/lib/api";
 
 /**
- * Opening panel. Asymmetric on purpose — the proposition holds the left column
- * and a documented dump site holds the right, so the page opens on the problem
- * rather than on a centred slogan.
+ * Hallmark · existing macrostructure: Narrative Workflow
+ * enrichment: E8 generated editorial backdrop + verified documentary inset
+ * generated: OpenAI imagegen · post-processed to local WebP
  *
- * The photograph is whichever cleanup report was verified most recently, so it
- * is never a stock image and never a hardcoded id. Its box keeps its aspect
- * ratio while loading, so nothing shifts when the image arrives.
+ * The generated image sets the civic/nature mood but never replaces evidence:
+ * the latest verified community report remains the foreground photograph.
  */
 export function HomeHero() {
   const [report, setReport] = useState<PublicCleanupReport | null>(null);
@@ -36,7 +36,7 @@ export function HomeHero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="grid min-w-0 grid-cols-1 items-start gap-8 pb-10 sm:pb-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] lg:gap-12"
+      className="grid min-w-0 grid-cols-1 items-center gap-8 pb-10 sm:pb-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)] lg:gap-12"
     >
       <div className="min-w-0">
         <h1
@@ -67,29 +67,34 @@ export function HomeHero() {
         </div>
       </div>
 
-      <figure className="min-w-0">
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-md border border-edge bg-paper-3">
-          {report ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={`/api${report.photoPath}`}
-              alt=""
-              fetchPriority="high"
-              className="h-full w-full object-cover"
-            />
-          ) : null}
-        </div>
-        <figcaption className="mt-2 text-xs leading-relaxed text-muted">
-          {report ? (
-            <>
+      <div className="relative min-h-[22rem] min-w-0 overflow-hidden rounded-md bg-paper-3 sm:min-h-[26rem] lg:min-h-[30rem]">
+        <Image
+          src="/images/home-hero-green-city.webp"
+          alt=""
+          fill
+          priority
+          sizes="(min-width: 1024px) 45vw, 100vw"
+          className="object-cover object-[58%_center]"
+        />
+
+        {report ? (
+          <figure className="absolute bottom-4 left-4 right-10 min-w-0 sm:bottom-6 sm:left-6 sm:right-20">
+            <div className="aspect-[16/10] w-full overflow-hidden border border-paper bg-paper-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api${report.photoPath}`}
+                alt=""
+                fetchPriority="high"
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <figcaption className="mt-2 max-w-prose bg-paper px-2 py-1 text-xs leading-relaxed text-muted">
               Điểm rác do người dân báo, đã được xác minh
               {place ? <> tại {place}</> : null}.
-            </>
-          ) : (
-            "Ảnh điểm rác do người dân gửi, hiển thị sau khi được xác minh."
-          )}
-        </figcaption>
-      </figure>
+            </figcaption>
+          </figure>
+        ) : null}
+      </div>
     </section>
   );
 }
