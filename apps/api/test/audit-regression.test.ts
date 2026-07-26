@@ -72,7 +72,7 @@ describe('audit regressions', () => {
     }
 
     const guard = new OriginGuard(new Reflector());
-    // The shape MoMo arrives in: unsafe method, no Origin, no session.
+    // The shape payOS arrives in: unsafe method, no Origin, no session.
     const req = {
       method: 'POST',
       headers: {},

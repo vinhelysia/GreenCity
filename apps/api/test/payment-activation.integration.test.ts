@@ -272,6 +272,42 @@ describe('Payment activation domain integration', () => {
     expect(untouched?.status).toBe('PENDING');
   });
 
+  it('lets only one of two concurrent orders claim the same bank reference', async () => {
+    // The sequential version above proves the guard; this proves it holds when
+    // both webhooks are in flight at once, which is when a check-then-write
+    // would let both through and hand out two subscriptions for one transfer.
+    const first = await pendingWithLink('conc-ref-a');
+    const second = await pendingWithLink('conc-ref-b');
+    const shared = `TF-shared-${suffix}`;
+    const before = await prisma.subscription.count({
+      where: { userId: testUserId },
+    });
+
+    const results = await Promise.all([
+      paymentService.processVerifiedNotification(
+        notificationFor(first, { reference: shared }),
+      ),
+      paymentService.processVerifiedNotification(
+        notificationFor(second, { reference: shared }),
+      ),
+    ]);
+
+    expect(results.filter((r) => r.status === 'PAID')).toHaveLength(1);
+    expect(
+      await prisma.subscription.count({ where: { userId: testUserId } }),
+    ).toBe(before + 1);
+
+    const rows = await prisma.subscriptionPayment.findMany({
+      where: { id: { in: [first.id, second.id] } },
+    });
+    expect(rows.filter((r) => r.status === 'PAID')).toHaveLength(1);
+    expect(rows.filter((r) => r.status === 'PENDING')).toHaveLength(1);
+    // The reference is recorded exactly once, on the winner.
+    expect(
+      rows.filter((r) => r.providerTransactionId === shared),
+    ).toHaveLength(1);
+  });
+
   it('extends an active subscription seamlessly from the latest expiry date', async () => {
     const first = await pendingWithLink('ext-1');
     await paymentService.processVerifiedNotification(notificationFor(first));

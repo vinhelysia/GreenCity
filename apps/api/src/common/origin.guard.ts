@@ -16,7 +16,7 @@ const SKIP_ORIGIN_CHECK = 'skipOriginCheck';
 /**
  * Exempts one route from the Origin requirement. Reserved for server-to-server
  * callbacks that legitimately arrive without an Origin and without a session —
- * currently only the signed MoMo IPN, which authenticates itself by HMAC.
+ * currently only the signed payOS webhook, which authenticates itself by HMAC.
  *
  * Deliberately separate from @Public(): being unauthenticated says nothing
  * about whether a request came from a browser, and every other public POST must

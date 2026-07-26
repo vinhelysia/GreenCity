@@ -220,12 +220,13 @@ const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
  */
 const PAYMENT_ERROR_MESSAGES: Record<string, string> = {
   PAYMENT_NOT_CONFIGURED:
-    "Thanh toán MoMo chưa được mở trên môi trường này. Bạn thử lại sau nhé.",
+    "Thanh toán VietQR chưa được mở trên môi trường này. Bạn thử lại sau nhé.",
   PAYMENT_PROVIDER_UNAVAILABLE:
-    "Chưa kết nối được MoMo. Bạn thử lại sau ít phút.",
+    "Chưa kết nối được cổng thanh toán. Bạn thử lại sau ít phút.",
   // Raised while the order is being created, before the payer has picked a
-  // MoMo account, so advice about switching accounts would be nonsense.
-  PAYMENT_PROVIDER_REJECTED: "MoMo chưa tạo được giao dịch. Bạn thử lại sau.",
+  // bank account, so advice about switching accounts would be nonsense.
+  PAYMENT_PROVIDER_REJECTED:
+    "Cổng thanh toán chưa tạo được giao dịch. Bạn thử lại sau.",
   PAYMENT_NOT_FOUND: "Giao dịch này không còn hợp lệ. Bạn hãy tạo giao dịch mới.",
   NETWORK_ERROR: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
 };
@@ -350,7 +351,7 @@ export async function fetchSubscriptionState(): Promise<
 }
 
 /**
- * POST /api/subscription-payments — starts a MoMo checkout.
+ * POST /api/subscription-payments — starts a payOS VietQR checkout.
  *
  * The body is an empty object and must stay that way: the server refuses
  * anything else, because price and duration are its decision, not the client's.

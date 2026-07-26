@@ -6,13 +6,17 @@ import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/http-exception.filter';
 import { requestIdMiddleware } from '../src/common/request-id';
 import { PrismaService } from '../src/prisma/prisma.service';
+import {
+  canonicalizeData,
+  signPayosPayload,
+} from '../src/payment/payos-signature';
 import './setup-env';
 
 /**
  * Checkout over real HTTP against the real AppModule, with the provider stubbed.
- * Nothing here contacts MoMo.
+ * Nothing here contacts payOS.
  *
- * The MoMo settings live in process.env rather than a fixture because the
+ * The payOS settings live in process.env rather than a fixture because the
  * service reads them through loadEnv() on every call, which is what lets a test
  * take them away again and observe PAYMENT_NOT_CONFIGURED.
  */
@@ -22,13 +26,13 @@ describe('Subscription checkout integration', () => {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
   const ORIGIN = 'http://localhost:3000';
-  const PARTNER_CODE = 'GCTESTPARTNER';
+  const CHECKSUM_KEY = 'test-checksum-key-not-a-credential';
+  const linkFor = (orderCode: unknown) => `link-${String(orderCode)}`;
 
-  const MOMO_ENV_KEYS = [
-    'MOMO_ENV',
-    'MOMO_PARTNER_CODE',
-    'MOMO_ACCESS_KEY',
-    'MOMO_SECRET_KEY',
+  const PAYOS_ENV_KEYS = [
+    'PAYOS_CLIENT_ID',
+    'PAYOS_API_KEY',
+    'PAYOS_CHECKSUM_KEY',
     'PUBLIC_API_URL',
     'PUBLIC_WEB_URL',
   ] as const;
@@ -39,21 +43,20 @@ describe('Subscription checkout integration', () => {
   /** Captured provider requests, so a test can assert what the server sent. */
   let sentBodies: Array<Record<string, unknown>>;
 
-  function configureMomo(): void {
-    process.env.MOMO_ENV = 'sandbox';
-    process.env.MOMO_PARTNER_CODE = PARTNER_CODE;
-    process.env.MOMO_ACCESS_KEY = 'test-access-key';
-    process.env.MOMO_SECRET_KEY = 'test-secret-not-a-credential';
+  function configurePayos(): void {
+    process.env.PAYOS_CLIENT_ID = 'fake-client-id';
+    process.env.PAYOS_API_KEY = 'fake-api-key';
+    process.env.PAYOS_CHECKSUM_KEY = CHECKSUM_KEY;
     process.env.PUBLIC_API_URL = 'https://api.example.test';
     process.env.PUBLIC_WEB_URL = 'https://web.example.test';
   }
 
-  function unconfigureMomo(): void {
-    for (const key of MOMO_ENV_KEYS) delete process.env[key];
+  function unconfigurePayos(): void {
+    for (const key of PAYOS_ENV_KEYS) delete process.env[key];
   }
 
   /**
-   * Replies the way MoMo would, echoing back whatever the server generated.
+   * Replies the way payOS would, echoing back whatever the server generated.
    * Reading the ids off the captured request is deliberate: hard-coding them in
    * both the service and the test would let a wrong id pass unnoticed.
    */
@@ -67,21 +70,45 @@ describe('Subscription checkout integration', () => {
     }) as unknown as typeof fetch;
   }
 
-  function providerSuccess(overrides: Record<string, unknown> = {}) {
-    return (body: Record<string, unknown>) =>
+  /**
+   * The client now refuses an unsigned success envelope, so this fixture signs
+   * the data it returns. Signed over the whole object, exactly as payOS does.
+   */
+  /** payOS answering "no": a non-"00" envelope, which carries no data. */
+  function providerRejection() {
+    return () =>
       new Response(
+        JSON.stringify({ code: '231', desc: 'Đơn thanh toán đã tồn tại' }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+  }
+
+  function providerSuccess(overrides: Record<string, unknown> = {}) {
+    return (body: Record<string, unknown>) => {
+      const data = {
+        bin: '970422',
+        accountNumber: '0011000000000',
+        accountName: 'GREENCITY',
+        amount: body.amount,
+        description: body.description,
+        orderCode: body.orderCode,
+        currency: 'VND',
+        paymentLinkId: linkFor(body.orderCode),
+        status: 'PENDING',
+        checkoutUrl: `https://pay.payos.vn/web/${linkFor(body.orderCode)}`,
+        qrCode: '00020101021238...',
+        ...overrides,
+      };
+      return new Response(
         JSON.stringify({
-          partnerCode: body.partnerCode,
-          orderId: body.orderId,
-          requestId: body.requestId,
-          amount: body.amount,
-          resultCode: 0,
-          message: 'Successful.',
-          payUrl: 'https://test-payment.momo.vn/v2/gateway/pay?t=abc123',
-          ...overrides,
+          code: '00',
+          desc: 'success',
+          data,
+          signature: signPayosPayload(canonicalizeData(data), CHECKSUM_KEY),
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
+    };
   }
 
   function email(name: string): string {
@@ -129,7 +156,7 @@ describe('Subscription checkout integration', () => {
   }
 
   beforeAll(async () => {
-    for (const key of MOMO_ENV_KEYS) originalEnv[key] = process.env[key];
+    for (const key of PAYOS_ENV_KEYS) originalEnv[key] = process.env[key];
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -150,7 +177,7 @@ describe('Subscription checkout integration', () => {
     // The integration lane shares one process and one database, so both the
     // patched global and the mutated env have to go back exactly as they were.
     globalThis.fetch = originalFetch;
-    for (const key of MOMO_ENV_KEYS) {
+    for (const key of PAYOS_ENV_KEYS) {
       const value = originalEnv[key];
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
@@ -181,7 +208,7 @@ describe('Subscription checkout integration', () => {
 
   beforeEach(async () => {
     sentBodies = [];
-    configureMomo();
+    configurePayos();
     globalThis.fetch = originalFetch;
     await prisma.subscriptionPayment.deleteMany({
       where: { userId: { in: [buyer.userId, stranger.userId] } },
@@ -249,11 +276,11 @@ describe('Subscription checkout integration', () => {
   // ── configuration ─────────────────────────────────────────────────────────
 
   it.each([
-    ['no configuration at all', () => unconfigureMomo()],
+    ['no configuration at all', () => unconfigurePayos()],
     [
       'partial configuration',
       () => {
-        delete process.env.MOMO_SECRET_KEY;
+        delete process.env.PAYOS_CHECKSUM_KEY;
       },
     ],
   ])(
@@ -288,7 +315,7 @@ describe('Subscription checkout integration', () => {
     expect(pendingAtCallTime).toBe(1);
   });
 
-  it('generates its own unique orderId/requestId, ignoring any the client sends', async () => {
+  it('generates its own unique orderCode, ignoring any the client sends', async () => {
     stubProvider(providerSuccess());
     const first = await postCheckout(buyer.cookie);
     const second = await postCheckout(buyer.cookie);
@@ -296,10 +323,14 @@ describe('Subscription checkout integration', () => {
     expect(second.status).toBe(201);
 
     const [a, b] = sentBodies;
-    expect(a!.orderId).not.toBe(b!.orderId);
-    expect(a!.requestId).not.toBe(b!.requestId);
+    expect(a!.orderCode).not.toBe(b!.orderCode);
+    // payOS requires a positive integer that survives JSON in JavaScript.
+    for (const body of [a, b]) {
+      expect(Number.isSafeInteger(body!.orderCode)).toBe(true);
+      expect(body!.orderCode as number).toBeGreaterThan(0);
+    }
     // Nothing identifying the user may travel to the provider as an id.
-    expect(String(a!.orderId)).not.toContain(buyer.userId);
+    expect(String(a!.orderCode)).not.toContain(buyer.userId);
     expect(String(a!.orderId)).not.toContain('@');
 
     // And an id supplied by the browser is not honoured.
@@ -318,7 +349,7 @@ describe('Subscription checkout integration', () => {
 
     expect(res.status).toBe(201);
     expect(Object.keys(res.body).sort()).toEqual(['payUrl', 'paymentId']);
-    expect(res.body.payUrl).toMatch(/^https:\/\/test-payment\.momo\.vn\//);
+    expect(res.body.payUrl).toMatch(/^https:\/\/pay\.payos\.vn\/web\/link-\d+$/);
   });
 
   it('creates no Subscription: only a verified IPN grants access', async () => {
@@ -373,7 +404,7 @@ describe('Subscription checkout integration', () => {
   );
 
   it('maps a provider rejection to PAYMENT_PROVIDER_REJECTED without granting access', async () => {
-    stubProvider(providerSuccess({ resultCode: 99, payUrl: undefined }));
+    stubProvider(providerRejection());
 
     const res = await postCheckout(buyer.cookie);
     expect(res.status).toBe(502);
@@ -405,7 +436,7 @@ describe('Subscription checkout integration', () => {
 
     const serialized = JSON.stringify(res.body);
     expect(serialized).not.toContain(buyer.userId);
-    expect(serialized.toLowerCase()).not.toContain('momo');
+    expect(serialized.toLowerCase()).not.toContain('payos');
   });
 
   it('gives another user and a nonexistent id the identical PAYMENT_NOT_FOUND', async () => {
@@ -437,11 +468,11 @@ describe('Subscription checkout integration', () => {
   });
 
   it.each([
-    ['missing', () => unconfigureMomo()],
+    ['missing', () => unconfigurePayos()],
     [
       'partial',
       () => {
-        delete process.env.MOMO_ACCESS_KEY;
+        delete process.env.PAYOS_API_KEY;
       },
     ],
   ])(
@@ -454,7 +485,7 @@ describe('Subscription checkout integration', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.checkoutAvailable).toBe(false);
-      expect(JSON.stringify(res.body)).not.toMatch(/MOMO|SECRET|ACCESS/i);
+      expect(JSON.stringify(res.body)).not.toMatch(/PAYOS|SECRET|CHECKSUM|CLIENT_ID/i);
     },
   );
 
@@ -477,7 +508,7 @@ describe('Subscription checkout integration', () => {
     const serialized = JSON.stringify(entry);
     for (const forbidden of [
       'test-secret-not-a-credential',
-      'test-payment.momo.vn',
+      'pay.payos.vn',
       String(sentBodies[0]!.signature),
       String(sentBodies[0]!.orderId),
     ]) {

@@ -9,9 +9,9 @@ import {
 } from "./helpers";
 
 /**
- * The buyer-pass purchase, end to end, with MoMo replaced by a route handler.
+ * The buyer-pass purchase, end to end, with payOS replaced by a route handler.
  * Nothing here reaches the provider: the payment endpoints are intercepted and
- * payUrl points back at this app, so "redirecting to MoMo" is a same-origin
+ * payUrl points back at this app, so "redirecting to payOS" is a same-origin
  * navigation the test can follow.
  */
 
@@ -140,7 +140,7 @@ test("shows the pass offer once, with its price and no auto-renewal", async ({
   assertCleanRuntime(issues, "buyer-pass-offer");
 });
 
-test("carries a payment through MoMo and unlocks reserving", async ({
+test("carries a payment through payOS and unlocks reserving", async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page);
@@ -158,8 +158,9 @@ test("carries a payment through MoMo and unlocks reserving", async ({
       route,
       {
         paymentId: PAYMENT_ID,
-        // Same-origin stand-in for MoMo, so the redirect is followable here.
-        payUrl: "http://127.0.0.1:3100/cho-online?resultCode=0&orderId=fake",
+        // Same-origin stand-in for payOS, so the redirect is followable here.
+        payUrl:
+          "http://127.0.0.1:3100/cho-online?code=00&id=fake-link&cancel=false&status=PAID&orderCode=1784000000000001",
       },
       201,
     );
@@ -182,8 +183,8 @@ test("carries a payment through MoMo and unlocks reserving", async ({
   await page.goto("/cho-online", { waitUntil: "networkidle" });
 
   await page.getByTestId("buyer-pass-checkout").click();
-  // Landing back on /cho-online is the return trip from MoMo.
-  await page.waitForURL(/\/cho-online\?resultCode=0/);
+  // Landing back on /cho-online is the return trip from payOS.
+  await page.waitForURL(/\/cho-online\?code=00/);
   // Let the returned page finish hydrating before asserting on it.
   await waitForAuthReady(page);
 
@@ -273,9 +274,14 @@ test("ignores a payment result forged in the query string", async ({ page }) => 
 
   await registerAndSignIn(page, "forged");
   // Anyone can type this. Nothing about it may be treated as proof of payment.
-  await page.goto("/cho-online?resultCode=0&orderId=fake&transId=fake", {
-    waitUntil: "networkidle",
-  });
+  // Every parameter payOS really appends, all of them saying "paid". None are
+  // signed, so none may move the UI: only the owner-authenticated status
+  // endpoint can do that.
+  await page.goto(
+    "/cho-online?code=00&id=forged-link&cancel=false&status=PAID" +
+      "&orderCode=1784000000000002",
+    { waitUntil: "networkidle" },
+  );
 
   expect(
     await page.evaluate((key) => window.sessionStorage.getItem(key), PENDING_KEY),
@@ -317,7 +323,7 @@ test("keeps the page usable when starting a checkout fails", async ({
 
   const alert = page.getByTestId("checkout-error");
   await expect(alert).toBeVisible();
-  await expect(alert).toContainText(/MoMo/i);
+  await expect(alert).toContainText(/thanh toán/i);
   // No navigation, no stored id, and the button works again.
   expect(page.url()).toBe(url);
   expect(
@@ -479,7 +485,7 @@ test("shows applying, not a second CTA, while the pass has not refreshed yet", a
 }) => {
   const issues = attachRuntimeGuards(page);
   // Every call — pre-checkout, the fresh page's own initial check after the
-  // MoMo redirect, and the refetch that follows PAID — reports not-eligible.
+  // payOS redirect, and the refetch that follows PAID — reports not-eligible.
   // Nothing ever makes it "error" or "ready & eligible", so once poll settles
   // on "paid" the panel has no path but "applying": a stable state, not a
   // single-frame race, and exactly what a genuinely slow grant looks like.
@@ -524,7 +530,7 @@ test("recovers from a failed refetch after payment, then activates on retry", as
 
   await stubListings(page);
   // Three calls land before any retry: the pre-checkout load, the fresh
-  // page's own initial check right after the MoMo redirect, and only then
+  // page's own initial check right after the payOS redirect, and only then
   // the refetch onSubscriptionChange triggers once poll observes PAID — that
   // third call is the one that must fail here. A 4th call, from clicking
   // Retry, is the one that succeeds.

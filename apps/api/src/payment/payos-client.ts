@@ -68,12 +68,20 @@ function providerRejected(): BadGatewayException {
 }
 
 /**
- * The one URL the browser is sent to. Host must match exactly: a suffix or
- * subdomain match would accept evil-pay.payos.vn and pay.payos.vn.evil.com
- * alike. A matching hostname on another port is still another server, and
- * embedded credentials would leak into the address bar.
+ * The one URL the browser is sent to.
+ *
+ * Host must match exactly: a suffix or subdomain match would accept
+ * evil-pay.payos.vn and pay.payos.vn.evil.com alike. A matching hostname on
+ * another port is still another server, and embedded credentials would leak
+ * into the address bar.
+ *
+ * The path is bound to the payment link this response claims to be for.
+ * Checking only the host would accept https://pay.payos.vn/web/<another-link>:
+ * a genuine payOS page, on the genuine payOS host, collecting money against an
+ * order that is not the one we created and will never be reconciled against
+ * this row. Query parameters stay allowed — payOS appends its own.
  */
-function safeCheckoutUrl(checkoutUrl: string): string {
+function safeCheckoutUrl(checkoutUrl: string, paymentLinkId: string): string {
   let url: URL;
   try {
     url = new URL(checkoutUrl);
@@ -85,7 +93,8 @@ function safeCheckoutUrl(checkoutUrl: string): string {
     url.hostname !== PAYOS_CHECKOUT_HOST ||
     url.port !== '' ||
     url.username !== '' ||
-    url.password !== ''
+    url.password !== '' ||
+    url.pathname !== `/web/${paymentLinkId}`
   ) {
     throw providerUnavailable();
   }
@@ -158,22 +167,28 @@ export async function createPayosPayment(
 
   const data = parsed.data.data;
 
-  // Verified over the raw object as received, never over a stripped copy: the
-  // canonical string covers every key payOS sent, including ones we do not
-  // model. Only checked when payOS actually supplies a signature — the create
-  // response signature is not documented on the API page, so requiring it would
-  // break checkout on a shape they do document.
-  if (parsed.data.signature) {
-    const rawData = (body as { data?: Record<string, unknown> }).data ?? {};
-    if (
-      !verifyPayosDataSignature(
-        rawData,
-        parsed.data.signature,
-        config.checksumKey,
-      )
-    ) {
-      throw providerUnavailable();
-    }
+  // Fail closed: a success envelope carrying no signature is not something we
+  // can attribute to payOS, so it is treated as the provider being unusable
+  // rather than trusted. payOS signs the create response and its own SDKs
+  // verify it; an unsigned body is either not payOS or not intact, and both
+  // answers are "do not send a payer to this URL".
+  //
+  // Checked before any field of `data` is read, and over the raw object as
+  // received rather than a stripped copy: the canonical string covers every key
+  // payOS sent, including ones this client does not model. Nothing below —
+  // paymentLinkId, checkoutUrl, amount, orderCode, description, currency,
+  // status — is trusted until this passes.
+  const rawData = (body as { data?: Record<string, unknown> }).data;
+  if (
+    !parsed.data.signature ||
+    !rawData ||
+    !verifyPayosDataSignature(
+      rawData,
+      parsed.data.signature,
+      config.checksumKey,
+    )
+  ) {
+    throw providerUnavailable();
   }
 
   // The echoed values decide what the webhook is later matched against, so all
@@ -190,7 +205,7 @@ export async function createPayosPayment(
   }
 
   return {
-    payUrl: safeCheckoutUrl(data.checkoutUrl),
+    payUrl: safeCheckoutUrl(data.checkoutUrl, data.paymentLinkId),
     providerPaymentId: data.paymentLinkId,
   };
 }

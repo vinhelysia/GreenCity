@@ -330,7 +330,7 @@ export type SubscriptionStatus = z.infer<typeof SubscriptionStatusSchema>;
  *
  * Carries no billing concepts on purpose: no plan tier, price, invoice, renewal
  * date or provider reference — those live on SubscriptionPayment instead. Rows
- * come from either a seeded/admin-created demo row or a paid MoMo buyer pass.
+ * come from either a seeded/admin-created demo row or a paid buyer pass.
  *
  * Eligible means status is ACTIVE and startsAt <= now < expiresAt. Several rows
  * per user are allowed so history survives, and overlapping active rows are
@@ -342,7 +342,7 @@ export const SubscriptionSchema = z.object({
   status: SubscriptionStatusSchema,
   startsAt: z.string(),
   expiresAt: z.string(),
-  /** Optional demo/admin labelling only — a paid MoMo pass leaves this null. */
+  /** Optional demo/admin labelling only — a paid pass leaves this null. */
   note: z.string().nullable(),
 });
 export type Subscription = z.infer<typeof SubscriptionSchema>;

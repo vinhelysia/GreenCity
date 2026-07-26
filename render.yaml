@@ -10,7 +10,7 @@
 #   4. After Vercel gives the web a domain, set CORS_ORIGINS to it (exact origin,
 #      no trailing slash) or every cookie-auth request returns 403 INVALID_ORIGIN.
 #
-# Operational note: if this service already existed before the MOMO_*/
+# Operational note: if this service already existed before the PAYOS_*/
 # PUBLIC_*_URL keys below were added to this file, do not assume a Blueprint
 # sync/redeploy will prompt for or create them on Render's side — verify in
 # the Render Dashboard → Environment that they are actually present after
@@ -60,18 +60,20 @@ services:
         sync: false # service_role key — secret
       - key: SUPABASE_STORAGE_BUCKET
         value: greencity-media
-      # MoMo buyer-pass checkout — entirely optional. Leaving any of these
+      # payOS buyer-pass checkout — entirely optional. Leaving any of these
       # unset only disables checkout (PAYMENT_NOT_CONFIGURED); it is never a
-      # startup error. Accepts sandbox or production only.
-      - key: MOMO_ENV
-        value: sandbox
-      - key: MOMO_PARTNER_CODE
+      # startup error. payOS publishes no sandbox, so there is no environment
+      # switch: the only host is production and it is hard-coded in the source.
+      - key: PAYOS_CLIENT_ID
         sync: false
-      - key: MOMO_ACCESS_KEY
-        sync: false
-      - key: MOMO_SECRET_KEY
+      - key: PAYOS_API_KEY
         sync: false # secret — set in the Render dashboard, never commit
-      # Public bases MoMo redirects/IPNs use. https:// required in production.
+      - key: PAYOS_CHECKSUM_KEY
+        sync: false # secret — signs and verifies every payment; never commit
+      # PUBLIC_WEB_URL builds the payOS return link. PUBLIC_API_URL is not used
+      # per request — it only tells you the webhook address to register with
+      # payOS: <PUBLIC_API_URL>/payment-webhooks/payos
+      # https:// required in production.
       - key: PUBLIC_API_URL
         sync: false # this service's own public URL, e.g. https://greencity-api.onrender.com
       - key: PUBLIC_WEB_URL

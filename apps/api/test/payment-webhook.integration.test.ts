@@ -7,37 +7,65 @@ import { ApiExceptionFilter } from '../src/common/http-exception.filter';
 import { requestIdMiddleware } from '../src/common/request-id';
 import { PrismaService } from '../src/prisma/prisma.service';
 import {
-  MOMO_EXTRA_DATA,
-  MOMO_IPN_PATH,
-  MOMO_ORDER_INFO,
-  MOMO_ORDER_TYPE,
-} from '../src/payment/momo-config';
+  PAYOS_DESCRIPTION,
+  PAYOS_WEBHOOK_PATH,
+} from '../src/payment/payos-config';
 import {
-  buildIpnRawSignature,
-  signMomoPayload,
-} from '../src/payment/momo-signature';
+  canonicalizeData,
+  signPayosPayload,
+} from '../src/payment/payos-signature';
 import './setup-env';
 
 /**
- * The signed MoMo callback, over real HTTP. It carries no cookie and no Origin,
+ * The signed payOS callback, over real HTTP. It carries no cookie and no Origin,
  * so these tests double as proof that the narrow OriginGuard exemption works —
  * and, just as importantly, that it did not open the rest of the application.
+ *
+ * Nothing here contacts payOS. Every credential is obviously fake except the
+ * public checksum key payOS publishes in its own signature documentation, which
+ * is used only to pin the golden fixture below.
  */
-describe('MoMo IPN webhook integration', () => {
+describe('payOS webhook integration', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
   const ORIGIN = 'http://localhost:3000';
-  const PARTNER_CODE = 'GCWEBHOOKPARTNER';
-  const SECRET = 'test-secret-not-a-credential';
-  const ACCESS_KEY = 'test-access-key';
+  const CHECKSUM_KEY = 'test-checksum-key-not-a-credential';
 
-  const MOMO_ENV_KEYS = [
-    'MOMO_ENV',
-    'MOMO_PARTNER_CODE',
-    'MOMO_ACCESS_KEY',
-    'MOMO_SECRET_KEY',
+  /**
+   * OFFICIAL DOCUMENTATION TEST DATA — the public sample from
+   * https://payos.vn/docs/tich-hop-webhook/kiem-tra-du-lieu-voi-signature/
+   * Not a credential of this project. Used to prove the endpoint accepts a
+   * signature payOS itself published, rather than only ones we generated.
+   */
+  const DOC_CHECKSUM_KEY =
+    '1a54716c8f0efb2744fb28b6e38b25da7f67a925d98bc1c18bd8faaecadd7675';
+  const DOC_DATA = {
+    orderCode: 123,
+    amount: 3000,
+    description: 'VQRIO123',
+    accountNumber: '12345678',
+    reference: 'TF230204212323',
+    transactionDateTime: '2023-02-04 18:25:00',
+    currency: 'VND',
+    paymentLinkId: '124c33293c43417ab7879e14c8d9eb18',
+    code: '00',
+    desc: 'Thành công',
+    counterAccountBankId: '',
+    counterAccountBankName: '',
+    counterAccountName: '',
+    counterAccountNumber: '',
+    virtualAccountName: '',
+    virtualAccountNumber: '',
+  };
+  const DOC_SIGNATURE =
+    '412e915d2871504ed31be63c8f62a149a4410d34c4c42affc9006ef9917eaa03';
+
+  const PAYOS_ENV_KEYS = [
+    'PAYOS_CLIENT_ID',
+    'PAYOS_API_KEY',
+    'PAYOS_CHECKSUM_KEY',
     'PUBLIC_API_URL',
     'PUBLIC_WEB_URL',
   ] as const;
@@ -47,87 +75,86 @@ describe('MoMo IPN webhook integration', () => {
   let userId: string;
   let orderSeq = 0;
   /**
-   * Separate from orderSeq: momoTransactionId is unique, and two orders sharing
-   * a transaction id collide on the second activation. Real callbacks carry a
-   * distinct id per transaction, so the fixture must too.
+   * Separate from orderSeq: providerTransactionId is unique, and two orders
+   * sharing a bank reference collide on the second activation. Real callbacks
+   * carry a distinct reference per transfer, so the fixture must too.
    */
-  let transSeq = 0;
+  let refSeq = 0;
 
-  interface IpnFields {
-    partnerCode: string;
-    orderId: string;
-    requestId: string;
-    amount: number;
-    orderInfo: string;
-    orderType: string;
-    transId: number;
-    resultCode: number;
-    message: string;
-    payType: string;
-    responseTime: number;
-    extraData: string;
-  }
-
-  /** A callback MoMo would actually send, signed with the configured secret. */
-  function signedIpn(overrides: Partial<IpnFields> = {}): Record<string, unknown> {
-    transSeq += 1;
-    const fields: IpnFields = {
-      partnerCode: PARTNER_CODE,
-      orderId: 'unset',
-      requestId: 'unset',
+  /** The data object payOS signs, with our defaults. */
+  function webhookData(overrides: Record<string, unknown> = {}) {
+    refSeq += 1;
+    return {
+      orderCode: 0,
       amount: 50000,
-      orderInfo: MOMO_ORDER_INFO,
-      orderType: MOMO_ORDER_TYPE,
-      transId: 900000 + transSeq,
-      resultCode: 0,
-      message: 'Successful.',
-      payType: 'webApp',
-      responseTime: 1735689600000,
-      extraData: MOMO_EXTRA_DATA,
+      description: PAYOS_DESCRIPTION,
+      accountNumber: '0011000000000',
+      reference: `TF${suffix}-${refSeq}`,
+      transactionDateTime: '2026-07-26 10:00:00',
+      currency: 'VND',
+      paymentLinkId: 'unset',
+      code: '00',
+      desc: 'Thành công',
+      counterAccountBankId: '',
+      counterAccountBankName: '',
+      counterAccountName: '',
+      counterAccountNumber: '',
+      virtualAccountName: '',
+      virtualAccountNumber: '',
       ...overrides,
     };
-    const signature = signMomoPayload(
-      buildIpnRawSignature({ accessKey: ACCESS_KEY, ...fields }),
-      SECRET,
-    );
-    return { ...fields, signature };
   }
 
-  function postIpn(body: Record<string, unknown>) {
-    // No cookie, no Origin: exactly how MoMo calls us.
-    return request(app.getHttpServer()).post(MOMO_IPN_PATH).send(body);
+  /** A callback payOS would actually send, signed with the configured key. */
+  function signedWebhook(data: Record<string, unknown>) {
+    return {
+      code: '00',
+      desc: 'success',
+      success: true,
+      data,
+      signature: signPayosPayload(canonicalizeData(data), CHECKSUM_KEY),
+    };
   }
 
-  async function makePending(): Promise<{ orderId: string; requestId: string }> {
+  function postWebhook(body: string | object) {
+    // No cookie, no Origin: exactly how payOS calls us.
+    return request(app.getHttpServer()).post(PAYOS_WEBHOOK_PATH).send(body);
+  }
+
+  async function makePending(): Promise<{
+    orderCode: number;
+    paymentLinkId: string;
+  }> {
     orderSeq += 1;
-    const orderId = `gc-order-${suffix}-${orderSeq}`;
-    const requestId = `gc-req-${suffix}-${orderSeq}`;
+    const orderCode = 1784000000000000 + orderSeq;
+    const paymentLinkId = `link-${suffix}-${orderSeq}`;
     await prisma.subscriptionPayment.create({
       data: {
         userId,
         amountVnd: 50000,
         durationDays: 30,
         status: 'PENDING',
-        momoOrderId: orderId,
-        momoRequestId: requestId,
+        provider: 'PAYOS',
+        providerOrderId: String(orderCode),
+        providerPaymentId: paymentLinkId,
+        providerDescription: PAYOS_DESCRIPTION,
       },
     });
-    return { orderId, requestId };
+    return { orderCode, paymentLinkId };
   }
 
-  const paymentFor = (orderId: string) =>
+  const paymentFor = (orderCode: number) =>
     prisma.subscriptionPayment.findUniqueOrThrow({
-      where: { momoOrderId: orderId },
+      where: { providerOrderId: String(orderCode) },
     });
   const subscriptionCount = () =>
     prisma.subscription.count({ where: { userId } });
 
   beforeAll(async () => {
-    for (const key of MOMO_ENV_KEYS) originalEnv[key] = process.env[key];
-    process.env.MOMO_ENV = 'sandbox';
-    process.env.MOMO_PARTNER_CODE = PARTNER_CODE;
-    process.env.MOMO_ACCESS_KEY = ACCESS_KEY;
-    process.env.MOMO_SECRET_KEY = SECRET;
+    for (const key of PAYOS_ENV_KEYS) originalEnv[key] = process.env[key];
+    process.env.PAYOS_CLIENT_ID = 'fake-client-id';
+    process.env.PAYOS_API_KEY = 'fake-api-key';
+    process.env.PAYOS_CHECKSUM_KEY = CHECKSUM_KEY;
     process.env.PUBLIC_API_URL = 'https://api.example.test';
     process.env.PUBLIC_WEB_URL = 'https://web.example.test';
 
@@ -142,14 +169,14 @@ describe('MoMo IPN webhook integration', () => {
     prisma = app.get(PrismaService);
 
     const user = await prisma.user.create({
-      data: { email: `ipn-${suffix}@webhook.test`, displayName: 'IPN Buyer' },
+      data: { email: `payos-${suffix}@webhook.test`, displayName: 'Webhook Buyer' },
     });
     userId = user.id;
   });
 
   afterAll(async () => {
     globalThis.fetch = originalFetch;
-    for (const key of MOMO_ENV_KEYS) {
+    for (const key of PAYOS_ENV_KEYS) {
       const value = originalEnv[key];
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
@@ -178,8 +205,10 @@ describe('MoMo IPN webhook integration', () => {
   // ── the exemption, and its limits ─────────────────────────────────────────
 
   it('accepts a signed callback with neither session cookie nor Origin', async () => {
-    const { orderId, requestId } = await makePending();
-    const res = await postIpn(signedIpn({ orderId, requestId }));
+    const { orderCode, paymentLinkId } = await makePending();
+    const res = await postWebhook(
+      signedWebhook(webhookData({ orderCode, paymentLinkId })),
+    );
 
     expect(res.status).toBe(204);
     expect(res.text).toBe('');
@@ -199,7 +228,6 @@ describe('MoMo IPN webhook integration', () => {
     expect(res.status).toBe(403);
     expect(res.body.error.code).toBe('INVALID_ORIGIN');
 
-    // And the same route still works when the Origin is present.
     const allowed = await request(app.getHttpServer())
       .post('/auth/register')
       .set('Origin', ORIGIN)
@@ -216,275 +244,258 @@ describe('MoMo IPN webhook integration', () => {
       .catch(() => undefined);
   });
 
-  // ── rejection paths ───────────────────────────────────────────────────────
+  // ── authentication ────────────────────────────────────────────────────────
 
-  it('rejects a malformed payload without touching the row', async () => {
-    const { orderId } = await makePending();
-    const res = await postIpn({ orderId, amount: 'fifty thousand' });
+  it('accepts the signature payOS publishes in its own documentation', async () => {
+    // The anchor against a self-agreeing test suite: this signature was not
+    // produced by our signer, it was copied from payOS. If our canonicaliser
+    // drifts, this is the test that notices.
+    process.env.PAYOS_CHECKSUM_KEY = DOC_CHECKSUM_KEY;
+    try {
+      const before = await subscriptionCount();
+      const res = await postWebhook({
+        code: '00',
+        desc: 'success',
+        success: true,
+        data: DOC_DATA,
+        signature: DOC_SIGNATURE,
+      });
+
+      // Authenticated, but orderCode 123 is not an order we ever issued — the
+      // same shape payOS's confirm-webhook probe arrives in.
+      expect(res.status).toBe(204);
+      expect(await subscriptionCount()).toBe(before);
+    } finally {
+      process.env.PAYOS_CHECKSUM_KEY = CHECKSUM_KEY;
+    }
+  });
+
+  it.each([
+    ['a non-object body', 'not-json-shaped'],
+    ['an empty object', {}],
+    ['no data', { code: '00', signature: 'a'.repeat(64) }],
+    ['data that is not an object', { code: '00', data: 5, signature: 'a'.repeat(64) }],
+  ])('answers 400 to %s', async (_label, body) => {
+    const res = await postWebhook(body);
+    expect(res.status).toBe(400);
+  });
+
+  it('answers 400 when the signature is absent', async () => {
+    const { orderCode, paymentLinkId } = await makePending();
+    const { signature: _dropped, ...unsigned } = signedWebhook(
+      webhookData({ orderCode, paymentLinkId }),
+    );
+    const res = await postWebhook(unsigned);
 
     expect(res.status).toBe(400);
-    expect((await paymentFor(orderId)).status).toBe('PENDING');
-    expect(await subscriptionCount()).toBe(0);
+    expect((await paymentFor(orderCode)).status).toBe('PENDING');
   });
 
   it.each([
-    // Absent entirely: the schema rejects it before any signature work.
-    [
-      'a missing signature',
-      400,
-      (b: Record<string, unknown>) => ({ ...b, signature: undefined }),
-    ],
-    // Present but not a 64-char hex digest: refused before Buffer.from, which
-    // would otherwise truncate silently at the first invalid nibble.
-    [
-      'a malformed signature',
-      401,
-      (b: Record<string, unknown>) => ({ ...b, signature: 'zz' }),
-    ],
-    [
-      'a signature of the right shape but the wrong value',
-      401,
-      (b: Record<string, unknown>) => ({ ...b, signature: 'a'.repeat(64) }),
-    ],
-  ])(
-    'rejects %s with %i and mutates nothing',
-    async (_label, expectedStatus, mutate) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(mutate(signedIpn({ orderId, requestId })));
-
-      expect(res.status).toBe(expectedStatus);
-      expect((await paymentFor(orderId)).status).toBe('PENDING');
-      expect(await subscriptionCount()).toBe(0);
-    },
-  );
-
-  it('rejects a signature computed over a different payload', async () => {
-    const { orderId, requestId } = await makePending();
-    // Signed correctly — for a different amount than the one being sent. This
-    // is the case a "sign whatever we received" verifier would wave through.
-    const honest = signedIpn({ orderId, requestId, amount: 50000 });
-    const tampered = { ...honest, amount: 1 };
-
-    const res = await postIpn(tampered);
+    ['a wrong signature', 'a'.repeat(64)],
+    ['a non-hex signature', 'z'.repeat(64)],
+    ['a truncated signature', 'a'.repeat(63)],
+  ])('answers 401 to %s and mutates nothing', async (_label, signature) => {
+    const { orderCode, paymentLinkId } = await makePending();
+    const body = signedWebhook(webhookData({ orderCode, paymentLinkId }));
+    const res = await postWebhook({ ...body, signature });
 
     expect(res.status).toBe(401);
-    expect((await paymentFor(orderId)).status).toBe('PENDING');
+    expect(res.body.error.code).toBe('INVALID_SIGNATURE');
+    expect((await paymentFor(orderCode)).status).toBe('PENDING');
     expect(await subscriptionCount()).toBe(0);
   });
 
-  it.each([
-    ['partnerCode', { partnerCode: 'SOMEONE-ELSE' }],
-    ['orderInfo', { orderInfo: 'a different description' }],
-    ['extraData', { extraData: 'unexpected-state' }],
-    ['orderType', { orderType: 'momo_bank' }],
-  ])(
-    'rejects a correctly signed callback whose %s is not ours',
-    async (_label, overrides) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(signedIpn({ orderId, requestId, ...overrides }));
+  it('rejects a signature computed over a different payload', async () => {
+    const { orderCode, paymentLinkId } = await makePending();
+    const delivered = webhookData({ orderCode, paymentLinkId });
+    const signature = signPayosPayload(
+      canonicalizeData({ ...delivered, amount: 1 }),
+      CHECKSUM_KEY,
+    );
 
-      expect(res.status).toBe(401);
-      expect((await paymentFor(orderId)).status).toBe('PENDING');
-      expect(await subscriptionCount()).toBe(0);
-    },
-  );
-
-  // ── result-code classification ────────────────────────────────────────────
-
-  it.each([[0], [9000]])(
-    'activates exactly one subscription on resultCode %i',
-    async (resultCode) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(signedIpn({ orderId, requestId, resultCode }));
-
-      expect(res.status).toBe(204);
-      expect(res.text).toBe('');
-
-      const payment = await paymentFor(orderId);
-      expect(payment.status).toBe('PAID');
-      expect(payment.paidAt).not.toBeNull();
-      expect(payment.subscriptionId).not.toBeNull();
-      expect(await subscriptionCount()).toBe(1);
-    },
-  );
-
-  it.each([[1000], [7000], [7002]])(
-    'keeps the payment PENDING and grants nothing on in-flight code %i',
-    async (resultCode) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(signedIpn({ orderId, requestId, resultCode }));
-
-      expect(res.status).toBe(204);
-      const payment = await paymentFor(orderId);
-      expect(payment.status).toBe('PENDING');
-      expect(payment.momoResultCode).toBe(resultCode);
-      // No placeholder id: the column is unique, and a sentinel would collide
-      // with the next in-flight callback.
-      expect(payment.momoTransactionId).toBeNull();
-      expect(payment.subscriptionId).toBeNull();
-      expect(await subscriptionCount()).toBe(0);
-    },
-  );
-
-  // MoMo publishes many codes whose final status is "no". Resolving one of them
-  // to FAILED would take the row out of the claimable state, and the success
-  // callback that follows would be discarded as a duplicate — a paying user
-  // silently loses access. Unrecognised codes must therefore stay open.
-  it.each([[10], [11], [20], [40], [43], [47], [123456]])(
-    'keeps a non-final or unknown code %i PENDING and grants nothing',
-    async (resultCode) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(signedIpn({ orderId, requestId, resultCode }));
-
-      expect(res.status).toBe(204);
-      const payment = await paymentFor(orderId);
-      expect(payment.status).toBe('PENDING');
-      expect(payment.momoResultCode).toBe(resultCode);
-      expect(await subscriptionCount()).toBe(0);
-    },
-  );
-
-  it.each([[10], [43]])(
-    'still activates when success follows non-final code %i',
-    async (resultCode) => {
-      const { orderId, requestId } = await makePending();
-
-      await postIpn(signedIpn({ orderId, requestId, resultCode }));
-      expect((await paymentFor(orderId)).status).toBe('PENDING');
-
-      const success = await postIpn(
-        signedIpn({ orderId, requestId, resultCode: 0 }),
-      );
-
-      expect(success.status).toBe(204);
-      expect((await paymentFor(orderId)).status).toBe('PAID');
-      expect(await subscriptionCount()).toBe(1);
-    },
-  );
-
-  // Every code MoMo's result table marks final for a wallet payment. Listed
-  // one by one rather than imported from the service: a test that reuses the
-  // production set would agree with it however wrong it became.
-  const TERMINAL_CODES = [
-    98, 99, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1017, 1026, 4001, 4002,
-    4100,
-  ];
-
-  it.each(TERMINAL_CODES.map((code) => [code]))(
-    'marks terminal code %i FAILED with no transaction id',
-    async (resultCode) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(signedIpn({ orderId, requestId, resultCode }));
-
-      expect(res.status).toBe(204);
-      const payment = await paymentFor(orderId);
-      expect(payment.status).toBe('FAILED');
-      expect(payment.momoResultCode).toBe(resultCode);
-      expect(payment.momoTransactionId).toBeNull();
-      expect(payment.subscriptionId).toBeNull();
-      expect(await subscriptionCount()).toBe(0);
-    },
-  );
-
-  it('does not activate when a success callback follows a terminal failure', async () => {
-    const { orderId, requestId } = await makePending();
-
-    await postIpn(signedIpn({ orderId, requestId, resultCode: 1006 }));
-    expect((await paymentFor(orderId)).status).toBe('FAILED');
-
-    // A resolved row is no longer claimable, so this is absorbed as a
-    // duplicate. Anything else would let a late success reopen a settled
-    // failure and mint a subscription nobody paid for.
-    const late = await postIpn(signedIpn({ orderId, requestId, resultCode: 0 }));
-
-    expect(late.status).toBe(204);
-    expect((await paymentFor(orderId)).status).toBe('FAILED');
-    expect(await subscriptionCount()).toBe(0);
+    const res = await postWebhook({
+      code: '00',
+      desc: 'success',
+      data: delivered,
+      signature,
+    });
+    expect(res.status).toBe(401);
+    expect((await paymentFor(orderCode)).status).toBe('PENDING');
   });
 
-  // ── orders we do not recognise ────────────────────────────────────────────
+  it('keeps unknown and empty data fields inside the verified string', async () => {
+    // payOS signs the whole data object. A body whose signature covers an extra
+    // field must still verify when that field is delivered, and must fail when
+    // it is stripped — which is what a Zod schema would silently do.
+    const { orderCode, paymentLinkId } = await makePending();
+    const data = webhookData({
+      orderCode,
+      paymentLinkId,
+      someFutureField: 'added-by-payos-later',
+      anEmptyOne: '',
+    });
+    const signature = signPayosPayload(canonicalizeData(data), CHECKSUM_KEY);
+
+    const accepted = await postWebhook({ code: '00', data, signature });
+    expect(accepted.status).toBe(204);
+    expect((await paymentFor(orderCode)).status).toBe('PAID');
+
+    // The same signature over the same body minus the unknown keys must fail.
+    const second = await makePending();
+    const stripped = webhookData({
+      orderCode: second.orderCode,
+      paymentLinkId: second.paymentLinkId,
+    });
+    const strippedSignature = signPayosPayload(
+      canonicalizeData({
+        ...stripped,
+        someFutureField: 'added-by-payos-later',
+        anEmptyOne: '',
+      }),
+      CHECKSUM_KEY,
+    );
+    const rejected = await postWebhook({
+      code: '00',
+      data: stripped,
+      signature: strippedSignature,
+    });
+    expect(rejected.status).toBe(401);
+  });
+
+  // ── matching the stored order ─────────────────────────────────────────────
 
   it('absorbs an unknown order as 204 without creating anything', async () => {
-    const res = await postIpn(
-      signedIpn({ orderId: `ghost-${suffix}`, requestId: `ghost-req-${suffix}` }),
+    const res = await postWebhook(
+      signedWebhook(
+        webhookData({ orderCode: 1999999999999999, paymentLinkId: 'nope' }),
+      ),
     );
 
     expect(res.status).toBe(204);
     expect(await subscriptionCount()).toBe(0);
-    expect(
-      await prisma.subscriptionPayment.count({ where: { userId } }),
-    ).toBe(0);
   });
 
   it.each([
-    ['amount', { amount: 999_000 }],
-    ['requestId', { requestId: 'not-the-stored-one' }],
+    ['amount', { amount: 1 }],
+    ['description', { description: 'OTHER' }],
+    ['paymentLinkId', { paymentLinkId: 'someone-elses-link' }],
   ])(
-    'grants no access when the signed %s disagrees with the stored row',
-    async (_label, overrides) => {
-      const { orderId, requestId } = await makePending();
-      const res = await postIpn(signedIpn({ orderId, requestId, ...overrides }));
+    'grants nothing when the signed %s disagrees with the stored row',
+    async (_label, override) => {
+      const { orderCode, paymentLinkId } = await makePending();
+      const res = await postWebhook(
+        signedWebhook(webhookData({ orderCode, paymentLinkId, ...override })),
+      );
 
       expect(res.status).toBe(204);
-      expect((await paymentFor(orderId)).status).toBe('PENDING');
       expect(await subscriptionCount()).toBe(0);
+      const row = await paymentFor(orderCode);
+      expect(row.status).toBe('PENDING');
+      expect(row.providerTransactionId).toBeNull();
     },
   );
 
-  // ── idempotency and ordering ──────────────────────────────────────────────
+  it('grants nothing for a currency that is not VND', async () => {
+    const { orderCode, paymentLinkId } = await makePending();
+    const res = await postWebhook(
+      signedWebhook(
+        webhookData({ orderCode, paymentLinkId, currency: 'USD' }),
+      ),
+    );
 
-  it('creates exactly one subscription for a duplicated success callback', async () => {
-    const { orderId, requestId } = await makePending();
-    const body = signedIpn({ orderId, requestId });
+    expect(res.status).toBe(204);
+    expect(await subscriptionCount()).toBe(0);
+    expect((await paymentFor(orderCode)).status).toBe('PENDING');
+  });
 
-    expect((await postIpn(body)).status).toBe(204);
-    expect((await postIpn(body)).status).toBe(204);
+  // ── activation ────────────────────────────────────────────────────────────
+
+  it('creates exactly one subscription for a duplicated callback', async () => {
+    const { orderCode, paymentLinkId } = await makePending();
+    const body = signedWebhook(webhookData({ orderCode, paymentLinkId }));
+
+    expect((await postWebhook(body)).status).toBe(204);
+    expect((await postWebhook(body)).status).toBe(204);
 
     expect(await subscriptionCount()).toBe(1);
+    expect((await paymentFor(orderCode)).status).toBe('PAID');
   });
 
   it('creates exactly one subscription when two identical callbacks race', async () => {
-    const { orderId, requestId } = await makePending();
-    const body = signedIpn({ orderId, requestId });
+    const { orderCode, paymentLinkId } = await makePending();
+    const body = signedWebhook(webhookData({ orderCode, paymentLinkId }));
 
-    const [a, b] = await Promise.all([postIpn(body), postIpn(body)]);
-    expect(a.status).toBe(204);
-    expect(b.status).toBe(204);
-
-    expect(await subscriptionCount()).toBe(1);
-    expect((await paymentFor(orderId)).status).toBe('PAID');
-  });
-
-  it('settles PAID when an in-flight callback precedes the success', async () => {
-    const { orderId, requestId } = await makePending();
-
-    await postIpn(signedIpn({ orderId, requestId, resultCode: 1000 }));
-    expect((await paymentFor(orderId)).status).toBe('PENDING');
-
-    await postIpn(signedIpn({ orderId, requestId, resultCode: 0 }));
-
-    expect((await paymentFor(orderId)).status).toBe('PAID');
+    const [a, b] = await Promise.all([postWebhook(body), postWebhook(body)]);
+    expect([a.status, b.status]).toEqual([204, 204]);
     expect(await subscriptionCount()).toBe(1);
   });
 
-  it('stays PAID when a late in-flight callback arrives after the success', async () => {
-    const { orderId, requestId } = await makePending();
+  it('will not let a reused bank reference activate a second order', async () => {
+    const first = await makePending();
+    const second = await makePending();
+    const firstData = webhookData({
+      orderCode: first.orderCode,
+      paymentLinkId: first.paymentLinkId,
+    });
 
-    await postIpn(signedIpn({ orderId, requestId, resultCode: 0 }));
-    const late = await postIpn(signedIpn({ orderId, requestId, resultCode: 1000 }));
+    expect((await postWebhook(signedWebhook(firstData))).status).toBe(204);
 
-    expect(late.status).toBe(204);
-    expect((await paymentFor(orderId)).status).toBe('PAID');
+    const replay = await postWebhook(
+      signedWebhook(
+        webhookData({
+          orderCode: second.orderCode,
+          paymentLinkId: second.paymentLinkId,
+          reference: firstData.reference,
+        }),
+      ),
+    );
+
+    expect(replay.status).toBe(204);
+    expect(await subscriptionCount()).toBe(1);
+    expect((await paymentFor(second.orderCode)).status).toBe('PENDING');
+  });
+
+  it('leaves a non-success code PENDING and still activates on the success that follows', async () => {
+    const { orderCode, paymentLinkId } = await makePending();
+
+    const pending = await postWebhook(
+      signedWebhook(webhookData({ orderCode, paymentLinkId, code: '01' })),
+    );
+    expect(pending.status).toBe(204);
+    const midway = await paymentFor(orderCode);
+    expect(midway.status).toBe('PENDING');
+    expect(midway.providerResultCode).toBe('01');
+    expect(midway.providerTransactionId).toBeNull();
+    expect(await subscriptionCount()).toBe(0);
+
+    const success = await postWebhook(
+      signedWebhook(webhookData({ orderCode, paymentLinkId })),
+    );
+    expect(success.status).toBe(204);
+    expect((await paymentFor(orderCode)).status).toBe('PAID');
     expect(await subscriptionCount()).toBe(1);
   });
 
-  it('gives two separate paid orders 60 days in total', async () => {
+  it('gives two separate paid orders 60 contiguous days', async () => {
     const first = await makePending();
     const second = await makePending();
 
-    await postIpn(signedIpn({ orderId: first.orderId, requestId: first.requestId }));
-    await postIpn(
-      signedIpn({ orderId: second.orderId, requestId: second.requestId }),
+    await postWebhook(
+      signedWebhook(
+        webhookData({
+          orderCode: first.orderCode,
+          paymentLinkId: first.paymentLinkId,
+        }),
+      ),
+    );
+    await postWebhook(
+      signedWebhook(
+        webhookData({
+          orderCode: second.orderCode,
+          paymentLinkId: second.paymentLinkId,
+        }),
+      ),
     );
 
     const subs = await prisma.subscription.findMany({
@@ -492,35 +503,33 @@ describe('MoMo IPN webhook integration', () => {
       orderBy: { startsAt: 'asc' },
     });
     expect(subs).toHaveLength(2);
-    // The second stacks on the first rather than overwriting it.
     expect(subs[1]!.startsAt.getTime()).toBe(subs[0]!.expiresAt.getTime());
-    const totalDays =
-      (subs[1]!.expiresAt.getTime() - subs[0]!.startsAt.getTime()) /
-      (24 * 60 * 60 * 1000);
-    expect(Math.round(totalDays)).toBe(60);
+    const days =
+      (subs[1]!.expiresAt.getTime() - subs[0]!.startsAt.getTime()) / 86_400_000;
+    expect(Math.round(days)).toBe(60);
   });
 
-  // ── server faults must be retryable ───────────────────────────────────────
+  // ── server faults ─────────────────────────────────────────────────────────
 
-  it('answers 5xx when the database fails, so MoMo retries', async () => {
-    const { orderId, requestId } = await makePending();
-    const service = app.get(PrismaService);
-    // $transaction, not the model method: activation runs entirely on the
-    // transaction client, so replacing prisma.subscriptionPayment.* is never
-    // reached and the request quietly succeeds instead of failing.
-    const original = service.$transaction.bind(service);
-    service.$transaction = (() => {
-      throw new Error('connection reset');
-    }) as typeof service.$transaction;
+  it('answers 5xx when the database fails, so payOS can retry', async () => {
+    // Patched at $transaction, not at a model method: the activation path runs
+    // inside the transaction, and stubbing the model would leave the real
+    // transaction wrapper untested.
+    const { orderCode, paymentLinkId } = await makePending();
+    const spy = jest
+      .spyOn(prisma, '$transaction')
+      .mockRejectedValue(new Error('connection lost'));
 
     try {
-      const res = await postIpn(signedIpn({ orderId, requestId }));
+      const res = await postWebhook(
+        signedWebhook(webhookData({ orderCode, paymentLinkId })),
+      );
       expect(res.status).toBeGreaterThanOrEqual(500);
-      expect(res.status).not.toBe(204);
     } finally {
-      service.$transaction = original as typeof service.$transaction;
+      spy.mockRestore();
     }
 
+    expect((await paymentFor(orderCode)).status).toBe('PENDING');
     expect(await subscriptionCount()).toBe(0);
   });
 });

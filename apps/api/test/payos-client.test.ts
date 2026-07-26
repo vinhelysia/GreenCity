@@ -303,6 +303,8 @@ function okResponse(body: unknown, status = 200): Response {
   });
 }
 
+const LINK_ID = '124c33293c43417ab7879e14c8d9eb18';
+
 function successBody(overrides: Record<string, unknown> = {}) {
   return {
     code: '00',
@@ -315,12 +317,30 @@ function successBody(overrides: Record<string, unknown> = {}) {
       description: PAYOS_DESCRIPTION,
       orderCode: 1784000000000123,
       currency: 'VND',
-      paymentLinkId: '124c33293c43417ab7879e14c8d9eb18',
+      paymentLinkId: LINK_ID,
       status: 'PENDING',
-      checkoutUrl: 'https://pay.payos.vn/web/124c33293c43417ab7879e14c8d9eb18',
+      checkoutUrl: `https://pay.payos.vn/web/${LINK_ID}`,
       qrCode: '00020101021238...',
       ...overrides,
     },
+  };
+}
+
+/**
+ * A provider response as payOS actually sends one. Every happy-path fixture
+ * goes through this: the client now refuses an unsigned success envelope, so a
+ * fixture without a signature would make a test pass or fail for the wrong
+ * reason. Signed over the raw data object, including the keys the client does
+ * not model.
+ */
+function signedBody(overrides: Record<string, unknown> = {}) {
+  const body = successBody(overrides);
+  return {
+    ...body,
+    signature: signPayosPayload(
+      canonicalizeData(body.data as Record<string, unknown>),
+      FAKE_CONFIG.checksumKey,
+    ),
   };
 }
 
@@ -338,7 +358,7 @@ describe('createPayosPayment', () => {
   afterEach(() => jest.restoreAllMocks());
 
   it('sends the documented endpoint, headers and signed body', async () => {
-    const { calls } = mockFetch(async () => okResponse(successBody()));
+    const { calls } = mockFetch(async () => okResponse(signedBody()));
 
     const result = await createPayosPayment(FAKE_CONFIG, CREATE_INPUT);
 
@@ -425,7 +445,7 @@ describe('createPayosPayment', () => {
   });
 
   it('maps a non-2xx status to PAYMENT_PROVIDER_UNAVAILABLE', async () => {
-    mockFetch(async () => okResponse(successBody(), 500));
+    mockFetch(async () => okResponse(signedBody(), 500));
     await expectPaymentErrorCode(
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
       'PAYMENT_PROVIDER_UNAVAILABLE',
@@ -434,7 +454,7 @@ describe('createPayosPayment', () => {
 
   it('maps a non-"00" envelope code to PAYMENT_PROVIDER_REJECTED', async () => {
     mockFetch(async () =>
-      okResponse({ ...successBody(), code: '231', desc: 'invalid' }),
+      okResponse({ ...signedBody(), code: '231', desc: 'invalid' }),
     );
     await expectPaymentErrorCode(
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
@@ -460,7 +480,7 @@ describe('createPayosPayment', () => {
     ['currency', { currency: 'USD' }],
     ['status', { status: 'PAID' }],
   ])('rejects a response whose echoed %s is not ours', async (_f, override) => {
-    mockFetch(async () => okResponse(successBody(override)));
+    mockFetch(async () => okResponse(signedBody(override)));
     await expectPaymentErrorCode(
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
       'PAYMENT_PROVIDER_UNAVAILABLE',
@@ -468,45 +488,90 @@ describe('createPayosPayment', () => {
   });
 
   it.each([
-    ['http scheme', 'http://pay.payos.vn/web/abc'],
-    ['a foreign host', 'https://evil.test/web/abc'],
-    ['a suffix host', 'https://pay.payos.vn.evil.test/web/abc'],
-    ['a prefixed host', 'https://evilpay.payos.vn/web/abc'],
-    ['a subdomain', 'https://a.pay.payos.vn/web/abc'],
-    ['a non-default port', 'https://pay.payos.vn:8443/web/abc'],
-    ['embedded credentials', 'https://u:p@pay.payos.vn/web/abc'],
-    ['a relative url', '/web/abc'],
+    ['http scheme', `http://pay.payos.vn/web/${LINK_ID}`],
+    ['a foreign host', `https://evil.test/web/${LINK_ID}`],
+    ['a suffix host', `https://pay.payos.vn.evil.test/web/${LINK_ID}`],
+    ['a prefixed host', `https://evilpay.payos.vn/web/${LINK_ID}`],
+    ['a subdomain', `https://a.pay.payos.vn/web/${LINK_ID}`],
+    ['a non-default port', `https://pay.payos.vn:8443/web/${LINK_ID}`],
+    ['embedded credentials', `https://u:p@pay.payos.vn/web/${LINK_ID}`],
+    ['a relative url', `/web/${LINK_ID}`],
     ['a javascript url', 'javascript:alert(1)'],
   ])('rejects an unsafe checkoutUrl (%s)', async (_label, checkoutUrl) => {
-    mockFetch(async () => okResponse(successBody({ checkoutUrl })));
+    mockFetch(async () => okResponse(signedBody({ checkoutUrl })));
     await expectPaymentErrorCode(
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
       'PAYMENT_PROVIDER_UNAVAILABLE',
     );
   });
 
-  it('rejects a response whose supplied signature does not verify', async () => {
+  it.each([
+    ['another payment link on the real host', 'https://pay.payos.vn/web/someone-else'],
+    ['a bare host', 'https://pay.payos.vn/'],
+    ['a different path shape', `https://pay.payos.vn/pay/${LINK_ID}`],
+    ['the link as a query parameter', `https://pay.payos.vn/web/other?id=${LINK_ID}`],
+    ['a trailing segment', `https://pay.payos.vn/web/${LINK_ID}/extra`],
+  ])(
+    'rejects a checkoutUrl not bound to the returned paymentLinkId (%s)',
+    async (_label, checkoutUrl) => {
+      // The host being genuinely payOS is not enough: this is a real payOS
+      // page collecting money against an order that is not ours, and no
+      // webhook for it would ever match this row.
+      mockFetch(async () => okResponse(signedBody({ checkoutUrl })));
+      await expectPaymentErrorCode(
+        createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+        'PAYMENT_PROVIDER_UNAVAILABLE',
+      );
+    },
+  );
+
+  it('allows query parameters payOS appends to its own checkout path', async () => {
     mockFetch(async () =>
-      okResponse({ ...successBody(), signature: 'a'.repeat(64) }),
-    );
-    await expectPaymentErrorCode(
-      createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
-      'PAYMENT_PROVIDER_UNAVAILABLE',
-    );
-  });
-
-  it('accepts a response whose supplied signature verifies over the raw data', async () => {
-    const body = successBody();
-    const signed = {
-      ...body,
-      signature: signPayosPayload(
-        canonicalizeData(body.data as Record<string, unknown>),
-        FAKE_CONFIG.checksumKey,
+      okResponse(
+        signedBody({ checkoutUrl: `https://pay.payos.vn/web/${LINK_ID}?lang=vi` }),
       ),
-    };
-    mockFetch(async () => okResponse(signed));
+    );
     await expect(
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
-    ).resolves.toMatchObject({ providerPaymentId: body.data.paymentLinkId });
+    ).resolves.toMatchObject({
+      payUrl: `https://pay.payos.vn/web/${LINK_ID}?lang=vi`,
+    });
+  });
+
+  it('rejects a success envelope carrying no signature at all', async () => {
+    // Fail closed. An unsigned body cannot be attributed to payOS, and their
+    // own SDKs verify this response before returning a checkout link.
+    mockFetch(async () => okResponse(successBody()));
+    await expectPaymentErrorCode(
+      createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+      'PAYMENT_PROVIDER_UNAVAILABLE',
+    );
+  });
+
+  it.each([
+    ['a wrong-but-well-formed signature', 'a'.repeat(64)],
+    ['a non-hex signature', 'z'.repeat(64)],
+    ['a truncated signature', 'a'.repeat(63)],
+  ])('rejects a response with %s', async (_label, signature) => {
+    mockFetch(async () => okResponse({ ...successBody(), signature }));
+    await expectPaymentErrorCode(
+      createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+      'PAYMENT_PROVIDER_UNAVAILABLE',
+    );
+  });
+
+  it('rejects a signature that covers a tampered copy of the data', async () => {
+    // Signed correctly, but for a different amount than the one delivered:
+    // proves the signature is checked against the body actually received.
+    const delivered = successBody();
+    const signature = signPayosPayload(
+      canonicalizeData({ ...delivered.data, amount: 1 }),
+      FAKE_CONFIG.checksumKey,
+    );
+    mockFetch(async () => okResponse({ ...delivered, signature }));
+    await expectPaymentErrorCode(
+      createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+      'PAYMENT_PROVIDER_UNAVAILABLE',
+    );
   });
 });

@@ -12,7 +12,7 @@ import {
 } from "@/lib/api";
 
 /**
- * Survives the round trip to MoMo and back, and no longer: the pass belongs to
+ * Survives the round trip to payOS and back, and no longer: the pass belongs to
  * the tab that started it, and a value left in localStorage would still be
  * there weeks later pointing at a payment nobody remembers.
  */
@@ -75,7 +75,7 @@ export function BuyerPassPanel({
 
 
   /**
-   * Resumes the payment this tab started, by id only. MoMo appends its own
+   * Resumes the payment this tab started, by id only. payOS appends its own
    * result to the return URL — resultCode, orderId, transId — and none of it is
    * read here: those parameters are attacker-writable, and treating them as
    * proof of payment would hand out a pass for the price of editing an address
@@ -181,7 +181,7 @@ export function BuyerPassPanel({
     } catch {
       /* storage unavailable; the payment itself is unaffected */
     }
-    // Same tab: MoMo returns the payer to us, and a popup would be blocked or
+    // Same tab: payOS returns the payer to us, and a popup would be blocked or
     // orphaned. Only payUrl is used — nothing from the provider is persisted.
     window.location.assign(result.data.payUrl);
   }, [starting, clearSessionAndRedirect]);
@@ -208,7 +208,7 @@ export function BuyerPassPanel({
           data-testid="payment-polling"
           className="mt-2 text-sm text-muted"
         >
-          Đang xác nhận giao dịch với MoMo…
+          Đang xác nhận giao dịch với ngân hàng…
         </p>
       );
     }
@@ -221,9 +221,9 @@ export function BuyerPassPanel({
           className="mt-2 text-sm text-muted"
         >
           <p>
-            Chưa xác nhận được giao dịch. Chúng tôi chưa biết MoMo đã ghi nhận
-            hay chưa, nên bạn đừng thanh toán lại. Hãy kiểm tra lại sau ít phút,
-            hoặc mở ứng dụng MoMo để xem lịch sử giao dịch.
+            Chưa xác nhận được giao dịch. Chúng tôi chưa biết ngân hàng đã ghi
+            nhận hay chưa, nên bạn đừng thanh toán lại. Hãy kiểm tra lại sau ít
+            phút, hoặc mở ứng dụng ngân hàng để xem lịch sử giao dịch.
           </p>
           <button
             type="button"
@@ -313,7 +313,7 @@ export function BuyerPassPanel({
               <span className="font-medium text-ink">
                 {PRICE_LABEL} / 30 ngày
               </span>
-              {" · thanh toán một lần qua MoMo · không tự động gia hạn"}
+              {" · chuyển khoản VietQR một lần · không tự động gia hạn"}
             </p>
             <button
               type="button"
@@ -323,8 +323,8 @@ export function BuyerPassPanel({
               className="mt-3 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
             >
               {starting
-                ? "Đang chuyển tới MoMo…"
-                : `Thanh toán ${PRICE_LABEL} qua MoMo`}
+                ? "Đang chuyển tới trang thanh toán…"
+                : `Chuyển khoản ${PRICE_LABEL} qua VietQR`}
             </button>
             {checkoutError ? (
               <p
@@ -342,7 +342,7 @@ export function BuyerPassPanel({
             data-testid="checkout-unavailable"
             className="mt-2 max-w-prose text-sm leading-relaxed text-muted"
           >
-            Thanh toán MoMo chưa được mở trên môi trường này, nên tạm thời chưa
+            Thanh toán VietQR chưa được mở trên môi trường này, nên tạm thời chưa
             mua gói người mua được.
           </p>
         )}

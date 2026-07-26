@@ -18,7 +18,7 @@ describe('payment contracts', () => {
   it('parses create subscription payment response', () => {
     const valid = {
       paymentId: 'pay-123',
-      payUrl: 'https://test-payment.momo.vn/v2/gateway/api/create?s=123',
+      payUrl: 'https://pay.payos.vn/web/124c33293c43417ab7879e14c8d9eb18',
     };
     expect(CreateSubscriptionPaymentResponseSchema.parse(valid)).toEqual(valid);
   });
