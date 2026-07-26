@@ -158,6 +158,34 @@ describe('momo signature', () => {
     expect(signMomoPayload(raw, SECRET)).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  // Pinned independently of buildIpnRawSignature/signMomoPayload: the round-trip
+  // test above signs with the same function it verifies with, so a field-order
+  // bug in both would still pass it. A literal expected string does not have
+  // that blind spot.
+  it('matches a golden fixture pinned independently of the signing function', () => {
+    const raw = buildIpnRawSignature(ipnInput);
+    expect(raw).toBe(
+      'accessKey=test-access-key&amount=50000&extraData=&message=Successful.' +
+        '&orderId=GC-ORDER-1&orderInfo=GreenCity subscription 30 ngay' +
+        '&orderType=momo_wallet&partnerCode=MOMOTESTPARTNER&payType=qr' +
+        '&requestId=GC-REQ-1&responseTime=1735689600000&resultCode=0' +
+        '&transId=1234567890',
+    );
+
+    const digest = signMomoPayload(raw, SECRET);
+    expect(digest).toBe(
+      '8f43ff1f57fd6cca40eb1eff02f1c9efa991f9edc95d17fd361d5011f406a1c7',
+    );
+
+    for (const tampered of [
+      { ...ipnInput, amount: 1 },
+      { ...ipnInput, requestId: 'someone-elses-request' },
+      { ...ipnInput, resultCode: 99 },
+    ]) {
+      expect(verifyMomoIpnSignature(tampered, digest, SECRET)).toBe(false);
+    }
+  });
+
   it('accepts a valid IPN signature', () => {
     const valid = signMomoPayload(buildIpnRawSignature(ipnInput), SECRET);
     expect(verifyMomoIpnSignature(ipnInput, valid, SECRET)).toBe(true);
@@ -299,6 +327,9 @@ describe('createMomoPayment', () => {
     expect(call.init.method).toBe('POST');
     expect(call.init.redirect).toBe('error');
     expect(call.init.signal).toBeInstanceOf(AbortSignal);
+    expect((call.init.headers as Record<string, string>)['Content-Type']).toBe(
+      'application/json; charset=UTF-8',
+    );
 
     const sent = JSON.parse(String(call.init.body)) as Record<string, unknown>;
     // Pinned to the literal, not to the constant: comparing the payload against

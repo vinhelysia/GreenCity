@@ -2,9 +2,9 @@
 
 GreenCity is a pnpm monorepo for a recycling marketplace + cleanup platform (API + web).
 
-Working today: email/password auth (Argon2id, opaque DB-backed sessions), and a scrap-marketplace vertical slice — sellers submit scrap with a photo, admins quote within a published price band, sellers accept, listings go live, and subscribed buyers reserve (one winner per listing, enforced transactionally). Stack: NestJS API, Next.js web, Prisma, native local PostgreSQL + PostGIS, local filesystem storage, console mail.
+Working today: email/password auth (Argon2id, opaque DB-backed sessions), and a scrap-marketplace vertical slice — sellers submit scrap with a photo, admins quote within a published price band, sellers accept, listings go live, and subscribed buyers reserve (one winner per listing, enforced transactionally). The code includes a MoMo Sandbox checkout for buyer eligibility — a one-time 50.000đ / 30-day payment, no auto-renewal, verified server-side by a signed IPN callback — but it is only reachable when every `MOMO_*`/`PUBLIC_*_URL` variable in `.env.example` is configured, and it has **not yet been manually verified against a real MoMo Sandbox account**. Stack: NestJS API, Next.js web, Prisma, native local PostgreSQL + PostGIS, local filesystem storage, console mail.
 
-Not implemented, and not faked: real payment, buyer subscription billing, seller reward payout, cleanup assignment, field collection, before/after evidence, and completion verification.
+Not implemented, and not faked: seller reward payout, cleanup assignment, field collection, before/after evidence, and completion verification. The MoMo integration is Sandbox-only until a merchant account and production credentials exist and a real checkout/IPN round trip has been observed — see `tasks/plan.md`.
 
 **Docker is not required for local development.**
 

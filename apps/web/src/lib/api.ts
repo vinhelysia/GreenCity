@@ -25,6 +25,10 @@ import {
   type PublicCleanupReportList,
   PointsBalanceSchema,
   type PointsBalance,
+  CreateSubscriptionPaymentResponseSchema,
+  type CreateSubscriptionPaymentResponse,
+  SubscriptionPaymentStatusResponseSchema,
+  type SubscriptionPaymentStatusResponse,
 } from "@greencity/shared";
 
 export type ParsedApiError = ApiError["error"];
@@ -194,7 +198,7 @@ function invalidResponse(status: number): ApiResult<never> {
  */
 const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   SUBSCRIPTION_REQUIRED:
-    "Bạn cần gói người mua để đặt giữ. Đây là gói demo, chưa xử lý thanh toán.",
+    "Bạn cần gói người mua để đặt giữ. Mua gói ở phần đầu trang.",
   LISTING_NOT_AVAILABLE: "Tin này vừa được người khác đặt giữ.",
   CANNOT_RESERVE_OWN_LISTING: "Đây là tin đăng của bạn.",
   QUOTE_OUT_OF_PUBLISHED_RANGE: "Giá phải nằm trong khoảng đã công khai.",
@@ -208,6 +212,31 @@ const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   CLEANUP_REPORT_NOT_FOUND: "Không tìm thấy dữ liệu báo cáo.",
   CLEANUP_REPORT_NOT_PENDING: "Báo cáo không còn ở trạng thái chờ duyệt.",
 };
+
+/**
+ * Vietnamese copy for the payment error codes. Branching on `code` and never on
+ * the server's message: the message is prose that may change, the code is the
+ * contract.
+ */
+const PAYMENT_ERROR_MESSAGES: Record<string, string> = {
+  PAYMENT_NOT_CONFIGURED:
+    "Thanh toán MoMo chưa được mở trên môi trường này. Bạn thử lại sau nhé.",
+  PAYMENT_PROVIDER_UNAVAILABLE:
+    "Chưa kết nối được MoMo. Bạn thử lại sau ít phút.",
+  // Raised while the order is being created, before the payer has picked a
+  // MoMo account, so advice about switching accounts would be nonsense.
+  PAYMENT_PROVIDER_REJECTED: "MoMo chưa tạo được giao dịch. Bạn thử lại sau.",
+  PAYMENT_NOT_FOUND: "Giao dịch này không còn hợp lệ. Bạn hãy tạo giao dịch mới.",
+  NETWORK_ERROR: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+};
+
+/** Localize a payment ApiError. Never surfaces the server's own wording. */
+export function paymentErrorMessage(error: ParsedApiError): string {
+  return (
+    PAYMENT_ERROR_MESSAGES[error.code] ??
+    "Không thể hoàn tất thanh toán. Bạn thử lại sau nhé."
+  );
+}
 
 /** Localize a marketplace ApiError. Falls back to the server message. */
 export function marketplaceErrorMessage(error: ParsedApiError): string {
@@ -316,6 +345,43 @@ export async function fetchSubscriptionState(): Promise<
   const result = await apiFetch<unknown>("/api/subscriptions/me");
   if (!result.ok) return result;
   const parsed = SubscriptionStateSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+/**
+ * POST /api/subscription-payments — starts a MoMo checkout.
+ *
+ * The body is an empty object and must stay that way: the server refuses
+ * anything else, because price and duration are its decision, not the client's.
+ */
+export async function createSubscriptionPayment(): Promise<
+  ApiResult<CreateSubscriptionPaymentResponse>
+> {
+  const result = await apiFetch<unknown>("/api/subscription-payments", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  if (!result.ok) return result;
+  const parsed = CreateSubscriptionPaymentResponseSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+/**
+ * GET /api/subscription-payments/:id — owner-only status.
+ *
+ * The id comes back out of sessionStorage, which anything running in the tab
+ * can write, so it is encoded rather than interpolated raw into the path.
+ */
+export async function fetchSubscriptionPaymentStatus(
+  paymentId: string,
+): Promise<ApiResult<SubscriptionPaymentStatusResponse>> {
+  const result = await apiFetch<unknown>(
+    `/api/subscription-payments/${encodeURIComponent(paymentId)}`,
+  );
+  if (!result.ok) return result;
+  const parsed = SubscriptionPaymentStatusResponseSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
   return { ok: true, data: parsed.data, status: result.status };
 }

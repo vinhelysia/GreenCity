@@ -303,7 +303,6 @@ export class PaymentService {
               status: 'ACTIVE',
               startsAt,
               expiresAt,
-              note: `Purchased via MoMo payment ${payment.id} (orderId: ${payment.momoOrderId})`,
             },
           });
 

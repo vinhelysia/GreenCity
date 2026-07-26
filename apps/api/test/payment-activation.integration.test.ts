@@ -75,6 +75,8 @@ describe('Payment activation domain integration', () => {
     expect(updatedPayment?.momoTransactionId).toBe('trans-1001');
     expect(updatedPayment?.subscription).toBeTruthy();
     expect(updatedPayment?.subscription?.status).toBe('ACTIVE');
+    // No internal payment id or MoMo order id in a field a reader might see.
+    expect(updatedPayment?.subscription?.note).toBeNull();
 
     const subCount = await prisma.subscription.count({
       where: { userId: testUserId },

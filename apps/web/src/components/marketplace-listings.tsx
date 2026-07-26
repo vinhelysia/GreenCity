@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { MarketplaceListing } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import {
+  BuyerPassPanel,
+  type SubscriptionLoad,
+} from "@/components/buyer-pass-panel";
 import { EmptyState } from "@/components/empty-state";
 import {
   checkAuthExpiry,
@@ -19,12 +23,25 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; data: MarketplaceListing[] };
 
+
 export function MarketplaceListings() {
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [eligible, setEligible] = useState<
-    "unknown" | "loading" | "eligible" | "not-eligible" | "error"
-  >("unknown");
+  // The whole SubscriptionState, not just the boolean: the pass panel needs the
+  // expiry date and whether checkout is configured. A failed request is its own
+  // state — collapsing it into null made the panel claim checkout was switched
+  // off when the truth was that we never got an answer.
+  const [load, setLoad] = useState<SubscriptionLoad>({ kind: "loading" });
+  const eligible: "unknown" | "error" | "eligible" | "not-eligible" =
+    authStatus !== "authenticated"
+      ? "unknown"
+      : load.kind === "error"
+        ? "error"
+        : load.kind === "loading"
+          ? "unknown"
+          : load.state.eligible
+            ? "eligible"
+            : "not-eligible";
 
   const loadListings = useCallback(async () => {
     setState({ status: "loading" });
@@ -40,32 +57,43 @@ export function MarketplaceListings() {
     void loadListings();
   }, [loadListings]);
 
+  // Bumped after a payment settles, so the pass unlocks the reserve buttons
+  // without the reader having to reload the page.
+  const [subscriptionRun, setSubscriptionRun] = useState(0);
+  const refreshSubscription = useCallback(() => {
+    setSubscriptionRun((n) => n + 1);
+  }, []);
+
   useEffect(() => {
     if (authStatus !== "authenticated") {
-      setEligible("unknown");
+      setLoad({ kind: "loading" });
       return;
     }
     let cancelled = false;
     (async () => {
-      setEligible("loading");
+      setLoad({ kind: "loading" });
       const result = checkAuthExpiry(
         await fetchSubscriptionState(),
         clearSessionAndRedirect,
       );
       if (cancelled) return;
-      if (!result.ok) {
-        setEligible("error");
-        return;
-      }
-      setEligible(result.data.eligible ? "eligible" : "not-eligible");
+      // 401 already redirects; anything else is an honest "we could not ask".
+      setLoad(
+        result.ok ? { kind: "ready", state: result.data } : { kind: "error" },
+      );
     })();
     return () => {
       cancelled = true;
     };
-  }, [authStatus, clearSessionAndRedirect]);
+  }, [authStatus, clearSessionAndRedirect, subscriptionRun]);
 
   return (
-    <div role="status" aria-live="polite" className="min-w-0">
+    <div className="min-w-0 space-y-6">
+      {/* One place to buy the pass, above the listings. Repeating the CTA on
+          every card would ask for the same money in a dozen places. */}
+      <BuyerPassPanel load={load} onSubscriptionChange={refreshSubscription} />
+
+      <div role="status" aria-live="polite" className="min-w-0">
       {state.status === "loading" ? (
         <div aria-hidden="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="skeleton h-64 w-full" />
@@ -96,6 +124,7 @@ export function MarketplaceListings() {
           ))}
         </ul>
       )}
+      </div>
     </div>
   );
 }
@@ -109,7 +138,7 @@ function ListingCard({
 }: {
   listing: MarketplaceListing;
   authStatus: "loading" | "authenticated" | "unauthenticated";
-  eligible: "unknown" | "loading" | "eligible" | "not-eligible" | "error";
+  eligible: "unknown" | "error" | "eligible" | "not-eligible";
   clearSessionAndRedirect: () => void;
   onReserved: () => void;
 }) {
@@ -186,9 +215,11 @@ function ListingCard({
             >
               {reserving ? "Đang đặt giữ…" : "Đặt giữ"}
             </button>
-          ) : eligible === "loading" || authStatus === "loading" ? (
+          ) : eligible === "unknown" || authStatus === "loading" ? (
             <span className="text-sm text-muted">Đang kiểm tra gói…</span>
-          ) : (
+          ) : eligible === "error" ? (
+            // Do not leave this stuck on "checking" forever: say what happened
+            // and point at the retry, which lives once, in the panel above.
             <div className="text-sm text-muted">
               <button
                 type="button"
@@ -198,8 +229,22 @@ function ListingCard({
                 Đặt giữ
               </button>
               <p className="mt-1.5">
-                Bạn cần gói người mua để đặt giữ. Đây là gói demo, chưa xử lý
-                thanh toán.
+                Chưa kiểm tra được gói. Thử lại ở phần đầu trang.
+              </p>
+            </div>
+          ) : (
+            // Points at the one panel above rather than repeating the offer:
+            // the same purchase asked for on every card reads as nagging.
+            <div className="text-sm text-muted">
+              <button
+                type="button"
+                disabled
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
+              >
+                Đặt giữ
+              </button>
+              <p className="mt-1.5">
+                Cần gói người mua. Mua ở phần đầu trang.
               </p>
             </div>
           )}

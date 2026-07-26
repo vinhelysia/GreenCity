@@ -109,7 +109,7 @@ export async function createMomoPayment(
   try {
     response = await fetch(config.createEndpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json; charset=UTF-8' },
       // A 3xx from a payment endpoint is never legitimate; do not follow it.
       redirect: 'error',
       signal: AbortSignal.timeout(CREATE_TIMEOUT_MS),
