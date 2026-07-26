@@ -76,10 +76,11 @@ export function BuyerPassPanel({
 
   /**
    * Resumes the payment this tab started, by id only. payOS appends its own
-   * result to the return URL — resultCode, orderId, transId — and none of it is
-   * read here: those parameters are attacker-writable, and treating them as
-   * proof of payment would hand out a pass for the price of editing an address
-   * bar. The owner-only status endpoint is the single source of truth.
+   * result to the return URL — code, id, cancel, status, orderCode — and none
+   * of it is read here: those parameters are unsigned and attacker-writable,
+   * and treating them as proof of payment would hand out a pass for the price
+   * of editing an address bar. The owner-only status endpoint is the single
+   * source of truth.
    */
   useEffect(() => {
     if (authStatus !== "authenticated") return;

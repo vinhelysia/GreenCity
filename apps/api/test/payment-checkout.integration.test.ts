@@ -330,13 +330,22 @@ describe('Subscription checkout integration', () => {
       expect(body!.orderCode as number).toBeGreaterThan(0);
     }
     // Nothing identifying the user may travel to the provider as an id.
-    expect(String(a!.orderCode)).not.toContain(buyer.userId);
-    expect(String(a!.orderId)).not.toContain('@');
+    // Asserted against the real generated value, not String(undefined): the
+    // previous version compared a field payOS does not have, so it could only
+    // ever pass.
+    for (const body of [a, b]) {
+      const code = String(body!.orderCode);
+      expect(code).toMatch(/^\d+$/);
+      expect(code).not.toContain(buyer.userId);
+      expect(code).not.toContain(email('buyer'));
+      expect(code).not.toContain('@');
+    }
 
-    // And an id supplied by the browser is not honoured.
+    // And nothing the browser supplies is honoured: the body is strictly empty.
     const forged = await postCheckout(buyer.cookie, {
-      orderId: 'ATTACKER',
-      requestId: 'ATTACKER',
+      orderCode: 999,
+      amount: 1,
+      durationDays: 3650,
     });
     expect(forged.status).toBe(400);
   });
@@ -505,12 +514,18 @@ describe('Subscription checkout integration', () => {
     expect(entry).not.toBeNull();
     expect(entry!.metadata).toEqual({ amountVnd: 50000, durationDays: 30 });
 
+    // Every forbidden value is read back from the request that actually went
+    // out, so this fails the moment any of them reaches the audit row. The
+    // stale MoMo constant it used to list no longer exists in this file, and
+    // orderId is not a payOS field — both made this check vacuous.
     const serialized = JSON.stringify(entry);
+    const orderCode = String(sentBodies[0]!.orderCode);
+    expect(orderCode).toMatch(/^\d+$/);
     for (const forbidden of [
-      'test-secret-not-a-credential',
+      CHECKSUM_KEY,
       'pay.payos.vn',
       String(sentBodies[0]!.signature),
-      String(sentBodies[0]!.orderId),
+      orderCode,
     ]) {
       expect(serialized).not.toContain(forbidden);
     }
