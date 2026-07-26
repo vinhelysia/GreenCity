@@ -19,21 +19,29 @@
 :root {
   color-scheme: light;
 
-  --header-height: 3.5rem;
+  --header-height: 4rem;
 
-  /* Confident-leaf tokens — OKLCH, leaf-green anchor ~150 + warm amber pop. */
-  --color-paper: oklch(98% 0.006 150);
-  --color-paper-2: oklch(95.5% 0.011 150);
-  --color-paper-3: oklch(92.5% 0.017 150);
-  --color-rule: oklch(87% 0.017 150);
-  --color-edge: oklch(52% 0.04 150);
-  --color-muted: oklch(42% 0.03 155);
-  --color-ink: oklch(18% 0.02 155);
-  --color-accent: oklch(44% 0.16 150);
-  --color-accent-deep: oklch(34% 0.15 150);
-  /* Warm amber — decorative marks/underlines/bands only, never as text on paper. */
-  --color-highlight: oklch(68% 0.15 68);
-  --color-highlight-soft: oklch(94% 0.05 80);
+  /* Modern Eco Marketplace Design Tokens */
+  --color-primary: #176B4D;
+  --color-primary-hover: #10543C;
+  --color-primary-soft: #DDEFE5;
+  --color-mint-surface: #EAF6EF;
+  --color-paper: #F7F8F4;
+  --color-card: #FFFFFF;
+  --color-ink: #18302A;
+  --color-muted: #66756F;
+  --color-edge: #DCE6E0;
+  --color-coral: #F26B4A;
+  --color-yellow: #F2C94C;
+
+  /* Backward compatible tokens */
+  --color-paper-2: #EAF6EF;
+  --color-paper-3: #DDEFE5;
+  --color-rule: #DCE6E0;
+  --color-accent: #176B4D;
+  --color-accent-deep: #10543C;
+  --color-highlight: #F2C94C;
+  --color-highlight-soft: #FBF5DF;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;

@@ -36,19 +36,24 @@ const STAGES = [
 
 export function HomeLoop() {
   return (
-    <ol className="grid min-w-0 grid-cols-1 gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+    <ol className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {STAGES.map((stage) => (
-        <li key={stage.n} className="min-w-0 border-t-2 border-accent pt-3">
-          <p
-            aria-hidden="true"
-            className="font-display text-sm font-bold tabular-nums tracking-widest text-accent"
-          >
-            {String(stage.n).padStart(2, "0")}
-          </p>
-          <h3 className="mt-1 font-display text-lg font-semibold tracking-tight text-ink">
-            {stage.title}
-          </h3>
-          <p className="mt-2 text-sm leading-relaxed text-muted">{stage.body}</p>
+        <li
+          key={stage.n}
+          className="group relative flex min-w-0 flex-col justify-between rounded-2xl border border-edge bg-card p-6 shadow-eco transition-shadow hover:shadow-eco-hover"
+        >
+          <div>
+            <span
+              aria-hidden="true"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-mint-surface font-display text-sm font-bold tabular-nums text-primary"
+            >
+              {String(stage.n).padStart(2, "0")}
+            </span>
+            <h3 className="mt-4 font-display text-lg font-bold tracking-tight text-ink">
+              {stage.title}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted">{stage.body}</p>
+          </div>
         </li>
       ))}
     </ol>

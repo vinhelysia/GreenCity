@@ -1,93 +1,88 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import type { PublicCleanupReport } from "@greencity/shared";
-import { fetchPublicCleanupReports } from "@/lib/api";
+import { EcoBadge } from "./eco-badge";
+import { EcoCityHeroIllustration } from "./eco-city-hero-illustration";
+import { IconArrowRight, IconLeaf, IconShieldCheck, IconSparkles } from "./eco-icons";
 
 /**
- * Opening panel. Asymmetric on purpose — the proposition holds the left column
- * and a documented dump site holds the right, so the page opens on the problem
- * rather than on a centred slogan.
- *
- * The photograph is whichever cleanup report was verified most recently, so it
- * is never a stock image and never a hardcoded id. Its box keeps its aspect
- * ratio while loading, so nothing shifts when the image arrives.
+ * Opening hero section — Server Component.
+ * Proposition left column, controlled eco-city vector illustration right column.
+ * Exact H1: "Rác có người mua. Điểm rác có người báo."
  */
 export function HomeHero() {
-  const [report, setReport] = useState<PublicCleanupReport | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const res = await fetchPublicCleanupReports();
-      if (cancelled || !res.ok) return;
-      setReport(res.data.reports[0] ?? null);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const place = report
-    ? [report.district, report.city].filter(Boolean).join(", ")
-    : null;
-
   return (
     <section
       aria-labelledby="hero-heading"
-      className="grid min-w-0 grid-cols-1 items-start gap-8 pb-10 sm:pb-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)] lg:gap-12"
+      className="grid min-w-0 grid-cols-1 items-center gap-8 pb-12 sm:pb-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-12"
     >
       <div className="min-w-0">
+        <div className="mb-4 inline-flex items-center gap-2">
+          <EcoBadge variant="mint" icon={<IconLeaf className="h-3.5 w-3.5" />}>
+            Nền tảng sinh thái số GreenCity
+          </EcoBadge>
+        </div>
+
         <h1
           id="hero-heading"
-          className="font-display text-3xl font-semibold leading-tight tracking-tight text-ink [overflow-wrap:anywhere] sm:text-4xl md:text-[2.75rem]"
+          className="font-display text-3.5xl font-extrabold leading-[1.15] tracking-tight text-ink [overflow-wrap:anywhere] sm:text-4xl md:text-5xl"
         >
-          Rác có người mua. Điểm rác có người báo.
+          Rác có người mua. <br className="hidden sm:inline" />
+          <span className="text-primary underline decoration-yellow decoration-4 underline-offset-6">
+            Điểm rác có người báo.
+          </span>
         </h1>
+
         <p className="mt-5 max-w-prose text-base leading-relaxed text-muted sm:text-lg">
-          GreenCity nối hai việc vốn rời nhau: bán phế liệu tái chế theo giá
-          niêm yết và báo điểm rác tự phát để được ghi nhận, xác minh. Làm xong
-          việc nào bạn cũng được cộng điểm thưởng.
+          GreenCity kết nối hai hoạt động bảo vệ môi trường: thu gom bán phế liệu theo giá
+          niêm yết minh bạch và báo cáo điểm rác tự phát để cộng đồng giải quyết. Mỗi đóng góp
+          đều được xác minh và quy đổi điểm thưởng.
         </p>
 
-        <div className="mt-7 flex min-w-0 flex-wrap items-center gap-3">
+        <div className="mt-8 flex min-w-0 flex-wrap items-center gap-3.5">
           <Link
             href="/ban-phe-lieu"
-            className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90"
+            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 py-3 text-base font-semibold text-white shadow-eco transition-colors hover:bg-primary-hover"
           >
-            Bán phế liệu
+            <span>Bán phế liệu</span>
+            <IconArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/dong-gop"
-            className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md border border-edge bg-paper px-5 py-2.5 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-accent"
+            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-edge bg-card px-6 py-3 text-base font-semibold text-ink shadow-eco-sm transition-colors hover:border-primary/40 hover:bg-mint-surface/40"
           >
-            Báo điểm rác
+            <span>Báo điểm rác</span>
           </Link>
+          <Link
+            href="/cho-online"
+            className="inline-flex min-h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-semibold text-primary transition-colors hover:text-primary-hover hover:underline"
+          >
+            <IconSparkles className="h-4 w-4" />
+            <span>Khám phá chợ online</span>
+          </Link>
+        </div>
+
+        {/* Value Micro-props */}
+        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge pt-5 text-xs font-semibold text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <IconShieldCheck className="h-4 w-4 text-primary" />
+            Giá phế liệu niêm yết
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <IconShieldCheck className="h-4 w-4 text-primary" />
+            Báo cáo được duyệt thực tế
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <IconShieldCheck className="h-4 w-4 text-primary" />
+            Đổi điểm nhận quà sinh thái
+          </span>
         </div>
       </div>
 
-      <figure className="min-w-0">
-        <div className="aspect-[4/3] w-full overflow-hidden rounded-md border border-edge bg-paper-3">
-          {report ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={`/api${report.photoPath}`}
-              alt=""
-              fetchPriority="high"
-              className="h-full w-full object-cover"
-            />
-          ) : null}
+      <figure className="relative min-w-0">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-edge bg-card p-4 shadow-eco">
+          <EcoCityHeroIllustration />
         </div>
-        <figcaption className="mt-2 text-xs leading-relaxed text-muted">
-          {report ? (
-            <>
-              Điểm rác do người dân báo, đã được xác minh
-              {place ? <> tại {place}</> : null}.
-            </>
-          ) : (
-            "Ảnh điểm rác do người dân gửi, hiển thị sau khi được xác minh."
-          )}
+        <figcaption className="mt-2.5 text-center text-xs leading-relaxed text-muted">
+          Mô phỏng đô thị xanh thông minh & chuỗi tuần hoàn tài nguyên sinh thái GreenCity.
         </figcaption>
       </figure>
     </section>

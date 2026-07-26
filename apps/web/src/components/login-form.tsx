@@ -113,18 +113,18 @@ export function LoginForm() {
           disabled={formState === "submitting"}
           aria-invalid={emailError ? true : undefined}
           aria-describedby={emailError ? emailErrorId : undefined}
-          className="mt-1.5 w-full min-h-11 rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
+        className="mt-1.5 w-full min-h-11 rounded-xl border border-edge bg-card px-3.5 py-2.5 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="ban@example.com"
         />
         {emailError ? (
-          <p id={emailErrorId} className="mt-1.5 text-sm text-red-800" role="alert">
+          <p id={emailErrorId} className="mt-1.5 text-sm font-medium text-red-600" role="alert">
             {emailError}
           </p>
         ) : null}
       </div>
 
       <div>
-        <label htmlFor={passwordId} className="block text-sm font-medium text-ink">
+        <label htmlFor={passwordId} className="block text-sm font-semibold text-ink">
           Mật khẩu
         </label>
         <div className="mt-1.5 flex min-w-0 gap-2">
@@ -137,11 +137,11 @@ export function LoginForm() {
             disabled={formState === "submitting"}
             aria-invalid={passwordError ? true : undefined}
             aria-describedby={passwordError ? passwordErrorId : undefined}
-            className="min-h-11 min-w-0 flex-1 rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
+            className="min-h-11 min-w-0 flex-1 rounded-xl border border-edge bg-card px-3.5 py-2.5 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="button"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink hover:border-accent"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-edge bg-card px-4 text-sm font-semibold text-ink hover:border-primary/40 hover:bg-mint-surface/30"
             aria-pressed={showPassword}
             aria-controls={passwordId}
             onClick={() => setShowPassword((value) => !value)}
@@ -153,7 +153,7 @@ export function LoginForm() {
         {passwordError ? (
           <p
             id={passwordErrorId}
-            className="mt-1.5 text-sm text-red-800"
+            className="mt-1.5 text-sm font-medium text-red-600"
             role="alert"
           >
             {passwordError}
@@ -164,7 +164,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={formState === "submitting"}
-        className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+        className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-5 py-3 text-base font-semibold text-white shadow-eco transition-colors hover:bg-primary-hover disabled:opacity-60"
       >
         {formState === "submitting" ? "Đang đăng nhập…" : "Đăng nhập"}
       </button>

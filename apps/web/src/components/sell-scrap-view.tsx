@@ -15,6 +15,7 @@ import {
   type ScrapRequestStatus,
 } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
 import { SignInRequired } from "@/components/sign-in-required";
 import {
@@ -43,11 +44,18 @@ const STATUS_LABEL: Record<ScrapRequestStatus, string> = {
   REJECTED: "Đã từ chối",
 };
 
+const STATUS_VARIANT: Record<ScrapRequestStatus, "mint" | "yellow" | "primary" | "coral"> = {
+  SUBMITTED: "mint",
+  QUOTED: "yellow",
+  ACCEPTED: "primary",
+  REJECTED: "coral",
+};
+
 function StatusBadge({ status }: { status: ScrapRequestStatus }) {
   return (
-    <span className="inline-flex items-center rounded-sm border border-edge bg-paper-2 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-muted">
+    <EcoBadge variant={STATUS_VARIANT[status]} className="text-xs uppercase tracking-wider">
       {STATUS_LABEL[status]}
-    </span>
+    </EcoBadge>
   );
 }
 

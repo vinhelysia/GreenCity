@@ -14,6 +14,7 @@ import {
   type CleanupReportStatus,
 } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
 import { SignInRequired } from "@/components/sign-in-required";
 import {
@@ -37,11 +38,17 @@ const STATUS_LABEL: Record<CleanupReportStatus, string> = {
   REJECTED: "Đã từ chối",
 };
 
+const STATUS_VARIANT: Record<CleanupReportStatus, "mint" | "primary" | "coral"> = {
+  SUBMITTED: "mint",
+  VERIFIED: "primary",
+  REJECTED: "coral",
+};
+
 function StatusBadge({ status }: { status: CleanupReportStatus }) {
   return (
-    <span className="inline-flex items-center rounded-sm border border-edge bg-paper-2 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-muted">
+    <EcoBadge variant={STATUS_VARIANT[status]} className="text-xs uppercase tracking-wider">
       {STATUS_LABEL[status]}
-    </span>
+    </EcoBadge>
   );
 }
 

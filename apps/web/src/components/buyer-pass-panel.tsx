@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import type { SubscriptionState } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { EcoBadge } from "@/components/eco-badge";
+import { IconLeaf, IconShieldCheck, IconSparkles } from "@/components/eco-icons";
 import {
   checkAuthExpiry,
   createSubscriptionPayment,
@@ -41,8 +43,6 @@ function readPendingPaymentId(): string | null {
   try {
     return window.sessionStorage.getItem(PENDING_PAYMENT_KEY);
   } catch {
-    // Private mode and blocked storage both throw. Checkout still works; the
-    // return trip simply cannot be resumed automatically.
     return null;
   }
 }
@@ -65,23 +65,9 @@ export function BuyerPassPanel({
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [starting, setStarting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  // Starts "checking", not "idle": the checkout CTA must not be paintable
-  // before this effect has had a chance to find a pending payment and switch
-  // to "polling" — otherwise a click in that window starts a second checkout
-  // for a payment that is already in flight.
   const [poll, setPoll] = useState<PollState>({ kind: "checking" });
-  /** Bumped by "Kiểm tra lại" to restart a run that timed out. */
   const [pollRun, setPollRun] = useState(0);
 
-
-  /**
-   * Resumes the payment this tab started, by id only. payOS appends its own
-   * result to the return URL — code, id, cancel, status, orderCode — and none
-   * of it is read here: those parameters are unsigned and attacker-writable,
-   * and treating them as proof of payment would hand out a pass for the price
-   * of editing an address bar. The owner-only status endpoint is the single
-   * source of truth.
-   */
   useEffect(() => {
     if (authStatus !== "authenticated") return;
     const paymentId = readPendingPaymentId();
@@ -90,16 +76,11 @@ export function BuyerPassPanel({
       return;
     }
 
-    // Local to this run. A ref shared across runs lets the previous effect's
-    // cleanup cancel the new run, or a stale chain resume once a later run
-    // resets the flag.
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempts = 0;
     setPoll({ kind: "polling" });
 
-    // Chained timeouts rather than an interval: a slow reply must delay the
-    // next request, not stack another one behind it.
     const tick = async (): Promise<void> => {
       attempts += 1;
       const result = checkAuthExpiry(
@@ -110,7 +91,6 @@ export function BuyerPassPanel({
 
       if (!result.ok) {
         if (result.status === 404) {
-          // The id is stale — cleared, so the next visit starts clean.
           clearPendingPaymentId();
           setPoll({
             kind: "failed",
@@ -118,8 +98,7 @@ export function BuyerPassPanel({
           });
           return;
         }
-        if (result.status === 401) return; // redirecting to sign in
-        // A network blip is not a verdict. Keep the id and keep trying.
+        if (result.status === 401) return;
         if (attempts >= MAX_POLL_ATTEMPTS) {
           setPoll({ kind: "unconfirmed" });
           return;
@@ -143,8 +122,6 @@ export function BuyerPassPanel({
         return;
       }
 
-      // Still PENDING. Giving up on the clock says nothing about the payment,
-      // so the id stays and the reader is offered a manual re-check.
       if (attempts >= MAX_POLL_ATTEMPTS) {
         setPoll({ kind: "unconfirmed" });
         return;
@@ -175,15 +152,11 @@ export function BuyerPassPanel({
       return;
     }
 
-    // Stored before navigating, not after: once assign() runs this page is
-    // gone, and an unstored id means the return trip has nothing to poll.
     try {
       window.sessionStorage.setItem(PENDING_PAYMENT_KEY, result.data.paymentId);
     } catch {
-      /* storage unavailable; the payment itself is unaffected */
+      /* storage unavailable */
     }
-    // Same tab: payOS returns the payer to us, and a popup would be blocked or
-    // orphaned. Only payUrl is used — nothing from the provider is persisted.
     window.location.assign(result.data.payUrl);
   }, [starting, clearSessionAndRedirect]);
 
@@ -191,15 +164,9 @@ export function BuyerPassPanel({
   const expiresAt =
     load.kind === "ready" ? load.state.subscription?.expiresAt : undefined;
 
-  /**
-   * The body for a signed-in reader. A second payment must be impossible while
-   * the first is unresolved, and while a settled one is still being applied:
-   * offering the button again there is how someone pays 100.000đ for one
-   * 30-day pass.
-   */
   function signedInBody() {
     if (poll.kind === "checking") {
-      return <div aria-hidden="true" className="skeleton mt-3 h-12 w-full" />;
+      return <div aria-hidden="true" className="skeleton mt-3 h-12 w-full rounded-xl" />;
     }
 
     if (poll.kind === "polling") {
@@ -207,7 +174,7 @@ export function BuyerPassPanel({
         <p
           role="status"
           data-testid="payment-polling"
-          className="mt-2 text-sm text-muted"
+          className="mt-3 text-sm font-medium text-primary"
         >
           Đang xác nhận giao dịch với ngân hàng…
         </p>
@@ -219,7 +186,7 @@ export function BuyerPassPanel({
         <div
           role="status"
           data-testid="payment-unconfirmed"
-          className="mt-2 text-sm text-muted"
+          className="mt-3 rounded-xl bg-yellow/10 p-4 text-sm text-ink border border-yellow/30"
         >
           <p>
             Chưa xác nhận được giao dịch. Chúng tôi chưa biết ngân hàng đã ghi
@@ -230,7 +197,7 @@ export function BuyerPassPanel({
             type="button"
             data-testid="payment-recheck"
             onClick={() => setPollRun((n) => n + 1)}
-            className="mt-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-accent"
+            className="mt-3 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40"
           >
             Kiểm tra lại
           </button>
@@ -238,16 +205,12 @@ export function BuyerPassPanel({
       );
     }
 
-    // Only while the refetch is still in flight or has not started. A failed
-    // refetch (load.kind === "error") must fall through to the error branch
-    // below instead — otherwise a payment that was in fact received is stuck
-    // behind "đang cập nhật quyền…" forever, with no retry offered.
     if (poll.kind === "paid" && !active && load.kind !== "error") {
       return (
         <p
           role="status"
           data-testid="payment-applying"
-          className="mt-2 text-sm font-medium text-accent"
+          className="mt-3 text-sm font-semibold text-primary"
         >
           Đã nhận thanh toán, đang cập nhật quyền cho tài khoản của bạn…
         </p>
@@ -260,7 +223,7 @@ export function BuyerPassPanel({
           <p
             role="status"
             data-testid="payment-success"
-            className="mt-2 text-sm font-medium text-accent"
+            className="mt-3 text-sm font-semibold text-primary"
           >
             Thanh toán thành công. Gói người mua của bạn đã được kích hoạt.
           </p>
@@ -270,29 +233,28 @@ export function BuyerPassPanel({
           <p
             role="alert"
             data-testid="payment-failed"
-            className="mt-2 text-sm text-red-800"
+            className="mt-3 text-sm font-medium text-coral"
           >
             {poll.message}
           </p>
         ) : null}
 
         {active ? (
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            <span className="font-medium text-ink">Đang hoạt động</span>
+          <div className="mt-3 flex items-center gap-2">
+            <EcoBadge variant="primary" icon={<IconShieldCheck className="h-4 w-4" />}>
+              Đang hoạt động
+            </EcoBadge>
             {expiresAt ? (
-              <>
-                {" · hết hạn "}
-                {new Date(expiresAt).toLocaleDateString("vi-VN")}
-              </>
+              <span className="text-sm text-muted">
+                hết hạn {new Date(expiresAt).toLocaleDateString("vi-VN")}
+              </span>
             ) : null}
-          </p>
+          </div>
         ) : load.kind === "error" ? (
-          // Never claim checkout is unavailable when the truth is that we could
-          // not ask. Those are different problems with different fixes.
           <div
             role="alert"
             data-testid="subscription-error"
-            className="mt-2 text-sm text-red-800"
+            className="mt-3 text-sm text-coral"
           >
             <p>
               {poll.kind === "paid"
@@ -303,15 +265,15 @@ export function BuyerPassPanel({
               type="button"
               data-testid="subscription-retry"
               onClick={onSubscriptionChange}
-              className="mt-2 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-accent"
+              className="mt-3 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40"
             >
               Thử lại
             </button>
           </div>
         ) : load.kind === "ready" && load.state.checkoutAvailable ? (
           <>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              <span className="font-medium text-ink">
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              <span className="font-semibold text-ink">
                 {PRICE_LABEL} / 30 ngày
               </span>
               {" · chuyển khoản VietQR một lần · không tự động gia hạn"}
@@ -321,27 +283,29 @@ export function BuyerPassPanel({
               data-testid="buyer-pass-checkout"
               disabled={starting}
               onClick={() => void onCheckout()}
-              className="mt-3 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+              className="mt-4 inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-eco transition-colors hover:bg-primary-hover disabled:opacity-60"
             >
-              {starting
-                ? "Đang chuyển tới trang thanh toán…"
-                : `Chuyển khoản ${PRICE_LABEL} qua VietQR`}
+              <IconSparkles className="h-4 w-4" />
+              <span>
+                {starting
+                  ? "Đang chuyển tới trang thanh toán…"
+                  : `Chuyển khoản ${PRICE_LABEL} qua VietQR`}
+              </span>
             </button>
             {checkoutError ? (
               <p
                 role="alert"
                 data-testid="checkout-error"
-                className="mt-2 text-sm text-red-800"
+                className="mt-2 text-sm text-coral"
               >
                 {checkoutError}
               </p>
             ) : null}
           </>
         ) : (
-          // Reached only when the server answered and said checkout is off.
           <p
             data-testid="checkout-unavailable"
-            className="mt-2 max-w-prose text-sm leading-relaxed text-muted"
+            className="mt-3 max-w-prose text-sm leading-relaxed text-muted"
           >
             Thanh toán VietQR chưa được mở trên môi trường này, nên tạm thời chưa
             mua gói người mua được.
@@ -352,9 +316,6 @@ export function BuyerPassPanel({
   }
 
   function body() {
-    if (authStatus === "loading" || load.kind === "loading") {
-      return <div aria-hidden="true" className="skeleton mt-3 h-12 w-full" />;
-    }
     if (authStatus === "unauthenticated") {
       return (
         <>
@@ -364,12 +325,15 @@ export function BuyerPassPanel({
           </p>
           <Link
             href="/dang-nhap"
-            className="mt-3 inline-flex items-center whitespace-nowrap text-sm font-medium text-accent underline-offset-4 hover:underline"
+            className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
             Đăng nhập để mua gói &rarr;
           </Link>
         </>
       );
+    }
+    if (authStatus === "loading" || load.kind === "loading") {
+      return <div aria-hidden="true" className="skeleton mt-3 h-12 w-full rounded-xl" />;
     }
     return signedInBody();
   }
@@ -377,14 +341,17 @@ export function BuyerPassPanel({
   return (
     <section
       aria-labelledby="buyer-pass-heading"
-      className="min-w-0 rounded-md border border-edge bg-paper-2 p-5 sm:p-6"
+      className="min-w-0 rounded-2xl border border-edge bg-mint-surface/40 p-6 shadow-eco-sm"
     >
-      <h2
-        id="buyer-pass-heading"
-        className="font-display text-lg font-semibold tracking-tight text-ink"
-      >
-        Gói người mua
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2
+          id="buyer-pass-heading"
+          className="font-display text-xl font-bold tracking-tight text-ink"
+        >
+          Gói người mua
+        </h2>
+        <EcoBadge variant="mint">30 Ngày</EcoBadge>
+      </div>
       {body()}
     </section>
   );
