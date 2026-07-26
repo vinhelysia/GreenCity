@@ -102,15 +102,23 @@ const EnvSchema = z.object({
    */
   TRUST_PROXY: z.coerce.number().int().min(0).max(1).default(0),
   /**
-   * MoMo payment — every key is optional, so the API boots with none, some, or
+   * payOS payment — every key is optional, so the API boots with none, some, or
    * all of them set. Completeness is the payment module's call, not startup's;
    * validation here must never hint at which credential is missing.
+   *
+   * payOS has no sandbox, so there is no environment switch: the only host is
+   * the production one, and it is hard-coded in payos-config.ts rather than
+   * read from here.
    */
-  MOMO_ENV: blankAsUnset(z.enum(['sandbox', 'production'])),
-  MOMO_PARTNER_CODE: z.string().optional(),
-  MOMO_ACCESS_KEY: z.string().optional(),
-  MOMO_SECRET_KEY: z.string().optional(),
-  /** Public bases for MoMo redirect (web) and IPN (api) links. */
+  PAYOS_CLIENT_ID: z.string().optional(),
+  PAYOS_API_KEY: z.string().optional(),
+  PAYOS_CHECKSUM_KEY: z.string().optional(),
+  /**
+   * Public bases for the payOS return link (web) and for reporting the webhook
+   * URL to register with payOS (api). The webhook address is configured once in
+   * the payOS channel, not sent per request, so PUBLIC_API_URL is not part of
+   * what makes checkout configured.
+   */
   PUBLIC_API_URL: blankAsUnset(publicUrl),
   PUBLIC_WEB_URL: blankAsUnset(publicUrl),
 });

@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import {
   CreateSubscriptionPaymentResponseSchema,
@@ -15,81 +15,54 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { loadEnv } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { createMomoPayment } from './momo-client';
+import { createPayosPayment } from './payos-client';
 import {
-  MOMO_EXTRA_DATA,
-  MOMO_ORDER_INFO,
-  resolveMomoCheckoutConfig,
-} from './momo-config';
+  PAYOS_DESCRIPTION,
+  PAYOS_ORDER_CODE_MAX,
+  PAYOS_SUCCESS_CODE,
+  resolvePayosCheckoutConfig,
+} from './payos-config';
 
+/**
+ * The signed fields of a payOS webhook, after signature verification. Only what
+ * the signature actually covers reaches this service — an unsigned field is a
+ * caller-chosen field and must never influence whether access is granted.
+ */
 export interface VerifiedPaymentNotification {
-  partnerCode: string;
-  orderId: string;
-  requestId: string;
+  /** Decimal string, compared against the stored providerOrderId. */
+  orderCode: string;
   amount: number;
-  transId: string;
-  resultCode: number;
-  message?: string;
-}
-
-/**
- * What a MoMo resultCode means for the payment row.
- *
- * `0` is a completed payment. `9000` is an authorised one, which is the same
- * thing here only because checkout sends autoCapture: true — on a two-step
- * flow it would still need capturing, so the two must be read together.
- *
- * The in-flight codes are the reason this is not a boolean: MoMo sends a
- * callback while the payer is still deciding, and treating that as failure
- * would resolve the row before the real answer arrives, after which the
- * genuine success IPN is discarded as a duplicate and paid access is lost.
- */
-const PAID_RESULT_CODES = new Set([0, 9000]);
-
-/**
- * The codes MoMo's result table marks final for a one-time wallet payment.
- *
- * Membership is explicit and the default below is PENDING, never FAILED,
- * because FAILED is irreversible here: it takes the row out of the claimable
- * state, so a success callback arriving afterwards is discarded as a duplicate
- * and someone who paid silently loses access. Plenty of codes are documented
- * final-status "no" — 10, 11, 20, 40, 43 and 47 among them — and resolving an
- * unrecognised one as failure would bet a paid subscription on this list being
- * exhaustive.
- *
- * Refund and disbursement codes (1080, 1081, 1088) are deliberately absent:
- * they belong to flows this service does not run, and a payment IPN never
- * carries them.
- */
-const TERMINAL_FAILURE_RESULT_CODES = new Set([
-  98,
-  99,
-  1001, // insufficient funds
-  1002, // rejected by the issuer
-  1003, // cancelled after authorisation
-  1004, // amount exceeds the payer's limit
-  1005, // payment url / QR expired
-  1006, // payer denied the confirmation
-  1007,
-  1017,
-  1026,
-  4001,
-  4002,
-  4100,
-]);
-
-function classifyResultCode(code: number): 'PAID' | 'PENDING' | 'FAILED' {
-  if (PAID_RESULT_CODES.has(code)) return 'PAID';
-  if (TERMINAL_FAILURE_RESULT_CODES.has(code)) return 'FAILED';
-  // Everything else — in-flight (1000, 7000, 7002), non-final, or simply
-  // unknown to us — stays open. Fail closed: no access, but still claimable.
-  return 'PENDING';
+  description: string;
+  reference: string;
+  paymentLinkId: string;
+  code: string;
 }
 
 export interface ProcessNotificationResult {
-  status: 'PAID' | 'PENDING' | 'FAILED' | 'IGNORED_MISMATCH' | 'DUPLICATE';
+  status: 'PAID' | 'PENDING' | 'IGNORED_MISMATCH' | 'DUPLICATE';
   paymentId?: string;
   subscriptionId?: string | null;
+}
+
+/**
+ * payOS orderCode: a positive integer that must survive JSON round-tripping in
+ * JavaScript. Milliseconds give ordering and three random digits give room for
+ * concurrent checkouts inside the same millisecond; the unique index on
+ * providerOrderId is what actually guarantees uniqueness, and startCheckout
+ * retries when it fires. Nothing here derives from user input.
+ */
+function nextOrderCode(): number {
+  const code = Date.now() * 1000 + randomInt(0, 1000);
+  // Date.now() * 1000 is ~1.8e15 today and stays inside the safe range for
+  // centuries, but an absurd system clock must not silently produce a value
+  // that loses precision on the wire.
+  if (!Number.isSafeInteger(code) || code <= 0 || code > PAYOS_ORDER_CODE_MAX) {
+    throw new ServiceUnavailableException({
+      code: 'PAYMENT_PROVIDER_UNAVAILABLE',
+      message: 'Payment provider is unavailable',
+    });
+  }
+  return code;
 }
 
 @Injectable()
@@ -102,32 +75,26 @@ export class PaymentService {
   ) {}
 
   /**
-   * Starts a checkout: the PENDING row is written before MoMo is called and is
+   * Starts a checkout: the PENDING row is written before payOS is called and is
    * left PENDING however that call ends — no delete, no FAILED. A timeout is
-   * ambiguous: MoMo may have accepted the order and a valid IPN may still
+   * ambiguous: payOS may have accepted the order and a valid webhook may still
    * arrive. Marking the row FAILED here would make processVerifiedNotification
-   * treat that later IPN as a duplicate and silently drop paid access.
+   * treat that later webhook as a duplicate and silently drop paid access.
    */
   async startCheckout(
     userId: string,
     requestId?: string,
   ): Promise<CreateSubscriptionPaymentResponse> {
-    const config = resolveMomoCheckoutConfig(loadEnv());
+    const config = resolvePayosCheckoutConfig(loadEnv());
     if (!config) {
-      // Which value is missing is never disclosed — see resolveMomoCheckoutConfig.
+      // Which value is missing is never disclosed — see resolvePayosCheckoutConfig.
       throw new ServiceUnavailableException({
         code: 'PAYMENT_NOT_CONFIGURED',
         message: 'Payment checkout is not configured',
       });
     }
 
-    const payment = await this.createPendingPayment({
-      userId,
-      // Server-generated and PII-free: MoMo echoes both back on the IPN, and a
-      // UUID already satisfies its orderId charset (<=200) / requestId (<=50).
-      momoOrderId: randomUUID(),
-      momoRequestId: randomUUID(),
-    });
+    const payment = await this.createPendingPayment(userId);
 
     await this.audit.record({
       actorId: userId,
@@ -142,15 +109,21 @@ export class PaymentService {
       },
     });
 
-    const created = await createMomoPayment(config, {
-      orderId: payment.momoOrderId,
-      requestId: payment.momoRequestId,
+    const created = await createPayosPayment(config, {
+      // Narrowed to a number only here, at the protocol boundary. The column
+      // stays text so it can also hold the historical MoMo identifiers.
+      orderCode: Number(payment.providerOrderId),
       // Read back from the row, never from the request: the client cannot
       // influence what it is charged.
       amount: payment.amountVnd,
-      // Shared with the webhook, which compares the echoed values against these.
-      orderInfo: MOMO_ORDER_INFO,
-      extraData: MOMO_EXTRA_DATA,
+      description: payment.providerDescription ?? PAYOS_DESCRIPTION,
+    });
+
+    // Learned only now, and only when payOS answered. A create that times out
+    // leaves this null, and a later signed webhook may claim it.
+    await this.prisma.subscriptionPayment.update({
+      where: { id: payment.id },
+      data: { providerPaymentId: created.providerPaymentId },
     });
 
     return CreateSubscriptionPaymentResponseSchema.parse({
@@ -184,54 +157,95 @@ export class PaymentService {
     });
   }
 
-  async createPendingPayment(input: {
-    userId: string;
-    momoOrderId: string;
-    momoRequestId: string;
-  }) {
-    return this.prisma.subscriptionPayment.create({
-      data: {
-        userId: input.userId,
-        amountVnd: 50000,
-        durationDays: 30,
-        status: 'PENDING',
-        momoOrderId: input.momoOrderId,
-        momoRequestId: input.momoRequestId,
-      },
-    });
+  /**
+   * Retries only the orderCode collision, which the unique index turns into a
+   * P2002. Two checkouts inside the same millisecond drawing the same three
+   * random digits is the only way to reach it.
+   */
+  async createPendingPayment(userId: string, attempts = 5) {
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        return await this.prisma.subscriptionPayment.create({
+          data: {
+            userId,
+            amountVnd: 50000,
+            durationDays: 30,
+            status: 'PENDING',
+            provider: 'PAYOS',
+            providerOrderId: String(nextOrderCode()),
+            providerDescription: PAYOS_DESCRIPTION,
+          },
+        });
+      } catch (error) {
+        const collision =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002';
+        if (!collision || attempt >= attempts) throw error;
+      }
+    }
   }
 
   async processVerifiedNotification(
+    notification: VerifiedPaymentNotification,
+  ): Promise<ProcessNotificationResult> {
+    try {
+      return await this.claimAndActivate(notification);
+    } catch (error) {
+      // A bank reference, or a payment link, already recorded against another
+      // row trips a unique index. That is the guard working, not a fault: the
+      // webhook is acknowledged and nothing is granted.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        this.logger.warn(
+          `Payment notification ignored: orderCode=${notification.orderCode} provider identifier already used`,
+        );
+        return { status: 'IGNORED_MISMATCH' };
+      }
+      throw error;
+    }
+  }
+
+  private async claimAndActivate(
     notification: VerifiedPaymentNotification,
   ): Promise<ProcessNotificationResult> {
     return this.executeWithRetry(async () => {
       return this.prisma.$transaction(
         async (tx) => {
           const payment = await tx.subscriptionPayment.findUnique({
-            where: { momoOrderId: notification.orderId },
-            include: { subscription: true },
+            where: { providerOrderId: notification.orderCode },
           });
 
           if (!payment) {
             this.logger.warn(
-              `Payment notification ignored: orderId=${notification.orderId} not found`,
+              `Payment notification ignored: orderCode=${notification.orderCode} not found`,
             );
             return { status: 'IGNORED_MISMATCH' };
           }
 
-          if (
-            payment.momoRequestId !== notification.requestId ||
-            payment.amountVnd !== notification.amount
-          ) {
+          // Everything compared here is signed and was set by us. A valid
+          // signature only proves the sender holds the checksum key; these
+          // prove it is answering the order we actually created.
+          const mismatched =
+            payment.amountVnd !== notification.amount ||
+            payment.providerDescription !== notification.description ||
+            // Null means the create call never came back with an id. A signed
+            // webhook is then allowed to claim it — refusing would punish a
+            // payer for our timeout. Once known, it must match exactly.
+            (payment.providerPaymentId !== null &&
+              payment.providerPaymentId !== notification.paymentLinkId);
+
+          if (mismatched) {
             this.logger.warn(
-              `Payment notification ignored: orderId=${notification.orderId} immutable fields mismatch`,
+              `Payment notification ignored: orderCode=${notification.orderCode} immutable fields mismatch`,
             );
             return { status: 'IGNORED_MISMATCH' };
           }
 
           if (payment.status !== 'PENDING') {
             this.logger.log(
-              `Payment notification duplicate for orderId=${notification.orderId}, current status=${payment.status}`,
+              `Payment notification duplicate for orderCode=${notification.orderCode}, current status=${payment.status}`,
             );
             return {
               status: 'DUPLICATE',
@@ -240,16 +254,15 @@ export class PaymentService {
             };
           }
 
-          const outcome = classifyResultCode(notification.resultCode);
-
-          if (outcome === 'PENDING') {
-            // The payer has not finished. Record the code but leave the row
-            // claimable, so the success IPN that follows can still take it.
-            // No transaction id is stored: that column is unique, and a
-            // placeholder would collide with the next in-flight callback.
+          if (notification.code !== PAYOS_SUCCESS_CODE) {
+            // payOS documents no terminal-failure webhook for the payment-link
+            // flow, so a non-success code is recorded and the row stays
+            // claimable. Resolving it here would discard a success that
+            // arrives afterwards. No transaction id is stored: that column is
+            // unique, and a placeholder would collide with the next callback.
             await tx.subscriptionPayment.updateMany({
               where: { id: payment.id, status: 'PENDING' },
-              data: { momoResultCode: notification.resultCode },
+              data: { providerResultCode: notification.code },
             });
             return { status: 'PENDING', paymentId: payment.id };
           }
@@ -257,10 +270,11 @@ export class PaymentService {
           const claimCount = await tx.subscriptionPayment.updateMany({
             where: { id: payment.id, status: 'PENDING' },
             data: {
-              status: outcome,
-              momoTransactionId:
-                outcome === 'PAID' ? notification.transId : null,
-              momoResultCode: notification.resultCode,
+              status: 'PAID',
+              // Unique: one bank transfer cannot activate two subscriptions.
+              providerTransactionId: notification.reference,
+              providerResultCode: notification.code,
+              providerPaymentId: notification.paymentLinkId,
             },
           });
 
@@ -273,10 +287,6 @@ export class PaymentService {
               paymentId: payment.id,
               subscriptionId: rechecked?.subscriptionId ?? null,
             };
-          }
-
-          if (outcome !== 'PAID') {
-            return { status: 'FAILED', paymentId: payment.id };
           }
 
           const now = new Date();
