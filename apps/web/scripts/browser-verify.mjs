@@ -1,12 +1,12 @@
 /**
- * Automated browser verification using Playwright.
- * Evaluates public routes, viewports, console logs, overflow, mobile menu, and admin queues.
+ * Optional browser verification using Playwright if resolvable.
+ * Requires the approved repository-owned @playwright/test dependency.
  *
  * Usage (from apps/web, after next start on PORT):
  *   node ./scripts/browser-verify.mjs
  *
  * Env:
- *   BASE_URL=http://127.0.0.1:3000
+ *   BASE_URL=http://127.0.0.1:3100
  *   SCREENSHOT_DIR=./screenshots
  */
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -16,7 +16,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const baseURL = process.env.BASE_URL ?? "http://127.0.0.1:3000";
+const baseURL = process.env.BASE_URL ?? "http://127.0.0.1:3100";
 const shotDir = process.env.SCREENSHOT_DIR
   ? join(process.cwd(), process.env.SCREENSHOT_DIR)
   : join(webRoot, "screenshots");
@@ -34,11 +34,13 @@ try {
 }
 
 const ROUTES = [
-  { path: "/", h1: /Rác có người mua/ },
+  { path: "/", h1: /Rác có người mua\. Điểm rác có người báo\./ },
   { path: "/thung-rac", h1: /Thùng rác/ },
   { path: "/dich-vu", h1: /Dịch vụ/ },
+  { path: "/ban-phe-lieu", h1: /Bán phế liệu/ },
   { path: "/dong-gop", h1: /Đóng góp/ },
   { path: "/cho-online", h1: /Chợ online/ },
+  { path: "/diem-thuong", h1: /Điểm thưởng/ },
   { path: "/dang-nhap", h1: /Đăng nhập/ },
   { path: "/dang-ky", h1: /Đăng ký/ },
 ];
@@ -56,43 +58,27 @@ const VIEWPORTS = [
 mkdirSync(shotDir, { recursive: true });
 
 const failures = [];
-let browser;
+const browser = await chromium.launch({ headless: true });
 
 try {
-  browser = await chromium.launch({ headless: true });
-} catch (err) {
-  writeFileSync(
-    join(shotDir, "VERIFY_REPORT.txt"),
-    `FAIL\nFailed to launch browser: ${err?.message || err}\n`,
-    "utf8",
-  );
-  console.error("Failed to launch browser:", err);
-  process.exit(1);
-}
-
-try {
-  // Check routes for 1 H1, correct status, and clean logs
   for (const route of ROUTES) {
-    const page = await browser.newPage({ viewport: VIEWPORTS[6] }); // 1440x900
+    const page = await browser.newPage({ viewport: VIEWPORTS[0] });
     const issues = [];
     page.on("console", (msg) => {
       const t = msg.text();
-      // Allow expected 401 unauthenticated check
-      if (t.includes("401") || t.includes("Unauthorized")) return;
-      if (/hydrat|did not match|Warning: |Error:/i.test(t)) {
-        issues.push(t);
-      }
+      if (/Failed to load resource:.*status of 401/i.test(t)) return;
+      if (msg.type() === "error" || /hydrat|did not match|Warning: /i.test(t)) issues.push(t);
     });
-    page.on("pageerror", (err) => {
-      issues.push(`PageError: ${err.message}`);
-    });
-    page.on("requestfailed", (req) => {
+    page.on("pageerror", (error) => issues.push(error.message));
+    page.on("requestfailed", (req) =>
+      issues.push(`${req.method()} ${req.url()} (${req.failure()?.errorText ?? "failed"})`),
+    );
+    page.on("request", (req) => {
       const url = req.url();
-      if (!url.includes("/api/auth/me")) {
-        failures.push(`${route.path} request failed: ${url}`);
+      if (/localhost:3001|127\.0\.0\.1:3001/.test(url)) {
+        failures.push(`${route.path} requested backend host: ${url}`);
       }
     });
-
     const res = await page.goto(new URL(route.path, baseURL).toString(), {
       waitUntil: "networkidle",
     });
@@ -109,7 +95,7 @@ try {
     await page.close();
   }
 
-  // Homepage viewports & horizontal overflow test across all viewports
+  // Homepage viewports + overflow
   for (const vp of VIEWPORTS) {
     const page = await browser.newPage({ viewport: vp });
     await page.goto(new URL("/", baseURL).toString(), { waitUntil: "networkidle" });
@@ -130,34 +116,36 @@ try {
     await page.close();
   }
 
-  // Mobile navigation drawer toggle & Escape key check
+  // Mobile menu open
   {
-    const page = await browser.newPage({ viewport: VIEWPORTS[2] }); // 390x844
+    const page = await browser.newPage({ viewport: VIEWPORTS[2] });
     await page.goto(new URL("/", baseURL).toString(), { waitUntil: "networkidle" });
     const toggle = page.getByRole("button", { name: /Mở menu|Menu/i });
     await toggle.click();
+    // Ensure a nav link is visible
     const homeLink = page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Trang chủ" });
     if (!(await homeLink.isVisible())) failures.push("mobile menu did not show links");
     await page.screenshot({
       path: join(shotDir, "mobile-nav-open.png"),
       fullPage: true,
     });
+    // Keyboard Escape
     await page.keyboard.press("Escape");
+    if (await homeLink.isVisible().catch(() => false)) {
+      // After close, links may be hidden — check aria-expanded
+    }
     const expanded = await toggle.getAttribute("aria-expanded");
     if (expanded === "true") failures.push("Escape did not close mobile menu");
     await page.close();
   }
 
-  // Capture screenshots for major routes
+  // Login + cho-online + not-found
   for (const [path, name] of [
     ["/dang-nhap", "dang-nhap"],
-    ["/dang-ky", "dang-ky"],
     ["/cho-online", "cho-online"],
-    ["/ban-phe-lieu", "ban-phe-lieu"],
-    ["/dong-gop", "dong-gop"],
     ["/trang-khong-ton-tai-xyz", "not-found"],
   ]) {
-    const page = await browser.newPage({ viewport: VIEWPORTS[6] });
+    const page = await browser.newPage({ viewport: VIEWPORTS[0] });
     await page.goto(new URL(path, baseURL).toString(), { waitUntil: "networkidle" });
     await page.screenshot({
       path: join(shotDir, `${name}.png`),
@@ -173,23 +161,26 @@ try {
     await page.close();
   }
 
-  // Write report based on failures
+  // Desktop nav click sample
+  {
+    const page = await browser.newPage({ viewport: VIEWPORTS.at(-1) });
+    await page.goto(new URL("/", baseURL).toString(), { waitUntil: "networkidle" });
+    await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Chợ online" }).click();
+    await page.waitForURL("**/cho-online");
+    await page.close();
+  }
+
+} catch (error) {
+  failures.push(`unhandled: ${error instanceof Error ? error.message : String(error)}`);
+} finally {
+  await browser.close();
   writeFileSync(
     join(shotDir, "VERIFY_REPORT.txt"),
     failures.length
       ? `FAIL\n${failures.join("\n")}\n`
-      : `OK\nbaseURL=${baseURL}\nscreenshots=${reportedShotDir}\n`,
+      : `OK\nbaseURL=${baseURL}\nscreenshots=${reportedShotDir}\nroutes=${ROUTES.length}\nviewports=${VIEWPORTS.length}\ngenerated=${new Date().toISOString()}\n`,
     "utf8",
   );
-} catch (err) {
-  failures.push(`Unexpected error: ${err?.message || err}`);
-  writeFileSync(
-    join(shotDir, "VERIFY_REPORT.txt"),
-    `FAIL\n${failures.join("\n")}\n`,
-    "utf8",
-  );
-} finally {
-  if (browser) await browser.close();
 }
 
 if (failures.length) {

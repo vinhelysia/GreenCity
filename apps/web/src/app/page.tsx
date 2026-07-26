@@ -9,7 +9,7 @@ import { Section } from "@/components/section";
 /**
  * Public homepage — Modern Eco Marketplace design.
  * Clear value proposition, core user journeys, live statistics,
- * transparent 5-step recycling loop, and points calculation logic.
+ * transparent 5-step recycling loop, and documented point rules.
  */
 export default function HomePage() {
   return (
@@ -64,7 +64,7 @@ export default function HomePage() {
               </div>
               <h2 className="mt-4 font-display text-xl font-bold text-ink">Báo điểm rác tồn đọng</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Chụp ảnh & báo cáo điểm rác ô nhiễm tự phát. Ban quản lý xác minh & cộng điểm thưởng.
+                Chụp ảnh & báo cáo điểm rác ô nhiễm tự phát. Ban quản lý xác minh trước khi cộng điểm thưởng.
               </p>
             </div>
             <Link

@@ -32,9 +32,9 @@ export function HomeHero() {
         </h1>
 
         <p className="mt-5 max-w-prose text-base leading-relaxed text-muted sm:text-lg">
-          GreenCity kết nối hai hoạt động bảo vệ môi trường: thu gom bán phế liệu theo giá
-          niêm yết minh bạch và báo cáo điểm rác tự phát để cộng đồng giải quyết. Mỗi đóng góp
-          đều được xác minh và quy đổi điểm thưởng.
+          GreenCity kết nối hai hoạt động bảo vệ môi trường: bán phế liệu theo giá
+          niêm yết minh bạch và báo cáo điểm rác tự phát để cộng đồng ghi nhận,
+          xác minh.
         </p>
 
         <div className="mt-8 flex min-w-0 flex-wrap items-center gap-3.5">
@@ -72,7 +72,7 @@ export function HomeHero() {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <IconShieldCheck className="h-4 w-4 text-primary" />
-            Đổi điểm nhận quà sinh thái
+            Điểm thưởng truy ngược được nguồn
           </span>
         </div>
       </div>

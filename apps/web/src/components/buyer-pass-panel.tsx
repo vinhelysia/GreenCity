@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { SubscriptionState } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EcoBadge } from "@/components/eco-badge";
-import { IconLeaf, IconShieldCheck, IconSparkles } from "@/components/eco-icons";
+import { IconShieldCheck, IconSparkles } from "@/components/eco-icons";
 import {
   checkAuthExpiry,
   createSubscriptionPayment,

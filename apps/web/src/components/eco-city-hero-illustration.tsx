@@ -44,7 +44,7 @@ export function EcoCityHeroIllustration(props: SVGProps<SVGSVGElement>) {
 
       {/* Background ground & atmosphere */}
       <rect width="540" height="400" rx="16" fill="url(#skyGrad)" />
-      
+
       {/* Eco Sun / Clean Energy Aura */}
       <circle cx="430" cy="85" r="45" fill="url(#sunGrad)" opacity="0.85" />
       <circle cx="430" cy="85" r="58" stroke="#F2C94C" strokeWidth="1.5" strokeDasharray="4 6" opacity="0.5" />
