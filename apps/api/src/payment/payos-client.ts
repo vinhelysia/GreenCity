@@ -191,13 +191,12 @@ export async function createPayosPayment(
     throw providerUnavailable();
   }
 
-  // The echoed values decide what the webhook is later matched against, so all
-  // of them must be the ones we asked for. A mismatch means storing a checkout
-  // link for another order, another sum, or an already-settled payment.
+  // Identity and money fields must still be ours. payOS can prepend a
+  // channel-specific transfer prefix to description; it remains protected by
+  // the response signature, but it is not a stable echo of our input.
   if (
     data.orderCode !== input.orderCode ||
     data.amount !== input.amount ||
-    data.description !== input.description ||
     data.currency !== PAYOS_CURRENCY ||
     data.status !== PAYOS_INITIAL_STATUS
   ) {

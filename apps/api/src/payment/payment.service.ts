@@ -224,12 +224,10 @@ export class PaymentService {
             return { status: 'IGNORED_MISMATCH' };
           }
 
-          // Everything compared here is signed and was set by us. A valid
-          // signature only proves the sender holds the checksum key; these
-          // prove it is answering the order we actually created.
+          // These signed fields prove the callback answers our order. payOS
+          // prefixes description per channel, so it is not a stable identifier.
           const mismatched =
             payment.amountVnd !== notification.amount ||
-            payment.providerDescription !== notification.description ||
             // Null means the create call never came back with an id. A signed
             // webhook is then allowed to claim it — refusing would punish a
             // payer for our timeout. Once known, it must match exactly.

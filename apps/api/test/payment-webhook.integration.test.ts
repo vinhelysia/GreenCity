@@ -378,7 +378,6 @@ describe('payOS webhook integration', () => {
 
   it.each([
     ['amount', { amount: 1 }],
-    ['description', { description: 'OTHER' }],
     ['paymentLinkId', { paymentLinkId: 'someone-elses-link' }],
   ])(
     'grants nothing when the signed %s disagrees with the stored row',
@@ -395,6 +394,23 @@ describe('payOS webhook integration', () => {
       expect(row.providerTransactionId).toBeNull();
     },
   );
+
+  it('activates when payOS prefixes the signed transfer description', async () => {
+    const { orderCode, paymentLinkId } = await makePending();
+    const res = await postWebhook(
+      signedWebhook(
+        webhookData({
+          orderCode,
+          paymentLinkId,
+          description: `CHANNEL ${PAYOS_DESCRIPTION}`,
+        }),
+      ),
+    );
+
+    expect(res.status).toBe(204);
+    expect((await paymentFor(orderCode)).status).toBe('PAID');
+    expect(await subscriptionCount()).toBe(1);
+  });
 
   it('grants nothing for a currency that is not VND', async () => {
     const { orderCode, paymentLinkId } = await makePending();
