@@ -85,6 +85,27 @@ function returnOrigin(
 }
 
 /**
+ * The webhook authenticates by HMAC and nothing else, so the checksum key is
+ * the only thing it needs — not the client id, not the api key, and above all
+ * not PUBLIC_WEB_URL.
+ *
+ * Kept separate from resolvePayosCheckoutConfig on purpose. Sharing it coupled
+ * two unrelated switches: PUBLIC_WEB_URL is how checkout is turned off, and
+ * while it was absent the webhook answered 503 — so payOS could not confirm the
+ * endpoint, because confirmation works by POSTing a signed sample to it. That
+ * left no order in which to go live: register the webhook first and checkout
+ * was already on, turn checkout off and registration failed.
+ *
+ * It also protects payments already in flight. Removing PUBLIC_WEB_URL now
+ * stops new checkouts while callbacks for transfers already made keep being
+ * accepted, which is the difference between pausing sales and losing money
+ * someone has already sent.
+ */
+export function resolvePayosWebhookChecksumKey(env: AppEnv): string | null {
+  return env.PAYOS_CHECKSUM_KEY?.trim() || null;
+}
+
+/**
  * Returns null when checkout is not fully configured. Partial configuration is
  * deliberately indistinguishable from none: the caller must never be able to
  * probe which secret is absent.

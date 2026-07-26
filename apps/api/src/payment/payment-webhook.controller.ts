@@ -14,7 +14,7 @@ import { loadEnv } from '../config/env';
 import {
   PAYOS_CURRENCY,
   PAYOS_WEBHOOK_PATH,
-  resolvePayosCheckoutConfig,
+  resolvePayosWebhookChecksumKey,
 } from './payos-config';
 import { verifyPayosDataSignature } from './payos-signature';
 import { PaymentService } from './payment.service';
@@ -79,8 +79,11 @@ export class PaymentWebhookController {
       });
     }
 
-    const config = resolvePayosCheckoutConfig(loadEnv());
-    if (!config) {
+    // Only the checksum key: this route authenticates by HMAC, and tying it to
+    // the checkout configuration meant turning checkout off also silenced the
+    // callbacks for payments already made.
+    const checksumKey = resolvePayosWebhookChecksumKey(loadEnv());
+    if (!checksumKey) {
       // Generic: an unconfigured server must not describe its own gaps to an
       // unauthenticated caller.
       throw new ServiceUnavailableException({
@@ -94,7 +97,7 @@ export class PaymentWebhookController {
       !verifyPayosDataSignature(
         envelope.data.data,
         envelope.data.signature,
-        config.checksumKey,
+        checksumKey,
       )
     ) {
       // One generic rejection: which check failed is not the caller's business,

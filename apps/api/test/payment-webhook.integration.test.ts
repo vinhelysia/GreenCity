@@ -511,6 +511,118 @@ describe('payOS webhook integration', () => {
 
   // ── server faults ─────────────────────────────────────────────────────────
 
+  // ── the webhook must not depend on checkout being configured ─────────────
+
+  describe('with checkout switched off by a missing PUBLIC_WEB_URL', () => {
+    let cookie: string;
+
+    beforeEach(async () => {
+      // PUBLIC_WEB_URL is the checkout kill switch. Removing it must stop new
+      // checkouts without silencing callbacks for transfers already made — and
+      // payOS confirms a webhook by POSTing a signed sample to it, so the
+      // endpoint has to answer before checkout is ever turned on.
+      delete process.env.PUBLIC_WEB_URL;
+      delete process.env.PUBLIC_API_URL;
+
+      const registered = await request(app.getHttpServer())
+        .post('/auth/register')
+        .set('Origin', ORIGIN)
+        .send({
+          email: `switched-off-${suffix}-${orderSeq}@webhook.test`,
+          password: 'password-123',
+        });
+      expect(registered.status).toBe(201);
+      const raw = registered.headers['set-cookie'];
+      cookie = (Array.isArray(raw) ? raw : [raw])[0] as string;
+    });
+
+    afterEach(async () => {
+      process.env.PUBLIC_API_URL = 'https://api.example.test';
+      process.env.PUBLIC_WEB_URL = 'https://web.example.test';
+      await prisma.session
+        .deleteMany({ where: { user: { email: { contains: 'switched-off-' } } } })
+        .catch(() => undefined);
+      await prisma.user
+        .deleteMany({ where: { email: { contains: 'switched-off-' } } })
+        .catch(() => undefined);
+    });
+
+    it('still accepts a valid signed callback and activates the payment', async () => {
+      const { orderCode, paymentLinkId } = await makePending();
+      const res = await postWebhook(
+        signedWebhook(webhookData({ orderCode, paymentLinkId })),
+      );
+
+      expect(res.status).toBe(204);
+      expect((await paymentFor(orderCode)).status).toBe('PAID');
+      expect(await subscriptionCount()).toBe(1);
+    });
+
+    it('acknowledges the confirm-webhook probe without creating a Subscription', async () => {
+      process.env.PAYOS_CHECKSUM_KEY = DOC_CHECKSUM_KEY;
+      try {
+        const res = await postWebhook({
+          code: '00',
+          desc: 'success',
+          success: true,
+          data: DOC_DATA,
+          signature: DOC_SIGNATURE,
+        });
+        expect(res.status).toBe(204);
+        expect(await subscriptionCount()).toBe(0);
+      } finally {
+        process.env.PAYOS_CHECKSUM_KEY = CHECKSUM_KEY;
+      }
+    });
+
+    it('still rejects an invalid signature with 401', async () => {
+      const { orderCode, paymentLinkId } = await makePending();
+      const body = signedWebhook(webhookData({ orderCode, paymentLinkId }));
+      const res = await postWebhook({ ...body, signature: 'a'.repeat(64) });
+
+      expect(res.status).toBe(401);
+      expect((await paymentFor(orderCode)).status).toBe('PENDING');
+    });
+
+    it('keeps checkout switched off: checkoutAvailable is false', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/subscriptions/me')
+        .set('Origin', ORIGIN)
+        .set('Cookie', cookie);
+
+      expect(res.status).toBe(200);
+      expect(res.body.checkoutAvailable).toBe(false);
+    });
+
+    it('keeps checkout switched off: starting one is PAYMENT_NOT_CONFIGURED', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/subscription-payments')
+        .set('Origin', ORIGIN)
+        .set('Cookie', cookie)
+        .send({});
+
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe('PAYMENT_NOT_CONFIGURED');
+    });
+  });
+
+  it('answers a generic 503 when the checksum key itself is absent', async () => {
+    // The one thing the webhook genuinely needs. Absent, it cannot authenticate
+    // anything, and it must not say why to an unauthenticated caller.
+    const { orderCode, paymentLinkId } = await makePending();
+    const body = signedWebhook(webhookData({ orderCode, paymentLinkId }));
+    delete process.env.PAYOS_CHECKSUM_KEY;
+    try {
+      const res = await postWebhook(body);
+      expect(res.status).toBe(503);
+      expect(res.body.error.code).toBe('PAYMENT_NOT_CONFIGURED');
+    } finally {
+      process.env.PAYOS_CHECKSUM_KEY = CHECKSUM_KEY;
+    }
+    expect((await paymentFor(orderCode)).status).toBe('PENDING');
+    expect(await subscriptionCount()).toBe(0);
+  });
+
   it('answers 5xx when the database fails, so payOS can retry', async () => {
     // Patched at $transaction, not at a model method: the activation path runs
     // inside the transaction, and stubbing the model would leave the real

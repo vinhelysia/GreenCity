@@ -9,6 +9,7 @@ import {
   PAYOS_DESCRIPTION,
   PAYOS_WEBHOOK_PATH,
   resolvePayosCheckoutConfig,
+  resolvePayosWebhookChecksumKey,
 } from '../src/payment/payos-config';
 import { createPayosPayment } from '../src/payment/payos-client';
 import type { AppEnv } from '../src/config/env';
@@ -281,6 +282,45 @@ describe('resolvePayosCheckoutConfig', () => {
         PUBLIC_WEB_URL: 'http://localhost:3000',
       } as AppEnv),
     ).not.toBeNull();
+  });
+});
+
+describe('resolvePayosWebhookChecksumKey', () => {
+  it('needs only the checksum key, not the checkout configuration', () => {
+    // The webhook authenticates by HMAC alone. Requiring PUBLIC_WEB_URL here
+    // once meant that switching checkout off also stopped payOS confirming the
+    // endpoint, and silenced callbacks for transfers already made.
+    expect(
+      resolvePayosWebhookChecksumKey({
+        PAYOS_CHECKSUM_KEY: 'fake-checksum-key',
+      } as unknown as AppEnv),
+    ).toBe('fake-checksum-key');
+  });
+
+  it('trims the key', () => {
+    expect(
+      resolvePayosWebhookChecksumKey({
+        PAYOS_CHECKSUM_KEY: '  fake-checksum-key  ',
+      } as unknown as AppEnv),
+    ).toBe('fake-checksum-key');
+  });
+
+  it.each([
+    ['absent', undefined],
+    ['empty', ''],
+    ['whitespace only', '   '],
+  ])('returns null when the key is %s', (_label, value) => {
+    expect(
+      resolvePayosWebhookChecksumKey({
+        PAYOS_CHECKSUM_KEY: value,
+      } as unknown as AppEnv),
+    ).toBeNull();
+  });
+
+  it('is unaffected by a complete checkout configuration being absent', () => {
+    const env = { PAYOS_CHECKSUM_KEY: 'fake-checksum-key' } as unknown as AppEnv;
+    expect(resolvePayosCheckoutConfig(env)).toBeNull();
+    expect(resolvePayosWebhookChecksumKey(env)).toBe('fake-checksum-key');
   });
 });
 
