@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Route } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import {
@@ -9,10 +9,10 @@ import {
 } from "./helpers";
 
 /**
- * The buyer-pass purchase, end to end, with payOS replaced by a route handler.
- * Nothing here reaches the provider: the payment endpoints are intercepted and
- * payUrl points back at this app, so "redirecting to payOS" is a same-origin
- * navigation the test can follow.
+ * The buyer-pass purchase, end to end, with payOS replaced by a fetch mock.
+ * Nothing here reaches the provider: the payment endpoints are answered in the
+ * test and payUrl points back at this app, so "redirecting to payOS" is a
+ * same-origin navigation the test can follow.
  */
 
 const RUN_SUFFIX = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
@@ -71,48 +71,98 @@ function subscriptionState(eligible: boolean) {
   };
 }
 
-const json = (route: Route, body: unknown, status = 200) =>
-  route.fulfill({
-    status,
-    contentType: "application/json",
-    body: JSON.stringify(body),
-  });
+type MockRequest = { path: string; method: string; body: string | null };
+type MockReply = { status: number; json: unknown };
+type MockHandler = (
+  req: MockRequest,
+) => MockReply | null | Promise<MockReply | null>;
+
+const reply = (json: unknown, status = 200): MockReply => ({ status, json });
 
 /**
- * One listing to reserve, served from the test rather than the database: this
- * spec is about the pass, and it should not fail because the marketplace
- * happens to be empty.
+ * Answers API calls from the test instead of the network, by wrapping
+ * window.fetch.
+ *
+ * Deliberately not page.route(): registering any route turns on Playwright's
+ * request interception for the whole page, and that perturbs resource timing
+ * enough for React to abandon hydration and report error #418 on roughly one
+ * load in ten. Measured over 125 authenticated page loads each: 0 with no
+ * interception, 14 with a route that matches nothing and changes no response.
+ * The same API boundary is still exercised here — only the mechanism differs.
+ *
+ * The handler runs in Node, so it can hold counters and unresolved promises.
+ * Returning null passes the request through untouched, which is what every
+ * /api/auth/* call, document, chunk and image does.
  */
-async function stubListings(page: Page): Promise<void> {
-  await page.route("**/api/marketplace/listings", (route) =>
-    json(route, {
-      listings: [
-        {
-          id: "listing-e2e",
-          categoryName: "Giấy carton",
-          estimatedWeightKg: 10,
-          buyerPricePerKgVnd: 3000,
-          estimatedTotalVnd: 30000,
-          status: "AVAILABLE",
-          mediaDownloadPath: "/marketplace/listings/listing-e2e/photo",
-          isOwn: false,
-          createdAt: new Date().toISOString(),
-        },
-      ],
-    }),
-  );
-  // The photo would 404 from the stubbed id and trip the failed-request guard.
-  await page.route("**/api/marketplace/listings/*/photo", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "image/png",
-      body: Buffer.from(
-        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-        "base64",
-      ),
-    }),
-  );
+async function installApiMock(
+  page: Page,
+  handler: MockHandler,
+): Promise<void> {
+  await page.exposeFunction("__gcApiMock", async (req: MockRequest) => {
+    const result = await handler(req);
+    return result
+      ? { status: result.status, body: JSON.stringify(result.json) }
+      : null;
+  });
+  // Installed before any page script and re-applied on every navigation, so it
+  // survives the return trip from the payment provider.
+  await page.addInitScript(() => {
+    const original = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const href =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      const { pathname } = new URL(href, window.location.href);
+      const method = (
+        init?.method ?? (input instanceof Request ? input.method : "GET")
+      ).toUpperCase();
+      const body = typeof init?.body === "string" ? init.body : null;
+      const handled = await (
+        window as unknown as {
+          __gcApiMock: (r: MockRequest) => Promise<{
+            status: number;
+            body: string;
+          } | null>;
+        }
+      ).__gcApiMock({ path: pathname, method, body });
+      if (!handled) return original(input, init);
+      return new Response(handled.body, {
+        status: handled.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+  });
 }
+
+/**
+ * One listing to reserve, answered from the test rather than the database: this
+ * spec is about the pass, and it should not fail because the marketplace
+ * happens to be empty. The card's photo is a plain <img>, so it still reaches
+ * the real API and 404s; attachRuntimeGuards already ignores document 404s.
+ */
+const LISTINGS = {
+  listings: [
+    {
+      id: "listing-e2e",
+      categoryName: "Giấy carton",
+      estimatedWeightKg: 10,
+      buyerPricePerKgVnd: 3000,
+      estimatedTotalVnd: 30000,
+      status: "AVAILABLE",
+      mediaDownloadPath: "/marketplace/listings/listing-e2e/photo",
+      isOwn: false,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+};
+
+const SUBSCRIPTIONS_PATH = "/api/subscriptions/me";
+const PAYMENTS_PATH = "/api/subscription-payments";
+const PAYMENT_STATUS_PATH = `/api/subscription-payments/${PAYMENT_ID}`;
+const LISTINGS_PATH = "/api/marketplace/listings";
 
 test.afterAll(() => {
   cleanupUsers();
@@ -122,8 +172,8 @@ test("shows the pass offer once, with its price and no auto-renewal", async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page);
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
+  await installApiMock(page, ({ path }) =>
+    path === SUBSCRIPTIONS_PATH ? reply(subscriptionState(false)) : null,
   );
 
   await registerAndSignIn(page, "offer");
@@ -148,35 +198,35 @@ test("carries a payment through payOS and unlocks reserving", async ({
   let statusCalls = 0;
   let createdBody: string | null = null;
 
-  await stubListings(page);
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(paid)),
-  );
-  await page.route("**/api/subscription-payments", async (route) => {
-    createdBody = route.request().postData();
-    await json(
-      route,
-      {
-        paymentId: PAYMENT_ID,
-        // Same-origin stand-in for payOS, so the redirect is followable here.
-        payUrl:
-          "http://127.0.0.1:3100/cho-online?code=00&id=fake-link&cancel=false&status=PAID&orderCode=1784000000000001",
-      },
-      201,
-    );
-  });
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, (route) => {
-    statusCalls += 1;
-    // First poll still pending, then settled: proves the UI waits rather than
-    // trusting the first answer it gets.
-    const status = statusCalls === 1 ? "PENDING" : "PAID";
-    if (status === "PAID") paid = true;
-    return json(route, {
-      id: PAYMENT_ID,
-      status,
-      amountVnd: 50000,
-      paidAt: status === "PAID" ? new Date().toISOString() : null,
-    });
+  await installApiMock(page, ({ path, method, body }) => {
+    if (path === LISTINGS_PATH) return reply(LISTINGS);
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(paid));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      createdBody = body;
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          // Same-origin stand-in for payOS, so the redirect is followable here.
+          payUrl:
+            "http://127.0.0.1:3100/cho-online?code=00&id=fake-link&cancel=false&status=PAID&orderCode=1784000000000001",
+        },
+        201,
+      );
+    }
+    if (path === PAYMENT_STATUS_PATH) {
+      statusCalls += 1;
+      // First poll still pending, then settled: proves the UI waits rather
+      // than trusting the first answer it gets.
+      const status = statusCalls === 1 ? "PENDING" : "PAID";
+      if (status === "PAID") paid = true;
+      return reply({
+        id: PAYMENT_ID,
+        status,
+        amountVnd: 50000,
+        paidAt: status === "PAID" ? new Date().toISOString() : null,
+      });
+    }
+    return null;
   });
 
   await registerAndSignIn(page, "flow");
@@ -211,30 +261,30 @@ test("carries a payment through payOS and unlocks reserving", async ({
 
 test("reports a failed payment and allows another attempt", async ({ page }) => {
   const issues = attachRuntimeGuards(page);
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments", (route) =>
-    json(
-      route,
-      {
-        paymentId: PAYMENT_ID,
-        // Distinct from the current URL on purpose: returning to the very same
-        // address makes waitForURL match before the reload even starts, and the
-        // assertions then race the page that is being torn down.
-        payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
-      },
-      201,
-    ),
-  );
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, (route) =>
-    json(route, {
-      id: PAYMENT_ID,
-      status: "FAILED",
-      amountVnd: 50000,
-      paidAt: null,
-    }),
-  );
+  await installApiMock(page, ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          // Distinct from the current URL on purpose: returning to the very
+          // same address makes waitForURL match before the reload even starts,
+          // and the assertions then race the page being torn down.
+          payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
+        },
+        201,
+      );
+    }
+    if (path === PAYMENT_STATUS_PATH) {
+      return reply({
+        id: PAYMENT_ID,
+        status: "FAILED",
+        amountVnd: 50000,
+        paidAt: null,
+      });
+    }
+    return null;
+  });
 
   await registerAndSignIn(page, "failed");
   await page.goto("/cho-online", { waitUntil: "networkidle" });
@@ -259,17 +309,18 @@ test("ignores a payment result forged in the query string", async ({ page }) => 
   const issues = attachRuntimeGuards(page);
   let statusCalls = 0;
 
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments/*", (route) => {
-    statusCalls += 1;
-    return json(route, {
-      id: PAYMENT_ID,
-      status: "PAID",
-      amountVnd: 50000,
-      paidAt: new Date().toISOString(),
-    });
+  await installApiMock(page, ({ path }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path.startsWith(PAYMENTS_PATH + "/")) {
+      statusCalls += 1;
+      return reply({
+        id: PAYMENT_ID,
+        status: "PAID",
+        amountVnd: 50000,
+        paidAt: new Date().toISOString(),
+      });
+    }
+    return null;
   });
 
   await registerAndSignIn(page, "forged");
@@ -299,21 +350,21 @@ test("keeps the page usable when starting a checkout fails", async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments", (route) =>
-    json(
-      route,
-      {
-        error: {
-          code: "PAYMENT_PROVIDER_UNAVAILABLE",
-          message: "Payment provider is unavailable",
+  await installApiMock(page, ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          error: {
+            code: "PAYMENT_PROVIDER_UNAVAILABLE",
+            message: "Payment provider is unavailable",
+          },
         },
-      },
-      503,
-    ),
-  );
+        503,
+      );
+    }
+    return null;
+  });
 
   await registerAndSignIn(page, "checkout-error");
   await page.goto("/cho-online", { waitUntil: "networkidle" });
@@ -343,25 +394,28 @@ test("offers no second checkout while a payment is unresolved", async ({
     release = resolve;
   });
 
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments", (route) =>
-    json(
-      route,
-      { paymentId: PAYMENT_ID, payUrl: "http://127.0.0.1:3100/cho-online?returned=1" },
-      201,
-    ),
-  );
-  // Held open so the panel stays in the polling state while we look at it.
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, async (route) => {
-    await held;
-    return json(route, {
-      id: PAYMENT_ID,
-      status: "PENDING",
-      amountVnd: 50000,
-      paidAt: null,
-    });
+  await installApiMock(page, async ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
+        },
+        201,
+      );
+    }
+    if (path === PAYMENT_STATUS_PATH) {
+      // Held open so the panel stays in the polling state while we look at it.
+      await held;
+      return reply({
+        id: PAYMENT_ID,
+        status: "PENDING",
+        amountVnd: 50000,
+        paidAt: null,
+      });
+    }
+    return null;
   });
 
   await registerAndSignIn(page, "no-double");
@@ -392,25 +446,28 @@ test("resumes polling instead of offering checkout on a fresh load with a pendin
     { key: PENDING_KEY, id: PAYMENT_ID },
   );
 
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments", (route) => {
-    createCalls += 1;
-    return json(
-      route,
-      { paymentId: PAYMENT_ID, payUrl: "http://127.0.0.1:3100/cho-online?returned=1" },
-      201,
-    );
+  await installApiMock(page, ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      createCalls += 1;
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
+        },
+        201,
+      );
+    }
+    if (path === PAYMENT_STATUS_PATH) {
+      return reply({
+        id: PAYMENT_ID,
+        status: "PENDING",
+        amountVnd: 50000,
+        paidAt: null,
+      });
+    }
+    return null;
   });
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, (route) =>
-    json(route, {
-      id: PAYMENT_ID,
-      status: "PENDING",
-      amountVnd: 50000,
-      paidAt: null,
-    }),
-  );
 
   await registerAndSignIn(page, "fresh-load");
   await page.goto("/cho-online", { waitUntil: "networkidle" });
@@ -428,24 +485,27 @@ test("keeps the pending id and hides checkout when polling gives up", async ({
   const issues = attachRuntimeGuards(page);
   let statusCalls = 0;
 
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments", (route) =>
-    json(
-      route,
-      { paymentId: PAYMENT_ID, payUrl: "http://127.0.0.1:3100/cho-online?returned=1" },
-      201,
-    ),
-  );
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, (route) => {
-    statusCalls += 1;
-    return json(route, {
-      id: PAYMENT_ID,
-      status: "PENDING",
-      amountVnd: 50000,
-      paidAt: null,
-    });
+  await installApiMock(page, ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
+        },
+        201,
+      );
+    }
+    if (path === PAYMENT_STATUS_PATH) {
+      statusCalls += 1;
+      return reply({
+        id: PAYMENT_ID,
+        status: "PENDING",
+        amountVnd: 50000,
+        paidAt: null,
+      });
+    }
+    return null;
   });
 
   await registerAndSignIn(page, "gives-up");
@@ -489,24 +549,27 @@ test("shows applying, not a second CTA, while the pass has not refreshed yet", a
   // Nothing ever makes it "error" or "ready & eligible", so once poll settles
   // on "paid" the panel has no path but "applying": a stable state, not a
   // single-frame race, and exactly what a genuinely slow grant looks like.
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, subscriptionState(false)),
-  );
-  await page.route("**/api/subscription-payments", (route) =>
-    json(
-      route,
-      { paymentId: PAYMENT_ID, payUrl: "http://127.0.0.1:3100/cho-online?returned=1" },
-      201,
-    ),
-  );
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, (route) =>
-    json(route, {
-      id: PAYMENT_ID,
-      status: "PAID",
-      amountVnd: 50000,
-      paidAt: new Date().toISOString(),
-    }),
-  );
+  await installApiMock(page, ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
+        },
+        201,
+      );
+    }
+    if (path === PAYMENT_STATUS_PATH) {
+      return reply({
+        id: PAYMENT_ID,
+        status: "PAID",
+        amountVnd: 50000,
+        paidAt: new Date().toISOString(),
+      });
+    }
+    return null;
+  });
 
   await registerAndSignIn(page, "applying");
   await page.goto("/cho-online", { waitUntil: "networkidle" });
@@ -528,38 +591,39 @@ test("recovers from a failed refetch after payment, then activates on retry", as
   const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
   let meCalls = 0;
 
-  await stubListings(page);
-  // Three calls land before any retry: the pre-checkout load, the fresh
-  // page's own initial check right after the payOS redirect, and only then
-  // the refetch onSubscriptionChange triggers once poll observes PAID — that
-  // third call is the one that must fail here. A 4th call, from clicking
-  // Retry, is the one that succeeds.
-  await page.route("**/api/subscriptions/me", (route) => {
-    meCalls += 1;
-    if (meCalls === 3) {
-      return json(
-        route,
-        { error: { code: "UNKNOWN_ERROR", message: "boom" } },
-        503,
+  await installApiMock(page, ({ path, method }) => {
+    if (path === LISTINGS_PATH) return reply(LISTINGS);
+    // Three calls land before any retry: the pre-checkout load, the fresh
+    // page own initial check right after the payOS redirect, and only then the
+    // refetch onSubscriptionChange triggers once poll observes PAID — that
+    // third call is the one that must fail here. A 4th call, from clicking
+    // Retry, is the one that succeeds.
+    if (path === SUBSCRIPTIONS_PATH) {
+      meCalls += 1;
+      if (meCalls === 3) {
+        return reply({ error: { code: "UNKNOWN_ERROR", message: "boom" } }, 503);
+      }
+      return reply(subscriptionState(meCalls >= 4));
+    }
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          paymentId: PAYMENT_ID,
+          payUrl: "http://127.0.0.1:3100/cho-online?returned=1",
+        },
+        201,
       );
     }
-    return json(route, subscriptionState(meCalls >= 4));
+    if (path === PAYMENT_STATUS_PATH) {
+      return reply({
+        id: PAYMENT_ID,
+        status: "PAID",
+        amountVnd: 50000,
+        paidAt: new Date().toISOString(),
+      });
+    }
+    return null;
   });
-  await page.route("**/api/subscription-payments", (route) =>
-    json(
-      route,
-      { paymentId: PAYMENT_ID, payUrl: "http://127.0.0.1:3100/cho-online?returned=1" },
-      201,
-    ),
-  );
-  await page.route(`**/api/subscription-payments/${PAYMENT_ID}`, (route) =>
-    json(route, {
-      id: PAYMENT_ID,
-      status: "PAID",
-      amountVnd: 50000,
-      paidAt: new Date().toISOString(),
-    }),
-  );
 
   await registerAndSignIn(page, "recover");
   await page.goto("/cho-online", { waitUntil: "networkidle" });
@@ -590,8 +654,10 @@ test("says it could not check the pass, rather than that checkout is off", async
   page,
 }) => {
   const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
-  await page.route("**/api/subscriptions/me", (route) =>
-    json(route, { error: { code: "UNKNOWN_ERROR", message: "boom" } }, 503),
+  await installApiMock(page, ({ path }) =>
+    path === SUBSCRIPTIONS_PATH
+      ? reply({ error: { code: "UNKNOWN_ERROR", message: "boom" } }, 503)
+      : null,
   );
 
   await registerAndSignIn(page, "sub-error");
