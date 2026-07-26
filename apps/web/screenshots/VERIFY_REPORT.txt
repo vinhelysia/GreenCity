@@ -1,5 +1,8 @@
-FAIL
-Ucommand=pnpm --filter web test:e2e
-generated=repository-relative::ERR_CONNECTION_REFUSED at http://127.0.0.1:3000/ban-phe-lieu
-Call log:
- [2m  - navigating to "http://127.0.0.1:3000/ban-phe-lieu", waiting until "networkidle" [22m
+OK
+tool=@playwright/test (repository-owned)
+project=chromium
+baseURL=http://127.0.0.1:3100
+screenshots=screenshots
+files=home-1440x900.png,home-1024x768.png,home-768x1024.png,home-390x844.png,home-320x568.png,mobile-nav-open.png,dang-nhap.png,cho-online.png,not-found.png
+command=pnpm --filter web test:e2e
+generated=repository-relative
