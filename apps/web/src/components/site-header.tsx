@@ -1,10 +1,21 @@
+import { Suspense } from "react";
 import { APP_NAME } from "@greencity/shared";
 import { Link } from "@/i18n/routing";
 import { IconLeaf } from "./eco-icons";
 import { HeaderLoginLink } from "./header-login-link";
+import { LanguageSwitcher } from "./language-switcher";
 import { SiteNav } from "./site-nav";
 
-/** Application header: eco identity left, navigation + login right. */
+function LanguageSwitcherFallback() {
+  return (
+    <div
+      aria-hidden="true"
+      className="inline-flex h-9 w-[4.75rem] items-center rounded-lg border border-edge bg-paper-2 p-0.5 shadow-eco-sm"
+    />
+  );
+}
+
+/** Application header: eco identity left, navigation middle, language selection + auth right. */
 export function SiteHeader() {
   return (
     <header className="site-header sticky top-0 z-50 border-b border-edge bg-paper shadow-eco-sm">
@@ -21,9 +32,16 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <SiteNav />
-          <HeaderLoginLink />
+          <div className="flex shrink-0 items-center gap-2.5">
+            <div className="hidden sm:block shrink-0">
+              <Suspense fallback={<LanguageSwitcherFallback />}>
+                <LanguageSwitcher />
+              </Suspense>
+            </div>
+            <HeaderLoginLink />
+          </div>
         </div>
       </div>
     </header>

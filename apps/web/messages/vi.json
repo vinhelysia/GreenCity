@@ -28,7 +28,9 @@
     "back": "Quay lại",
     "confirm": "Xác nhận",
     "switchToVietnamese": "Chuyển sang Tiếng Việt",
-    "switchToEnglish": "Chuyển sang Tiếng Anh"
+    "switchToEnglish": "Chuyển sang Tiếng Anh",
+    "skipToContent": "Bỏ qua đến nội dung chính",
+    "inDevelopment": "Đang phát triển"
   },
   "navigation": {
     "home": "Trang chủ",
@@ -134,7 +136,15 @@
     "adminBadge": "Quản trị viên",
     "signInRequiredTitle": "Yêu cầu đăng nhập",
     "signInRequiredDesc": "Bạn cần đăng nhập để thực hiện thao tác này.",
-    "signInRequiredButton": "Đăng nhập ngay"
+    "signInRequiredButton": "Đăng nhập ngay",
+    "signInRequiredForAction": "Bạn cần tài khoản để {action}",
+    "signInRequiredGeneric": "Bạn cần tài khoản",
+    "signInRequiredBody1": "Phần lớn chức năng của GreenCity cần đăng nhập: bán phế liệu, đặt giữ tin đăng, gửi báo cáo điểm rác và xem điểm thưởng. Chỉ có trang chủ và danh sách trên chợ là xem được khi chưa đăng nhập.",
+    "signInRequiredBody2": "Chưa có tài khoản thì đăng ký cũng được, chỉ cần email, mật khẩu và tên hiển thị.",
+    "createNewAccount": "Tạo tài khoản mới",
+    "actionSellScrap": "bán phế liệu",
+    "actionViewRewards": "xem điểm thưởng",
+    "actionReportDumping": "gửi báo cáo điểm rác"
   },
   "services": {
     "title": "Dịch vụ",

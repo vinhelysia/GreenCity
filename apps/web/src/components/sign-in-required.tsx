@@ -1,10 +1,17 @@
-import Link from "next/link";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
+import { Link } from "@/i18n/routing";
 
 type SignInRequiredProps = {
   testId?: string;
-  /** What the visitor was trying to do, e.g. "gửi báo cáo điểm rác". */
-  action?: string;
+  /**
+   * Which dictionary key under `auth` names what the visitor was trying to do,
+   * e.g. "actionSellScrap". A key rather than a string so the sentence is built
+   * in the reader's language instead of whichever one the caller was written in.
+   */
+  actionKey?: "actionSellScrap" | "actionViewRewards" | "actionReportDumping";
 };
 
 /**
@@ -14,34 +21,35 @@ type SignInRequiredProps = {
  * only a login link. Someone without an account was told to sign in and given
  * nowhere to go, so registering is offered here as well.
  */
-export function SignInRequired({ testId, action }: SignInRequiredProps) {
+export function SignInRequired({ testId, actionKey }: SignInRequiredProps) {
+  const t = useTranslations("auth");
+
   return (
     <EmptyState
       testId={testId}
-      title={action ? `Bạn cần tài khoản để ${action}` : "Bạn cần tài khoản"}
+      title={
+        actionKey
+          ? t("signInRequiredForAction", { action: t(actionKey) })
+          : t("signInRequiredGeneric")
+      }
       description={
         <div className="space-y-3">
-          <p>
-            Phần lớn chức năng của GreenCity cần đăng nhập: bán phế liệu, đặt
-            giữ tin đăng, gửi báo cáo điểm rác và xem điểm thưởng. Chỉ có trang
-            chủ và danh sách trên chợ là xem được khi chưa đăng nhập.
-          </p>
-          <p>
-            Chưa có tài khoản thì đăng ký cũng được, chỉ cần email, mật khẩu và
-            tên hiển thị.
-          </p>
+          <p>{t("signInRequiredBody1")}</p>
+          <p>{t("signInRequiredBody2")}</p>
           <p className="flex flex-wrap gap-x-4 gap-y-2">
+            {/* Locale-aware Link: on /en these must go to /en/login and
+                /en/register, not the Vietnamese paths. */}
             <Link
               href="/dang-nhap"
               className="font-medium text-accent underline-offset-4 hover:underline"
             >
-              Đăng nhập
+              {t("loginButton")}
             </Link>
             <Link
               href="/dang-ky"
               className="font-medium text-accent underline-offset-4 hover:underline"
             >
-              Tạo tài khoản mới
+              {t("createNewAccount")}
             </Link>
           </p>
         </div>

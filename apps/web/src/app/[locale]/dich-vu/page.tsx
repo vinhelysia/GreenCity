@@ -24,6 +24,7 @@ export default async function DichVuPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "services" });
+  const tCommon = await getTranslations({ locale, namespace: "common" });
   const isEn = locale === "en";
 
   return (
@@ -33,6 +34,7 @@ export default async function DichVuPage({
         description={<p>{t("lede")}</p>}
       />
       <FeatureUnavailable
+        status={tCommon("inDevelopment")}
         testId="dich-vu-unavailable"
         title={isEn ? "Service Catalog Unavailable" : "Danh mục dịch vụ chưa mở"}
         description={

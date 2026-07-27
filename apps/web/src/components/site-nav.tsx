@@ -6,10 +6,6 @@ import { Link, usePathname } from "@/i18n/routing";
 import { LanguageSwitcher } from "./language-switcher";
 import { isNavActive, NAV_LINKS } from "./nav-links";
 
-/**
- * Reserves the switcher's footprint while it waits for search params, so the
- * header does not shift once it hydrates.
- */
 function LanguageSwitcherFallback() {
   return (
     <div
@@ -21,7 +17,7 @@ function LanguageSwitcherFallback() {
 
 /**
  * Primary navigation: desktop inline links, mobile disclosure menu.
- * Includes LanguageSwitcher for locale control.
+ * Includes mobile LanguageSwitcher inside mobile drawer.
  * Keyboard: Escape closes menu and returns focus to the toggle.
  */
 export function SiteNav() {
@@ -41,12 +37,10 @@ export function SiteNav() {
     toggleRef.current?.focus();
   }, []);
 
-  // Close on route change (e.g. browser back while menu open).
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Lock body scroll only while mobile menu is open (narrow viewports).
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -67,26 +61,17 @@ export function SiteNav() {
         }
       }}
     >
-      <div className="flex items-center gap-2">
-        <button
-          ref={toggleRef}
-          type="button"
-          className="nav-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink lg:hidden"
-          aria-expanded={open}
-          aria-controls={menuId}
-          onClick={() => setOpen((value) => !value)}
-        >
-          <span className="sr-only">{open ? tCommon("closeMenu") : tCommon("openMenu")}</span>
-          <span aria-hidden="true">{open ? tCommon("closeShort") : tCommon("menuShort")}</span>
-        </button>
-
-        {/* Desktop Language Switcher */}
-        <div className="hidden lg:block">
-          <Suspense fallback={<LanguageSwitcherFallback />}>
-            <LanguageSwitcher />
-          </Suspense>
-        </div>
-      </div>
+      <button
+        ref={toggleRef}
+        type="button"
+        className="nav-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink lg:hidden"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span className="sr-only">{open ? tCommon("closeMenu") : tCommon("openMenu")}</span>
+        <span aria-hidden="true">{open ? tCommon("closeShort") : tCommon("menuShort")}</span>
+      </button>
 
       {/* Backdrop below header so the toggle stays clickable */}
       {open ? (
@@ -111,13 +96,13 @@ export function SiteNav() {
           const active = isNavActive(pathname, href);
           const translatedLabel = tNav(key as any) || label;
           return (
-            <li key={href}>
+            <li key={href} className="shrink-0">
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
                 onClick={close}
                 className={[
-                  "block rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors duration-quick ease-out",
+                  "block whitespace-nowrap rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors duration-quick ease-out",
                   "min-h-11 lg:min-h-0 lg:py-2 lg:text-sm",
                   active
                     ? "bg-mint-surface text-primary font-semibold"

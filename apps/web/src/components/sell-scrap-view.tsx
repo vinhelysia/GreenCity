@@ -168,7 +168,7 @@ export function SellScrapView() {
       ) : authStatus === "unauthenticated" ? (
         <SignInRequired
           testId="sell-scrap-login-required"
-          action="bán phế liệu"
+          actionKey="actionSellScrap"
         />
       ) : (
         <>

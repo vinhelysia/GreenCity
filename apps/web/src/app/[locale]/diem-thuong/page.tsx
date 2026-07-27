@@ -63,7 +63,7 @@ export default function DiemThuongPage() {
       {authStatus === "unauthenticated" ? (
         <SignInRequired
           testId="points-login-required"
-          action="xem điểm thưởng"
+          actionKey="actionViewRewards"
         />
       ) : (
         <div role="status" aria-live="polite" className="min-w-0 space-y-8">

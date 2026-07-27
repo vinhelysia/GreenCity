@@ -119,6 +119,15 @@ test.describe("English routes & i18n", () => {
     page,
   }) => {
     await page.goto("/cho-online?sort=newest", { waitUntil: "networkidle" });
+
+    // The languages sit behind a globe disclosure, so open it first.
+    const viTrigger = page
+      .getByRole("button", { name: /Chuyển đổi ngôn ngữ/ })
+      .first();
+    await expect(viTrigger).toHaveAttribute("aria-expanded", "false");
+    await viTrigger.click();
+    await expect(viTrigger).toHaveAttribute("aria-expanded", "true");
+
     const enSwitch = page.getByRole("link", { name: "Chuyển sang Tiếng Anh" });
     await expect(enSwitch).toBeVisible();
     await expect(enSwitch).toHaveAttribute("href", "/en/marketplace?sort=newest");
@@ -127,6 +136,9 @@ test.describe("English routes & i18n", () => {
     await page.waitForURL("**/en/marketplace?sort=newest");
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await assertOneH1(page, "Marketplace");
+
+    const enTrigger = page.getByRole("button", { name: /Switch language/ }).first();
+    await enTrigger.click();
 
     const viSwitch = page.getByRole("link", { name: "Switch to Vietnamese" });
     await expect(viSwitch).toBeVisible();
