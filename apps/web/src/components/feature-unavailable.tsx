@@ -2,8 +2,11 @@ import type { ReactNode } from "react";
 import { EmptyState } from "./empty-state";
 
 type FeatureUnavailableProps = {
-  /** Short status line, e.g. "Đang phát triển" */
-  status?: string;
+  /**
+   * Short status line. Required so it is always translated by the caller —
+   * a default here would silently render one language on both locales.
+   */
+  status: string;
   title: string;
   description: ReactNode;
   testId?: string;
@@ -11,7 +14,7 @@ type FeatureUnavailableProps = {
 
 /** Shell for planned product areas that have no backend yet. */
 export function FeatureUnavailable({
-  status = "Đang phát triển",
+  status,
   title,
   description,
   testId,

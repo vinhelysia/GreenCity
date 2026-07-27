@@ -24,6 +24,7 @@ export default async function ThungRacPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "recyclingBins" });
+  const tCommon = await getTranslations({ locale, namespace: "common" });
   const isEn = locale === "en";
 
   return (
@@ -33,6 +34,7 @@ export default async function ThungRacPage({
         description={<p>{t("lede")}</p>}
       />
       <FeatureUnavailable
+        status={tCommon("inDevelopment")}
         testId="thung-rac-unavailable"
         title={isEn ? "Feature in Development" : "Tính năng đang phát triển"}
         description={

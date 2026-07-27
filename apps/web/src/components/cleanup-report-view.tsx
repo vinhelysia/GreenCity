@@ -71,7 +71,7 @@ export function CleanupReportView() {
     return (
       <SignInRequired
         testId="cleanup-login-required"
-        action="gửi báo cáo điểm rác"
+        actionKey="actionReportDumping"
       />
     );
   }

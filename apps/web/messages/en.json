@@ -28,7 +28,9 @@
     "back": "Back",
     "confirm": "Confirm",
     "switchToVietnamese": "Switch to Vietnamese",
-    "switchToEnglish": "Switch to English"
+    "switchToEnglish": "Switch to English",
+    "skipToContent": "Skip to main content",
+    "inDevelopment": "In development"
   },
   "navigation": {
     "home": "Home",
@@ -134,7 +136,15 @@
     "adminBadge": "Administrator",
     "signInRequiredTitle": "Sign In Required",
     "signInRequiredDesc": "You need to sign in to perform this action.",
-    "signInRequiredButton": "Sign In Now"
+    "signInRequiredButton": "Sign In Now",
+    "signInRequiredForAction": "You need an account to {action}",
+    "signInRequiredGeneric": "You need an account",
+    "signInRequiredBody1": "Most of GreenCity needs an account: selling scrap, reserving listings, reporting dumping sites and viewing reward points. Only the homepage and the marketplace listings are visible without signing in.",
+    "signInRequiredBody2": "If you do not have an account yet you can register — it only needs an email, a password and a display name.",
+    "createNewAccount": "Create a new account",
+    "actionSellScrap": "sell scrap",
+    "actionViewRewards": "view reward points",
+    "actionReportDumping": "report a dumping site"
   },
   "services": {
     "title": "Services",
