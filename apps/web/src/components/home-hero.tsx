@@ -6,7 +6,7 @@ import { IconArrowRight, IconLeaf, IconShieldCheck, IconSparkles } from "./eco-i
 /**
  * Opening hero section — Server Component.
  * Proposition over a controlled, decorative eco-city panorama.
- * Exact H1: "Rác có người mua. Điểm rác có người báo."
+ * Exact H1: "Rác có người mua! Người báo điểm rác!"
  */
 export function HomeHero() {
   return (
@@ -36,9 +36,9 @@ export function HomeHero() {
           id="hero-heading"
           className="font-display text-3.5xl font-extrabold leading-[1.15] tracking-tight text-ink [overflow-wrap:anywhere] sm:text-4xl md:text-5xl"
         >
-          Rác có người mua. <br className="hidden sm:inline" />
+          Rác có người mua! <br className="hidden sm:inline" />
           <span className="text-primary underline decoration-yellow decoration-4 underline-offset-6">
-            Điểm rác có người báo.
+            Người báo điểm rác!
           </span>
         </h1>
 

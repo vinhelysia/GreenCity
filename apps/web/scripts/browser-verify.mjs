@@ -34,7 +34,7 @@ try {
 }
 
 const ROUTES = [
-  { path: "/", h1: /Rác có người mua\. Điểm rác có người báo\./ },
+  { path: "/", h1: /Rác có người mua! Người báo điểm rác!/ },
   { path: "/thung-rac", h1: /Thùng rác/ },
   { path: "/dich-vu", h1: /Dịch vụ/ },
   { path: "/ban-phe-lieu", h1: /Bán phế liệu/ },
