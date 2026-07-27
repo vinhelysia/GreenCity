@@ -75,9 +75,9 @@ export function HeaderLoginLink() {
         href="/dang-ky"
         aria-current={registerActive ? "page" : undefined}
         className={[
-          "hidden min-h-11 items-center justify-center rounded-md px-2 py-2 text-sm font-medium transition-colors duration-quick ease-out sm:inline-flex sm:px-3",
+          "hidden min-h-11 items-center justify-center rounded-xl px-3 py-2 text-sm font-semibold transition-colors duration-quick ease-out sm:inline-flex",
           registerActive
-            ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+            ? "text-primary font-bold"
             : "text-muted hover:text-ink",
         ].join(" ")}
       >
@@ -88,10 +88,10 @@ export function HeaderLoginLink() {
         aria-current={loginActive ? "page" : undefined}
         data-testid="header-login"
         className={[
-          "inline-flex min-h-11 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-quick ease-out sm:px-4",
+          "inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition-colors duration-quick ease-out shadow-eco-sm",
           loginActive
-            ? "border-accent bg-paper-2 text-accent"
-            : "border-edge bg-paper text-ink hover:border-accent hover:text-accent",
+            ? "bg-primary-hover text-white"
+            : "bg-primary text-white hover:bg-primary-hover",
         ].join(" ")}
       >
         Đăng nhập

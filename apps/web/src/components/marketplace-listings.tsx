@@ -8,6 +8,7 @@ import {
   BuyerPassPanel,
   type SubscriptionLoad,
 } from "@/components/buyer-pass-panel";
+import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
 import {
   checkAuthExpiry,
@@ -162,11 +163,9 @@ function ListingCard({
   }
 
   return (
-    <li className="flex min-w-0 flex-col rounded-md border border-edge bg-paper p-4">
-      {/* Type-led: the material and the price are what a buyer scans. The photo
-          supports that decision rather than filling a banner above it. */}
+    <li className="flex min-w-0 flex-col justify-between rounded-2xl border border-edge bg-card p-5 shadow-eco transition-shadow hover:shadow-eco-hover">
       <div className="flex min-w-0 items-start gap-4">
-        <div className="aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-md border border-edge bg-paper-3 sm:w-28">
+        <div className="aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-xl border border-edge bg-mint-surface/30 sm:w-28">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/marketplace/listings/${listing.id}/photo`}
@@ -176,33 +175,38 @@ function ListingCard({
           />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-lg font-semibold tracking-tight text-ink">
+          <div className="inline-flex items-center gap-1.5 mb-1">
+            <EcoBadge variant="mint" className="text-[11px] font-bold">
+              Phế liệu
+            </EcoBadge>
+          </div>
+          <h3 className="font-display text-lg font-bold tracking-tight text-ink">
             {listing.categoryName}
           </h3>
           <p className="mt-1 text-sm tabular-nums text-muted">
             {listing.estimatedWeightKg}kg ·{" "}
             {formatVnd(listing.buyerPricePerKgVnd)}/kg
           </p>
-          <p className="mt-2 font-display text-xl font-bold tabular-nums text-ink">
+          <p className="mt-2 font-display text-xl font-extrabold tabular-nums text-primary">
             {formatVnd(listing.estimatedTotalVnd)}
           </p>
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="mt-4">
+      <div className="flex min-w-0 flex-1 flex-col justify-end gap-1.5 pt-4">
+        <div>
           {listing.isOwn ? (
-            <span className="inline-flex items-center rounded-sm border border-edge bg-paper-2 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-muted">
+            <EcoBadge variant="gray" className="py-1">
               Tin của bạn
-            </span>
+            </EcoBadge>
           ) : listing.status !== "AVAILABLE" ? (
-            <span className="inline-flex items-center rounded-sm border border-edge bg-paper-2 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-muted">
+            <EcoBadge variant="coral" className="py-1">
               Đã được đặt giữ
-            </span>
+            </EcoBadge>
           ) : authStatus === "unauthenticated" ? (
             <Link
               href="/dang-nhap"
-              className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink hover:border-accent"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-mint-surface/30"
             >
               Đăng nhập để đặt giữ
             </Link>
@@ -211,20 +215,18 @@ function ListingCard({
               type="button"
               disabled={reserving}
               onClick={() => void onReserve()}
-              className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-eco-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
             >
               {reserving ? "Đang đặt giữ…" : "Đặt giữ"}
             </button>
           ) : eligible === "unknown" || authStatus === "loading" ? (
             <span className="text-sm text-muted">Đang kiểm tra gói…</span>
           ) : eligible === "error" ? (
-            // Do not leave this stuck on "checking" forever: say what happened
-            // and point at the retry, which lives once, in the panel above.
             <div className="text-sm text-muted">
               <button
                 type="button"
                 disabled
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
               >
                 Đặt giữ
               </button>
@@ -233,13 +235,11 @@ function ListingCard({
               </p>
             </div>
           ) : (
-            // Points at the one panel above rather than repeating the offer:
-            // the same purchase asked for on every card reads as nagging.
             <div className="text-sm text-muted">
               <button
                 type="button"
                 disabled
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
               >
                 Đặt giữ
               </button>
@@ -251,7 +251,7 @@ function ListingCard({
         </div>
 
         {rowError ? (
-          <p role="alert" className="text-sm text-red-800">
+          <p role="alert" className="text-sm font-medium text-coral">
             {rowError}
           </p>
         ) : null}

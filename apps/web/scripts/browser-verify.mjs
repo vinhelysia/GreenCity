@@ -34,19 +34,25 @@ try {
 }
 
 const ROUTES = [
-  { path: "/", h1: /GreenCity/ },
+  { path: "/", h1: /Rác có người mua! Người báo điểm rác!/ },
   { path: "/thung-rac", h1: /Thùng rác/ },
   { path: "/dich-vu", h1: /Dịch vụ/ },
+  { path: "/ban-phe-lieu", h1: /Bán phế liệu/ },
   { path: "/dong-gop", h1: /Đóng góp/ },
   { path: "/cho-online", h1: /Chợ online/ },
+  { path: "/diem-thuong", h1: /Điểm thưởng/ },
   { path: "/dang-nhap", h1: /Đăng nhập/ },
+  { path: "/dang-ky", h1: /Đăng ký/ },
 ];
 
 const VIEWPORTS = [
-  { name: "1440x900", width: 1440, height: 900 },
-  { name: "1024x768", width: 1024, height: 768 },
-  { name: "768x1024", width: 768, height: 1024 },
+  { name: "320x568", width: 320, height: 568 },
+  { name: "360x800", width: 360, height: 800 },
   { name: "390x844", width: 390, height: 844 },
+  { name: "768x1024", width: 768, height: 1024 },
+  { name: "1024x768", width: 1024, height: 768 },
+  { name: "1366x768", width: 1366, height: 768 },
+  { name: "1440x900", width: 1440, height: 900 },
 ];
 
 mkdirSync(shotDir, { recursive: true });
@@ -60,8 +66,13 @@ try {
     const issues = [];
     page.on("console", (msg) => {
       const t = msg.text();
-      if (/hydrat|did not match|Warning: /i.test(t)) issues.push(t);
+      if (/Failed to load resource:.*status of 401/i.test(t)) return;
+      if (msg.type() === "error" || /hydrat|did not match|Warning: /i.test(t)) issues.push(t);
     });
+    page.on("pageerror", (error) => issues.push(error.message));
+    page.on("requestfailed", (req) =>
+      issues.push(`${req.method()} ${req.url()} (${req.failure()?.errorText ?? "failed"})`),
+    );
     page.on("request", (req) => {
       const url = req.url();
       if (/localhost:3001|127\.0\.0\.1:3001/.test(url)) {
@@ -107,11 +118,10 @@ try {
 
   // Mobile menu open
   {
-    const page = await browser.newPage({ viewport: VIEWPORTS[3] });
+    const page = await browser.newPage({ viewport: VIEWPORTS[2] });
     await page.goto(new URL("/", baseURL).toString(), { waitUntil: "networkidle" });
     const toggle = page.getByRole("button", { name: /Mở menu|Menu/i });
     await toggle.click();
-    await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Tin tức" }).count().catch(() => 0);
     // Ensure a nav link is visible
     const homeLink = page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Trang chủ" });
     if (!(await homeLink.isVisible())) failures.push("mobile menu did not show links");
@@ -153,22 +163,24 @@ try {
 
   // Desktop nav click sample
   {
-    const page = await browser.newPage({ viewport: VIEWPORTS[0] });
+    const page = await browser.newPage({ viewport: VIEWPORTS.at(-1) });
     await page.goto(new URL("/", baseURL).toString(), { waitUntil: "networkidle" });
     await page.getByRole("navigation", { name: "Điều hướng chính" }).getByRole("link", { name: "Chợ online" }).click();
     await page.waitForURL("**/cho-online");
     await page.close();
   }
 
+} catch (error) {
+  failures.push(`unhandled: ${error instanceof Error ? error.message : String(error)}`);
+} finally {
+  await browser.close();
   writeFileSync(
     join(shotDir, "VERIFY_REPORT.txt"),
     failures.length
       ? `FAIL\n${failures.join("\n")}\n`
-      : `OK\nbaseURL=${baseURL}\nscreenshots=${reportedShotDir}\n`,
+      : `OK\nbaseURL=${baseURL}\nscreenshots=${reportedShotDir}\nroutes=${ROUTES.length}\nviewports=${VIEWPORTS.length}\ngenerated=${new Date().toISOString()}\n`,
     "utf8",
   );
-} finally {
-  await browser.close();
 }
 
 if (failures.length) {

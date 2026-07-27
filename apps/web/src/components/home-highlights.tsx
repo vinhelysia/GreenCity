@@ -116,22 +116,22 @@ export function HomeHighlights() {
                   value: statsState.data.verifiedCleanupReports,
                   label: "điểm rác đã xác minh",
                 },
-                { value: statsState.data.scrapWeightKg, label: "kg phế liệu" },
+                { value: statsState.data.scrapWeightKg, label: "kg phế liệu đã niêm yết" },
                 {
                   value: statsState.data.totalPointsAwarded,
                   label: "điểm thưởng đã trao",
                 },
               ].map((tile) => (
-                <div key={tile.label} className="min-w-0">
+                <div key={tile.label} className="min-w-0 rounded-2xl border border-edge bg-card p-5 shadow-eco">
                   <dd>
                     <CountUp
                       value={tile.value}
-                      className="block font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-accent [overflow-wrap:anywhere] sm:text-5xl"
+                      className="block font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-primary [overflow-wrap:anywhere] sm:text-5xl"
                     />
                   </dd>
                   <span
                     aria-hidden="true"
-                    className="mt-3 block h-1 w-8 rounded-full bg-highlight"
+                    className="mt-3 block h-1 w-8 rounded-full bg-yellow"
                   />
                   <dt className="mt-3 text-sm font-medium text-muted">
                     {tile.label}
