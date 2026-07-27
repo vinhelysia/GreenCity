@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import type { MarketplaceListing } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   completeListing,
@@ -20,6 +21,10 @@ type LoadState =
   | { status: "ready"; data: MarketplaceListing[] };
 
 export function AdminListingQueue() {
+  const locale = useLocale();
+  const tAdmin = useTranslations("admin");
+  const tAuth = useTranslations("auth");
+  const tErr = useTranslations("errors");
   const { status: authStatus, user, clearSessionAndRedirect } = useAuth();
   const isAdmin = user?.roles.includes("ADMIN") ?? false;
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -52,7 +57,7 @@ export function AdminListingQueue() {
   if (authStatus === "loading") {
     return (
       <p role="status" className="text-sm text-muted">
-        Đang kiểm tra đăng nhập…
+        Loading...
       </p>
     );
   }
@@ -61,16 +66,16 @@ export function AdminListingQueue() {
     return (
       <EmptyState
         testId="admin-listing-queue-login-required"
-        title="Cần đăng nhập"
+        title={locale === "en" ? "Sign In Required" : "Cần đăng nhập"}
         description={
           <p>
             <Link
               href="/dang-nhap"
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Đăng nhập
+              {tAuth("loginButton")}
             </Link>{" "}
-            bằng tài khoản quản trị viên để xem giao dịch đang chờ.
+            {locale === "en" ? "with an administrator account." : "bằng tài khoản quản trị viên để xem giao dịch đang chờ."}
           </p>
         }
       />
@@ -81,8 +86,8 @@ export function AdminListingQueue() {
     return (
       <EmptyState
         testId="admin-listing-queue-forbidden"
-        title="Không có quyền truy cập"
-        description="Chỉ quản trị viên mới có thể xác nhận giao dịch."
+        title={locale === "en" ? "Access Denied" : "Không có quyền truy cập"}
+        description={tErr("forbidden")}
       />
     );
   }
@@ -101,8 +106,8 @@ export function AdminListingQueue() {
       ) : state.data.length === 0 ? (
         <EmptyState
           testId="admin-listing-queue-empty"
-          title="Không có giao dịch chờ xác nhận"
-          description="Giao dịch sẽ xuất hiện tại đây sau khi người mua đặt giữ một tin đăng."
+          title={tAdmin("transactionQueueTitle")}
+          description={tAdmin("noItems")}
         />
       ) : (
         <ul className="flex min-w-0 flex-col gap-4">
@@ -129,6 +134,9 @@ function AdminListingRow({
   onActionComplete: () => void;
   clearSessionAndRedirect: () => void;
 }) {
+  const locale = useLocale();
+  const tAdmin = useTranslations("admin");
+  const tMkt = useTranslations("marketplace");
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -152,14 +160,14 @@ function AdminListingRow({
       <div className="min-w-0">
         <p className="font-medium text-ink">{listing.categoryName}</p>
         <p className="mt-1 text-sm text-muted">
-          Khối lượng: {listing.estimatedWeightKg}kg · Giá mua:{" "}
-          {formatVnd(listing.buyerPricePerKgVnd)}/kg
+          {tMkt("quantity", { weight: listing.estimatedWeightKg })} ·{" "}
+          {tMkt("unitPrice", { price: formatVnd(listing.buyerPricePerKgVnd, locale) })}
         </p>
         <p className="mt-1 text-sm font-semibold text-ink">
-          Ước tính: {formatVnd(listing.estimatedTotalVnd)}
+          {locale === "en" ? "Estimate: " : "Ước tính: "}{formatVnd(listing.estimatedTotalVnd, locale)}
         </p>
         <p className="mt-1 text-xs text-muted">
-          Đã được đặt giữ, chờ xác nhận giao hàng.
+          {locale === "en" ? "Reserved, awaiting delivery confirmation." : "Đã được đặt giữ, chờ xác nhận giao hàng."}
         </p>
       </div>
 
@@ -168,12 +176,12 @@ function AdminListingRow({
           type="button"
           disabled={submitting}
           onClick={() => void onComplete()}
-          className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-eco-sm transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
         >
-          {submitting ? "Đang xử lý…" : "Hoàn tất giao dịch"}
+          {submitting ? tAdmin("processing") : tAdmin("completeTx")}
         </button>
         <p className="text-xs text-muted">
-          Người bán được cộng điểm thưởng khi hoàn tất.
+          {locale === "en" ? "Seller awarded points upon completion." : "Người bán được cộng điểm thưởng khi hoàn tất."}
         </p>
       </div>
 

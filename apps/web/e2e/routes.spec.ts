@@ -16,6 +16,7 @@ test.describe("Public routes", () => {
       expect(response?.status(), `${route.path} status`).toBe(200);
       await assertOneH1(page, route.h1);
       await expect(page.locator("main#noi-dung")).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("lang", "vi");
       assertCleanRuntime(issues, route.path);
     });
   }
@@ -25,7 +26,6 @@ test.describe("Public routes", () => {
     const response = await page.goto("/trang-khong-ton-tai-xyz", {
       waitUntil: "networkidle",
     });
-    // Next.js App Router not-found typically returns 404.
     expect(response?.status()).toBe(404);
     await assertOneH1(page, "Không tìm thấy trang");
     await expect(
@@ -46,6 +46,7 @@ test.describe("Public routes", () => {
       page.getByRole("link", { name: "Đăng nhập để đặt giữ" }).first(),
     ).toBeVisible();
   });
+
   test("shows a recoverable error when the response body stream fails", async ({ page }) => {
     await page.addInitScript(() => {
       const realFetch = window.fetch.bind(window);
@@ -68,5 +69,72 @@ test.describe("Public routes", () => {
     const alert = page.locator('main [role="alert"]');
     await expect(alert).toBeVisible();
     await expect(alert).not.toBeEmpty();
+  });
+});
+
+test.describe("English routes & i18n", () => {
+  const EN_ROUTES = [
+    { path: "/en", h1: "Scrap finds a buyer! Report illegal dumping!" },
+    { path: "/en/recycling-bins", h1: "Recycling Bins" },
+    { path: "/en/services", h1: "Services" },
+    { path: "/en/community-cleanup", h1: "Community Reporting" },
+    { path: "/en/marketplace", h1: "Marketplace" },
+    { path: "/en/login", h1: "Sign In" },
+    { path: "/en/register", h1: "Create Account" },
+    { path: "/en/sell-scrap", h1: "Sell Scrap" },
+  ] as const;
+
+  for (const route of EN_ROUTES) {
+    test(`${route.path} renders 200 with English h1 and lang="en"`, async ({
+      page,
+    }) => {
+      const issues = attachRuntimeGuards(page);
+      const response = await page.goto(route.path, { waitUntil: "networkidle" });
+      expect(response?.status(), `${route.path} status`).toBe(200);
+      await assertOneH1(page, route.h1);
+      await expect(page.locator("main#noi-dung")).toBeVisible();
+      await expect(page.locator("html")).toHaveAttribute("lang", "en");
+      assertCleanRuntime(issues, route.path);
+    });
+  }
+
+  test("unknown English route shows English not-found content", async ({ page }) => {
+    const issues = attachRuntimeGuards(page);
+    const response = await page.goto("/en/unknown-page-xyz", {
+      waitUntil: "networkidle",
+    });
+    expect(response?.status()).toBe(404);
+    await assertOneH1(page, "Page Not Found");
+    await expect(
+      page.getByRole("link", { name: "Return home" }),
+    ).toBeVisible();
+    // No html[lang] assertion here: Next renders notFound() into its own
+    // error document (<html id="__next_error__">) which sits outside
+    // [locale]/layout.tsx, so the locale layout never gets to set lang. The
+    // copy above still proves the 404 body itself is localized.
+    assertCleanRuntime(issues, "not-found-en");
+  });
+
+  test("language switcher toggles between VI and EN routes while preserving query params", async ({
+    page,
+  }) => {
+    await page.goto("/cho-online?sort=newest", { waitUntil: "networkidle" });
+    const enSwitch = page.getByRole("link", { name: "Chuyển sang Tiếng Anh" });
+    await expect(enSwitch).toBeVisible();
+    await expect(enSwitch).toHaveAttribute("href", "/en/marketplace?sort=newest");
+
+    await enSwitch.click();
+    await page.waitForURL("**/en/marketplace?sort=newest");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await assertOneH1(page, "Marketplace");
+
+    const viSwitch = page.getByRole("link", { name: "Switch to Vietnamese" });
+    await expect(viSwitch).toBeVisible();
+    await expect(viSwitch).toHaveAttribute("href", "/cho-online?sort=newest");
+
+    await viSwitch.click();
+    await page.waitForURL("**/cho-online?sort=newest");
+    await expect(page.locator("html")).toHaveAttribute("lang", "vi");
+    await assertOneH1(page, "Chợ online");
   });
 });

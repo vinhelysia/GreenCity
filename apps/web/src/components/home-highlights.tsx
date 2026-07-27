@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type {
   HomeStats,
@@ -10,12 +10,13 @@ import type {
 import { CountUp } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
 import { Section } from "@/components/section";
+import { Link } from "@/i18n/routing";
 import {
   fetchHomeStats,
   fetchMarketplaceListings,
   fetchPublicCleanupReports,
 } from "@/lib/api";
-import { formatVnd } from "@/lib/format";
+import { formatDate, formatVnd } from "@/lib/format";
 
 type LoadState<T> =
   | { status: "loading" }
@@ -23,6 +24,11 @@ type LoadState<T> =
   | { status: "ready"; data: T };
 
 export function HomeHighlights() {
+  const locale = useLocale();
+  const tHome = useTranslations("home");
+  const tHighlights = useTranslations("home.highlights");
+  const tCommon = useTranslations("common");
+
   const [statsState, setStatsState] = useState<LoadState<HomeStats>>({
     status: "loading",
   });
@@ -82,13 +88,15 @@ export function HomeHighlights() {
 
   return (
     <div className="min-w-0">
-      {/* Impact — a tinted band, not another bordered card. Every number here is
-          a live count from the database. */}
       <Section
         id="tac-dong"
-        title="Tác động đến nay"
+        title={locale === "en" ? "Impact to Date" : "Tác động đến nay"}
         tone="band"
-        lede="Số liệu đọc thẳng từ hệ thống đang chạy. Không có con số nào dựng sẵn."
+        lede={
+          locale === "en"
+            ? "Live operational stats recorded directly from our system."
+            : "Số liệu đọc thẳng từ hệ thống đang chạy. Không có con số nào dựng sẵn."
+        }
       >
         <div role="status" aria-live="polite">
           {statsState.status === "loading" ? (
@@ -110,16 +118,19 @@ export function HomeHighlights() {
               {[
                 {
                   value: statsState.data.availableListings,
-                  label: "tin đang bán",
+                  label: locale === "en" ? "active material listings" : "tin đang bán",
                 },
                 {
                   value: statsState.data.verifiedCleanupReports,
-                  label: "điểm rác đã xác minh",
+                  label: locale === "en" ? "verified dumping sites" : "điểm rác đã xác minh",
                 },
-                { value: statsState.data.scrapWeightKg, label: "kg phế liệu đã niêm yết" },
+                {
+                  value: statsState.data.scrapWeightKg,
+                  label: locale === "en" ? "kg scrap listed" : "kg phế liệu đã niêm yết",
+                },
                 {
                   value: statsState.data.totalPointsAwarded,
-                  label: "điểm thưởng đã trao",
+                  label: locale === "en" ? "reward points issued" : "điểm thưởng đã trao",
                 },
               ].map((tile) => (
                 <div key={tile.label} className="min-w-0 rounded-2xl border border-edge bg-card p-5 shadow-eco">
@@ -143,12 +154,15 @@ export function HomeHighlights() {
         </div>
       </Section>
 
-      {/* Listings lead with type and price — what a buyer actually scans for. */}
       <Section
         id="tin-dang-noi-bat"
-        title="Đang bán trên chợ"
+        title={locale === "en" ? "Available on Marketplace" : "Đang bán trên chợ"}
         tone="open"
-        lede="Giá niêm yết theo khung công khai của từng loại phế liệu."
+        lede={
+          locale === "en"
+            ? "Published pricing based on transparent rate bands for each material category."
+            : "Giá niêm yết theo khung công khai của từng loại phế liệu."
+        }
       >
         <div role="status" aria-live="polite" className="min-w-0">
           {listingsState.status === "loading" ? (
@@ -162,18 +176,17 @@ export function HomeHighlights() {
           ) : listingsState.status === "error" ? (
             <EmptyState
               testId="featured-listings-error"
-              title="Không thể tải tin đăng"
+              title={locale === "en" ? "Unable to load listings" : "Không thể tải tin đăng"}
               description={listingsState.message}
             />
           ) : listingsState.data.length === 0 ? (
             <EmptyState
               testId="featured-listings-empty"
-              title="Chưa có tin đăng nào"
-              description="Hiện chưa có tin đăng bán phế liệu nào khả dụng."
+              title={locale === "en" ? "No listings available" : "Chưa có tin đăng nào"}
+              description={tHighlights("noListings")}
             />
           ) : (
             <div className="min-w-0 space-y-5">
-              {/* One hairline grid, not four floating cards. */}
               <ul className="grid min-w-0 grid-cols-1 gap-px overflow-hidden rounded-md border border-edge bg-rule sm:grid-cols-2">
                 {listingsState.data.slice(0, 4).map((listing) => (
                   <li
@@ -186,32 +199,36 @@ export function HomeHighlights() {
                       </h3>
                       <p className="mt-1 text-sm tabular-nums text-muted">
                         {listing.estimatedWeightKg}kg ·{" "}
-                        {formatVnd(listing.buyerPricePerKgVnd)}/kg
+                        {formatVnd(listing.buyerPricePerKgVnd, locale)}
+                        {tCommon("perKg")}
                       </p>
                     </div>
                     <p className="font-display text-xl font-bold tabular-nums text-ink">
-                      {formatVnd(listing.estimatedTotalVnd)}
+                      {formatVnd(listing.estimatedTotalVnd, locale)}
                     </p>
                   </li>
                 ))}
               </ul>
               <Link
                 href="/cho-online"
-                className="inline-flex items-center whitespace-nowrap text-sm font-medium text-accent underline-offset-4 hover:underline"
+                className="inline-flex items-center whitespace-nowrap text-sm font-medium text-primary hover:underline"
               >
-                Xem tất cả trên Chợ online &rarr;
+                {locale === "en" ? "View all on Marketplace →" : "Xem tất cả trên Chợ online →"}
               </Link>
             </div>
           )}
         </div>
       </Section>
 
-      {/* Cleanup leads with the photograph — here the image IS the evidence. */}
       <Section
         id="diem-rac-da-don"
-        title="Điểm rác đã được xác minh"
+        title={locale === "en" ? "Verified Dumping Sites" : "Điểm rác đã được xác minh"}
         tone="ruled"
-        lede="Người dân gửi ảnh, ban quản lý đối chiếu và xác nhận là có thật. Việc thu gom do đơn vị vệ sinh của địa phương thực hiện, GreenCity chưa điều phối phần đó."
+        lede={
+          locale === "en"
+            ? "Citizens submit photo evidence, which management verifies against local reports."
+            : "Người dân gửi ảnh, ban quản lý đối chiếu và xác nhận là có thật. Việc thu gom do đơn vị vệ sinh của địa phương thực hiện, GreenCity chưa điều phối phần đó."
+        }
         className="mt-12 sm:mt-16"
       >
         <div role="status" aria-live="polite" className="min-w-0">
@@ -228,16 +245,11 @@ export function HomeHighlights() {
             cleanupState.data.length === 0 ? (
             <EmptyState
               testId="public-cleanup-reports-empty"
-              title="Chưa có báo cáo nào được xác minh"
-              description="Báo cáo điểm rác sau khi được ban quản lý xác minh là có thật sẽ xuất hiện tại đây."
+              title={locale === "en" ? "No verified reports yet" : "Chưa có báo cáo nào được xác minh"}
+              description={tHighlights("noReports")}
             />
           ) : (
             <ul className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">
-              {/* Two columns and two reports: at the counts this feed actually
-                  carries, a third slot sits empty, and a half-filled row reads
-                  as missing content rather than as breathing room. The hero
-                  already shows the newest, so start after it, unless it is the
-                  only one where repeating beats an empty grid. */}
               {(cleanupState.data.length > 1
                 ? cleanupState.data.slice(1, 3)
                 : cleanupState.data
@@ -260,8 +272,9 @@ export function HomeHighlights() {
                       {report.description}
                     </p>
                     <p className="mt-1 text-xs text-muted">
-                      {place ? `${place} · ` : ""}xác minh{" "}
-                      {new Date(report.verifiedAt).toLocaleDateString("vi-VN")}
+                      {place ? `${place} · ` : ""}
+                      {locale === "en" ? "verified " : "xác minh "}
+                      {formatDate(report.verifiedAt, locale)}
                     </p>
                   </li>
                 );

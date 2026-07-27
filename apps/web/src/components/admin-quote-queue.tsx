@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { CreateQuoteRequestSchema, type ScrapRequestDto } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   fetchAdminSubmittedScrapRequests,
@@ -21,6 +22,10 @@ type LoadState =
   | { status: "ready"; data: ScrapRequestDto[] };
 
 export function AdminQuoteQueue() {
+  const locale = useLocale();
+  const tAdmin = useTranslations("admin");
+  const tAuth = useTranslations("auth");
+  const tErr = useTranslations("errors");
   const { status: authStatus, user, clearSessionAndRedirect } = useAuth();
   const isAdmin = user?.roles.includes("ADMIN") ?? false;
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -44,15 +49,13 @@ export function AdminQuoteQueue() {
 
   useEffect(() => {
     if (authStatus !== "authenticated") return;
-    // The client role check below is a UX shortcut only — this fetch is the
-    // real gate, since ADMIN is enforced server-side, not by this `if`.
     void load();
   }, [authStatus, load]);
 
   if (authStatus === "loading") {
     return (
       <p role="status" className="text-sm text-muted">
-        Đang kiểm tra đăng nhập…
+        Loading...
       </p>
     );
   }
@@ -61,16 +64,16 @@ export function AdminQuoteQueue() {
     return (
       <EmptyState
         testId="admin-queue-login-required"
-        title="Cần đăng nhập"
+        title={locale === "en" ? "Sign In Required" : "Cần đăng nhập"}
         description={
           <p>
             <Link
               href="/dang-nhap"
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Đăng nhập
+              {tAuth("loginButton")}
             </Link>{" "}
-            bằng tài khoản quản trị viên để xem hàng chờ báo giá.
+            {locale === "en" ? "with an administrator account to view the queue." : "bằng tài khoản quản trị viên để xem hàng chờ báo giá."}
           </p>
         }
       />
@@ -81,8 +84,8 @@ export function AdminQuoteQueue() {
     return (
       <EmptyState
         testId="admin-queue-forbidden"
-        title="Không có quyền truy cập"
-        description="Chỉ quản trị viên mới có thể báo giá phế liệu."
+        title={locale === "en" ? "Access Denied" : "Không có quyền truy cập"}
+        description={tErr("forbidden")}
       />
     );
   }
@@ -101,8 +104,8 @@ export function AdminQuoteQueue() {
       ) : state.data.length === 0 ? (
         <EmptyState
           testId="admin-queue-empty"
-          title="Không có yêu cầu chờ báo giá"
-          description="Chưa có yêu cầu bán phế liệu nào cần báo giá."
+          title={tAdmin("quoteQueueTitle")}
+          description={tAdmin("noItems")}
         />
       ) : (
         <ul className="flex min-w-0 flex-col gap-4">
@@ -129,6 +132,8 @@ function AdminQuoteRow({
   onQuoted: () => void;
   clearSessionAndRedirect: () => void;
 }) {
+  const locale = useLocale();
+  const tAdmin = useTranslations("admin");
   const [submitting, setSubmitting] = useState(false);
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -142,7 +147,7 @@ function AdminQuoteRow({
     const raw = { pricePerKgVnd: Number(new FormData(event.currentTarget).get("price")) };
     const parsed = CreateQuoteRequestSchema.safeParse(raw);
     if (!parsed.success) {
-      setFieldError("Vui lòng nhập giá hợp lệ.");
+      setFieldError(locale === "en" ? "Please enter a valid price." : "Vui lòng nhập giá hợp lệ.");
       return;
     }
     if (
@@ -150,9 +155,9 @@ function AdminQuoteRow({
       parsed.data.pricePerKgVnd > category.maxPricePerKgVnd
     ) {
       setFieldError(
-        `Giá phải trong khoảng ${formatVnd(category.minPricePerKgVnd)}–${formatVnd(
-          category.maxPricePerKgVnd,
-        )}/kg.`,
+        locale === "en"
+          ? `Price must be between ${formatVnd(category.minPricePerKgVnd, locale)}–${formatVnd(category.maxPricePerKgVnd, locale)}/kg.`
+          : `Giá phải trong khoảng ${formatVnd(category.minPricePerKgVnd, locale)}–${formatVnd(category.maxPricePerKgVnd, locale)}/kg.`,
       );
       return;
     }
@@ -183,8 +188,9 @@ function AdminQuoteRow({
           <p className="font-medium text-ink">{category.name}</p>
           <p className="text-sm text-muted">{request.estimatedWeightKg}kg</p>
           <p className="text-sm text-muted">
-            Khoảng giá công khai: {formatVnd(category.minPricePerKgVnd)}–
-            {formatVnd(category.maxPricePerKgVnd)}/kg
+            {tAdmin("validRange", {
+              range: `${formatVnd(category.minPricePerKgVnd, locale)}–${formatVnd(category.maxPricePerKgVnd, locale)}/kg`,
+            })}
           </p>
           {request.note ? (
             <p className="mt-1 text-sm text-muted">{request.note}</p>
@@ -201,7 +207,7 @@ function AdminQuoteRow({
             htmlFor={`price-${request.id}`}
             className="block text-sm font-medium text-ink"
           >
-            Giá báo (đ/kg)
+            {tAdmin("quotePriceLabel")}
           </label>
           <input
             id={`price-${request.id}`}
@@ -221,9 +227,9 @@ function AdminQuoteRow({
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-eco-sm transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
         >
-          {submitting ? "Đang gửi…" : "Gửi báo giá"}
+          {submitting ? tAdmin("sendingQuote") : tAdmin("sendQuote")}
         </button>
       </form>
       {fieldError ? (

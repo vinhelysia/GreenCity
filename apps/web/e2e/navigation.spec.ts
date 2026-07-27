@@ -98,7 +98,13 @@ test.describe("Mobile navigation", () => {
     // Backdrop dismiss also closes
     await menuToggle(page).click();
     await expect(menuToggle(page)).toHaveAttribute("aria-expanded", "true");
-    await page.getByRole("button", { name: "Đóng menu điều hướng" }).click();
+    // Click low on the backdrop rather than at its centre: the backdrop spans
+    // the whole area under the header, and the open drawer covers its middle,
+    // so a default centre-click lands on the drawer instead. Users tap the
+    // dimmed strip below the drawer, which is what this targets.
+    await page
+      .getByRole("button", { name: "Đóng menu điều hướng" })
+      .click({ position: { x: 20, y: 700 } });
     await expect(menuToggle(page)).toHaveAttribute("aria-expanded", "false");
     await expect(menuToggle(page)).toBeFocused();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import type { MarketplaceListing } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
@@ -10,6 +10,7 @@ import {
 } from "@/components/buyer-pass-panel";
 import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
+import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   fetchMarketplaceListings,
@@ -24,14 +25,11 @@ type LoadState =
   | { status: "error"; message: string }
   | { status: "ready"; data: MarketplaceListing[] };
 
-
 export function MarketplaceListings() {
+  const locale = useLocale();
+  const tMkt = useTranslations("marketplace");
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  // The whole SubscriptionState, not just the boolean: the pass panel needs the
-  // expiry date and whether checkout is configured. A failed request is its own
-  // state — collapsing it into null made the panel claim checkout was switched
-  // off when the truth was that we never got an answer.
   const [load, setLoad] = useState<SubscriptionLoad>({ kind: "loading" });
   const eligible: "unknown" | "error" | "eligible" | "not-eligible" =
     authStatus !== "authenticated"
@@ -58,8 +56,6 @@ export function MarketplaceListings() {
     void loadListings();
   }, [loadListings]);
 
-  // Bumped after a payment settles, so the pass unlocks the reserve buttons
-  // without the reader having to reload the page.
   const [subscriptionRun, setSubscriptionRun] = useState(0);
   const refreshSubscription = useCallback(() => {
     setSubscriptionRun((n) => n + 1);
@@ -78,7 +74,6 @@ export function MarketplaceListings() {
         clearSessionAndRedirect,
       );
       if (cancelled) return;
-      // 401 already redirects; anything else is an honest "we could not ask".
       setLoad(
         result.ok ? { kind: "ready", state: result.data } : { kind: "error" },
       );
@@ -90,41 +85,39 @@ export function MarketplaceListings() {
 
   return (
     <div className="min-w-0 space-y-6">
-      {/* One place to buy the pass, above the listings. Repeating the CTA on
-          every card would ask for the same money in a dozen places. */}
       <BuyerPassPanel load={load} onSubscriptionChange={refreshSubscription} />
 
       <div role="status" aria-live="polite" className="min-w-0">
-      {state.status === "loading" ? (
-        <div aria-hidden="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="skeleton h-64 w-full" />
-          <div className="skeleton h-64 w-full" />
-          <div className="skeleton h-64 w-full" />
-        </div>
-      ) : state.status === "error" ? (
-        <p role="alert" className="text-sm leading-relaxed text-red-800">
-          {state.message}
-        </p>
-      ) : state.data.length === 0 ? (
-        <EmptyState
-          testId="cho-online-listings-empty"
-          title="Chưa có tin đăng"
-          description="Chưa có phế liệu nào được niêm yết để đặt giữ."
-        />
-      ) : (
-        <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {state.data.map((listing) => (
-            <ListingCard
-              key={listing.id}
-              listing={listing}
-              authStatus={authStatus}
-              eligible={eligible}
-              clearSessionAndRedirect={clearSessionAndRedirect}
-              onReserved={loadListings}
-            />
-          ))}
-        </ul>
-      )}
+        {state.status === "loading" ? (
+          <div aria-hidden="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="skeleton h-64 w-full" />
+            <div className="skeleton h-64 w-full" />
+            <div className="skeleton h-64 w-full" />
+          </div>
+        ) : state.status === "error" ? (
+          <p role="alert" className="text-sm leading-relaxed text-red-800">
+            {state.message}
+          </p>
+        ) : state.data.length === 0 ? (
+          <EmptyState
+            testId="cho-online-listings-empty"
+            title={locale === "en" ? "No listings available" : "Chưa có tin đăng"}
+            description={tMkt("noListings")}
+          />
+        ) : (
+          <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {state.data.map((listing) => (
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                authStatus={authStatus}
+                eligible={eligible}
+                clearSessionAndRedirect={clearSessionAndRedirect}
+                onReserved={loadListings}
+              />
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
@@ -143,6 +136,8 @@ function ListingCard({
   clearSessionAndRedirect: () => void;
   onReserved: () => void;
 }) {
+  const locale = useLocale();
+  const tMkt = useTranslations("marketplace");
   const [reserving, setReserving] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
 
@@ -177,18 +172,18 @@ function ListingCard({
         <div className="min-w-0 flex-1">
           <div className="inline-flex items-center gap-1.5 mb-1">
             <EcoBadge variant="mint" className="text-[11px] font-bold">
-              Phế liệu
+              {locale === "en" ? "Recyclables" : "Phế liệu"}
             </EcoBadge>
           </div>
           <h3 className="font-display text-lg font-bold tracking-tight text-ink">
             {listing.categoryName}
           </h3>
           <p className="mt-1 text-sm tabular-nums text-muted">
-            {listing.estimatedWeightKg}kg ·{" "}
-            {formatVnd(listing.buyerPricePerKgVnd)}/kg
+            {tMkt("quantity", { weight: listing.estimatedWeightKg })} ·{" "}
+            {tMkt("unitPrice", { price: formatVnd(listing.buyerPricePerKgVnd, locale) })}
           </p>
           <p className="mt-2 font-display text-xl font-extrabold tabular-nums text-primary">
-            {formatVnd(listing.estimatedTotalVnd)}
+            {formatVnd(listing.estimatedTotalVnd, locale)}
           </p>
         </div>
       </div>
@@ -197,18 +192,18 @@ function ListingCard({
         <div>
           {listing.isOwn ? (
             <EcoBadge variant="gray" className="py-1">
-              Tin của bạn
+              {locale === "en" ? "Your Listing" : "Tin của bạn"}
             </EcoBadge>
           ) : listing.status !== "AVAILABLE" ? (
             <EcoBadge variant="coral" className="py-1">
-              Đã được đặt giữ
+              {locale === "en" ? "Reserved" : "Đã được đặt giữ"}
             </EcoBadge>
           ) : authStatus === "unauthenticated" ? (
             <Link
               href="/dang-nhap"
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-mint-surface/30"
             >
-              Đăng nhập để đặt giữ
+              {tMkt("loginToReserve")}
             </Link>
           ) : eligible === "eligible" ? (
             <button
@@ -217,10 +212,10 @@ function ListingCard({
               onClick={() => void onReserve()}
               className="inline-flex min-h-11 items-center justify-center rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-eco-sm transition-colors hover:bg-primary-hover disabled:opacity-60"
             >
-              {reserving ? "Đang đặt giữ…" : "Đặt giữ"}
+              {reserving ? tMkt("reserving") : tMkt("reserve")}
             </button>
           ) : eligible === "unknown" || authStatus === "loading" ? (
-            <span className="text-sm text-muted">Đang kiểm tra gói…</span>
+            <span className="text-sm text-muted">{locale === "en" ? "Checking pass..." : "Đang kiểm tra gói…"}</span>
           ) : eligible === "error" ? (
             <div className="text-sm text-muted">
               <button
@@ -228,10 +223,10 @@ function ListingCard({
                 disabled
                 className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
               >
-                Đặt giữ
+                {tMkt("reserve")}
               </button>
               <p className="mt-1.5">
-                Chưa kiểm tra được gói. Thử lại ở phần đầu trang.
+                {locale === "en" ? "Unable to check Buyer Pass." : "Chưa kiểm tra được gói. Thử lại ở phần đầu trang."}
               </p>
             </div>
           ) : (
@@ -241,10 +236,10 @@ function ListingCard({
                 disabled
                 className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-paper-2 px-4 py-2 text-sm font-medium text-muted opacity-60"
               >
-                Đặt giữ
+                {tMkt("reserve")}
               </button>
               <p className="mt-1.5">
-                Cần gói người mua. Mua ở phần đầu trang.
+                {tMkt("needPassToReserve")}
               </p>
             </div>
           )}

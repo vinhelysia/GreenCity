@@ -1,11 +1,16 @@
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { APP_NAME } from "@greencity/shared";
+import { Link } from "@/i18n/routing";
 import { EcoBadge } from "./eco-badge";
 import { IconLeaf, IconShieldCheck } from "./eco-icons";
 import { NAV_LINKS } from "./nav-links";
 
 /** Modern civic eco footer — identity, tagline, navigation, transparency badge. */
 export function SiteFooter() {
+  const tFooter = useTranslations("footer");
+  const tNav = useTranslations("navigation");
+  const tCommon = useTranslations("common");
+
   return (
     <footer className="mt-auto border-t border-edge bg-card text-ink">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12 md:flex-row md:items-start md:justify-between">
@@ -19,28 +24,27 @@ export function SiteFooter() {
             </span>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Nền tảng kết nối bán phế liệu tái chế theo khung giá niêm yết và báo cáo điểm rác
-            tự phát để ban quản lý xác minh, ghi nhận điểm thưởng sinh thái.
+            {tCommon("slogan")}
           </p>
           <div className="mt-4 inline-flex items-center gap-2">
             <EcoBadge variant="mint" icon={<IconShieldCheck className="h-3.5 w-3.5" />}>
-              Dữ liệu công khai & minh bạch
+              {tCommon("platformTagline")}
             </EcoBadge>
           </div>
         </div>
 
-        <nav aria-label="Liên kết chân trang" className="min-w-0">
+        <nav aria-label={tFooter("navigation")} className="min-w-0">
           <h3 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
-            Điều hướng
+            {tFooter("navigation")}
           </h3>
           <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-            {NAV_LINKS.map(({ href, label }) => (
+            {NAV_LINKS.map(({ href, key, label }) => (
               <li key={href}>
                 <Link
                   href={href}
                   className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition-colors hover:text-primary hover:underline"
                 >
-                  {label}
+                  {tNav(key as any) || label}
                 </Link>
               </li>
             ))}
@@ -49,7 +53,7 @@ export function SiteFooter() {
                 href="/dang-ky"
                 className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition-colors hover:text-primary hover:underline"
               >
-                Đăng ký
+                {tFooter("register")}
               </Link>
             </li>
             <li>
@@ -57,7 +61,7 @@ export function SiteFooter() {
                 href="/dang-nhap"
                 className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition-colors hover:text-primary hover:underline"
               >
-                Đăng nhập
+                {tFooter("login")}
               </Link>
             </li>
           </ul>
@@ -66,8 +70,8 @@ export function SiteFooter() {
 
       <div className="border-t border-edge bg-mint-surface/30 px-4 py-4 text-center text-xs text-muted">
         <div className="mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p>© {new Date().getFullYear()} GreenCity. Nền tảng sinh thái đô thị Việt Nam.</p>
-          <p>Dữ liệu vận hành & điểm thưởng theo thời gian thực.</p>
+          <p>{tFooter("copyright", { year: new Date().getFullYear().toString() })}</p>
+          <p>{tFooter("subline")}</p>
         </div>
       </div>
     </footer>

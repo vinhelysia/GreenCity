@@ -1,22 +1,25 @@
+import { type Pathnames } from "@/i18n/routing";
+
 /**
- * Public primary navigation — order matches teacher-approved wireframe, with
- * Bán phế liệu added at integration: the seller flow is a core product tab and
- * must be reachable without typing a URL. Admin screens stay out of public nav.
+ * Public primary navigation — order matches teacher-approved wireframe:
+ * Trang chủ, Thùng rác, Dịch vụ, Bán phế liệu, Đóng góp, Chợ online, Điểm thưởng.
  */
 export const NAV_LINKS = [
-  { href: "/", label: "Trang chủ" },
-  { href: "/thung-rac", label: "Thùng rác" },
-  { href: "/dich-vu", label: "Dịch vụ" },
-  { href: "/ban-phe-lieu", label: "Bán phế liệu" },
-  { href: "/dong-gop", label: "Đóng góp" },
-  { href: "/cho-online", label: "Chợ online" },
-  { href: "/diem-thuong", label: "Điểm thưởng" },
+  { href: "/", key: "home", label: "Trang chủ" },
+  { href: "/thung-rac", key: "recyclingBins", label: "Thùng rác" },
+  { href: "/dich-vu", key: "services", label: "Dịch vụ" },
+  { href: "/ban-phe-lieu", key: "sellScrap", label: "Bán phế liệu" },
+  { href: "/dong-gop", key: "communityCleanup", label: "Đóng góp" },
+  { href: "/cho-online", key: "marketplace", label: "Chợ online" },
+  { href: "/diem-thuong", key: "rewards", label: "Điểm thưởng" },
 ] as const;
 
 export type NavHref = (typeof NAV_LINKS)[number]["href"];
 
-/** Active state: exact match for home; prefix match for nested routes later. */
+/** Active state: exact match for home; prefix match for nested routes. */
 export function isNavActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  // Strip optional locale prefix (/en)
+  const cleanPath = pathname.replace(/^\/en(?=\/|$)/, "") || "/";
+  if (href === "/") return cleanPath === "/";
+  return cleanPath === href || cleanPath.startsWith(`${href}/`);
 }

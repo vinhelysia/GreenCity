@@ -10,20 +10,26 @@ const webRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const srcRoot = join(webRoot, "src");
 
 const REQUIRED_ROUTES = [
-  "app/page.tsx",
-  "app/thung-rac/page.tsx",
-  "app/dich-vu/page.tsx",
-  "app/dong-gop/page.tsx",
-  "app/cho-online/page.tsx",
-  "app/dang-nhap/page.tsx",
-  "app/dang-ky/page.tsx",
-  "app/ban-phe-lieu/page.tsx",
-  "app/admin/bao-gia/page.tsx",
-  "app/admin/dong-gop/page.tsx",
-  "app/loading.tsx",
+  "app/[locale]/layout.tsx",
+  "app/[locale]/page.tsx",
+  "app/[locale]/thung-rac/page.tsx",
+  "app/[locale]/dich-vu/page.tsx",
+  "app/[locale]/dong-gop/page.tsx",
+  "app/[locale]/cho-online/page.tsx",
+  "app/[locale]/dang-nhap/page.tsx",
+  "app/[locale]/dang-ky/page.tsx",
+  "app/[locale]/ban-phe-lieu/page.tsx",
+  "app/[locale]/admin/bao-gia/page.tsx",
+  "app/[locale]/admin/dong-gop/page.tsx",
+  "app/[locale]/admin/giao-dich/page.tsx",
+  // No app/loading.tsx on purpose: a Suspense boundary above [locale] flushes
+  // the response before the [...rest] catch-all can call notFound(), which
+  // turned every unknown URL into a 200 "soft 404". Removing it also let every
+  // page prerender statically. The catch-all below is what serves real 404s.
+  "app/[locale]/[...rest]/page.tsx",
+  "app/[locale]/not-found.tsx",
   "app/error.tsx",
   "app/not-found.tsx",
-  "app/layout.tsx",
 ];
 
 const REQUIRED_COMPONENTS = [
@@ -85,24 +91,16 @@ for (const file of sourceFiles) {
   }
 }
 
-// Nav labels and active helper present
+// Nav keys check in nav-links.ts
 const navLinks = readFileSync(join(srcRoot, "components/nav-links.ts"), "utf8");
-for (const label of [
-  "Trang chủ",
-  "Thùng rác",
-  "Dịch vụ",
-  "Đóng góp",
-  "Chợ online",
-]) {
-  if (!navLinks.includes(label)) {
-    failures.push(`nav-links.ts missing label: ${label}`);
+for (const key of ["home", "recyclingBins", "services", "sellScrap", "communityCleanup", "marketplace", "rewards"]) {
+  if (!navLinks.includes(key)) {
+    failures.push(`nav-links.ts missing item key: ${key}`);
   }
 }
 
-// The homepage used to close on four empty editorial slots, and this check
-// pinned them in place. They were replaced by sections that carry real
-// content, so it now pins those instead.
-const home = readFileSync(join(srcRoot, "app/page.tsx"), "utf8");
+// Homepage sections check
+const home = readFileSync(join(srcRoot, "app/[locale]/page.tsx"), "utf8");
 for (const section of ["HomeHero", "HomeHighlights", "HomeLoop", "cach-tinh-diem"]) {
   if (!home.includes(section)) {
     failures.push(`homepage missing section: ${section}`);
@@ -139,10 +137,6 @@ if (!login.includes("useAuth") && !/fetch\s*\(/.test(login)) {
   failures.push("login-form must invoke auth login (useAuth or fetch)");
 }
 
-// Marketplace: every fetch path must be same-origin /api/* (never a direct
-// API host). FORBIDDEN_SOURCE_PATTERNS above already bans localhost:3001,
-// NEXT_PUBLIC_API_URL and absolute-URL fetch() across all source files; this
-// additionally checks the agreed marketplace paths are actually present.
 const MARKETPLACE_API_PATHS = [
   "/api/scrap-categories",
   "/api/marketplace/listings",
@@ -158,6 +152,35 @@ for (const path of MARKETPLACE_API_PATHS) {
   if (!apiLib.includes(path)) {
     failures.push(`lib/api.ts missing same-origin marketplace path: ${path}`);
   }
+}
+
+// Dictionary parity check
+const viDict = JSON.parse(readFileSync(join(webRoot, "messages/vi.json"), "utf8"));
+const enDict = JSON.parse(readFileSync(join(webRoot, "messages/en.json"), "utf8"));
+
+function getDictKeys(obj, prefix = "") {
+  let keys = [];
+  for (const k of Object.keys(obj)) {
+    const fullKey = prefix ? `${prefix}.${k}` : k;
+    if (typeof obj[k] === "object" && obj[k] !== null && !Array.isArray(obj[k])) {
+      keys = keys.concat(getDictKeys(obj[k], fullKey));
+    } else {
+      keys.push(fullKey);
+    }
+  }
+  return keys.sort();
+}
+
+const viKeys = getDictKeys(viDict);
+const enKeys = getDictKeys(enDict);
+const missingInEn = viKeys.filter((k) => !enKeys.includes(k));
+const missingInVi = enKeys.filter((k) => !viKeys.includes(k));
+
+if (missingInEn.length) {
+  failures.push(`messages/en.json missing keys present in vi.json: ${missingInEn.join(", ")}`);
+}
+if (missingInVi.length) {
+  failures.push(`messages/vi.json missing keys present in en.json: ${missingInVi.join(", ")}`);
 }
 
 const browserVerify = readFileSync(
@@ -204,3 +227,4 @@ console.log(` - ${REQUIRED_ROUTES.length} routes/boundaries`);
 console.log(` - ${REQUIRED_COMPONENTS.length} components`);
 console.log(` - scanned ${sourceFiles.length} source files (no hard-coded API hosts)`);
 console.log(" - homepage hierarchy + real auth same-origin /api guards");
+console.log(` - dictionary parity OK (${viKeys.length} keys)`);

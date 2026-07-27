@@ -1,12 +1,27 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
+import { Link, usePathname } from "@/i18n/routing";
+import { LanguageSwitcher } from "./language-switcher";
 import { isNavActive, NAV_LINKS } from "./nav-links";
 
 /**
+ * Reserves the switcher's footprint while it waits for search params, so the
+ * header does not shift once it hydrates.
+ */
+function LanguageSwitcherFallback() {
+  return (
+    <div
+      aria-hidden="true"
+      className="inline-flex h-9 w-[4.75rem] items-center rounded-lg border border-edge bg-paper-2 p-0.5 shadow-eco-sm"
+    />
+  );
+}
+
+/**
  * Primary navigation: desktop inline links, mobile disclosure menu.
+ * Includes LanguageSwitcher for locale control.
  * Keyboard: Escape closes menu and returns focus to the toggle.
  */
 export function SiteNav() {
@@ -14,6 +29,8 @@ export function SiteNav() {
   const [open, setOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const tNav = useTranslations("navigation");
+  const tCommon = useTranslations("common");
 
   const close = useCallback(() => {
     setOpen(false);
@@ -41,7 +58,7 @@ export function SiteNav() {
 
   return (
     <nav
-      aria-label="Điều hướng chính"
+      aria-label={tCommon("mainNavigation")}
       className="min-w-0"
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
@@ -50,24 +67,33 @@ export function SiteNav() {
         }
       }}
     >
-      <button
-        ref={toggleRef}
-        type="button"
-        className="nav-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink lg:hidden"
-        aria-expanded={open}
-        aria-controls={menuId}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span className="sr-only">{open ? "Đóng menu" : "Mở menu"}</span>
-        <span aria-hidden="true">{open ? "Đóng" : "Menu"}</span>
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          ref={toggleRef}
+          type="button"
+          className="nav-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink lg:hidden"
+          aria-expanded={open}
+          aria-controls={menuId}
+          onClick={() => setOpen((value) => !value)}
+        >
+          <span className="sr-only">{open ? tCommon("closeMenu") : tCommon("openMenu")}</span>
+          <span aria-hidden="true">{open ? tCommon("closeShort") : tCommon("menuShort")}</span>
+        </button>
+
+        {/* Desktop Language Switcher */}
+        <div className="hidden lg:block">
+          <Suspense fallback={<LanguageSwitcherFallback />}>
+            <LanguageSwitcher />
+          </Suspense>
+        </div>
+      </div>
 
       {/* Backdrop below header so the toggle stays clickable */}
       {open ? (
         <button
           type="button"
           className="fixed inset-x-0 bottom-0 top-[var(--header-height,3.5rem)] z-40 bg-ink/20 lg:hidden"
-          aria-label="Đóng menu điều hướng"
+          aria-label={tCommon("dismissMenu")}
           onClick={closeAndFocusToggle}
         />
       ) : null}
@@ -81,8 +107,9 @@ export function SiteNav() {
           "lg:static lg:flex lg:flex-row lg:items-center lg:gap-1 lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none",
         ].join(" ")}
       >
-        {NAV_LINKS.map(({ href, label }) => {
+        {NAV_LINKS.map(({ href, key, label }) => {
           const active = isNavActive(pathname, href);
+          const translatedLabel = tNav(key as any) || label;
           return (
             <li key={href}>
               <Link
@@ -97,11 +124,18 @@ export function SiteNav() {
                     : "text-muted hover:bg-mint-surface/50 hover:text-ink",
                 ].join(" ")}
               >
-                {label}
+                {translatedLabel}
               </Link>
             </li>
           );
         })}
+
+        {/* Mobile Language Switcher inside Drawer */}
+        <li className="mt-2 border-t border-edge/60 pt-2 lg:hidden">
+          <Suspense fallback={<LanguageSwitcherFallback />}>
+            <LanguageSwitcher onNavigate={close} />
+          </Suspense>
+        </li>
       </ul>
     </nav>
   );

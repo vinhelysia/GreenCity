@@ -42,7 +42,12 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const AUTH_PAGES = new Set(["/dang-nhap", "/dang-ky"]);
+const AUTH_PAGES = new Set([
+  "/dang-nhap",
+  "/dang-ky",
+  "/en/login",
+  "/en/register",
+]);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -54,7 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setStatus("unauthenticated");
     if (!AUTH_PAGES.has(pathname)) {
-      router.replace("/dang-nhap");
+      const isEn = pathname?.startsWith("/en");
+      router.replace(isEn ? "/en/login" : "/dang-nhap");
     }
   }, [pathname, router]);
 

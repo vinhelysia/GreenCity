@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import type { CleanupReportDto } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   fetchAdminCleanupReports,
@@ -13,6 +14,7 @@ import {
   rejectCleanupReport,
   verifyCleanupReport,
 } from "@/lib/api";
+import { formatDateTime } from "@/lib/format";
 
 type LoadState =
   | { status: "loading" }
@@ -21,6 +23,10 @@ type LoadState =
   | { status: "ready"; data: CleanupReportDto[] };
 
 export function AdminCleanupQueue() {
+  const locale = useLocale();
+  const tAdmin = useTranslations("admin");
+  const tAuth = useTranslations("auth");
+  const tErr = useTranslations("errors");
   const { status: authStatus, user, clearSessionAndRedirect } = useAuth();
   const isAdmin = user?.roles.includes("ADMIN") ?? false;
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -53,7 +59,7 @@ export function AdminCleanupQueue() {
   if (authStatus === "loading") {
     return (
       <p role="status" className="text-sm text-muted">
-        Đang kiểm tra đăng nhập…
+        Loading...
       </p>
     );
   }
@@ -62,16 +68,16 @@ export function AdminCleanupQueue() {
     return (
       <EmptyState
         testId="admin-cleanup-queue-login-required"
-        title="Cần đăng nhập"
+        title={locale === "en" ? "Sign In Required" : "Cần đăng nhập"}
         description={
           <p>
             <Link
               href="/dang-nhap"
-              className="font-medium text-accent underline-offset-4 hover:underline"
+              className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Đăng nhập
+              {tAuth("loginButton")}
             </Link>{" "}
-            bằng tài khoản quản trị viên để xem hàng chờ báo cáo.
+            {locale === "en" ? "with an administrator account." : "bằng tài khoản quản trị viên để xem hàng chờ báo cáo."}
           </p>
         }
       />
@@ -82,8 +88,8 @@ export function AdminCleanupQueue() {
     return (
       <EmptyState
         testId="admin-cleanup-queue-forbidden"
-        title="Không có quyền truy cập"
-        description="Chỉ quản trị viên mới có thể duyệt báo cáo điểm rác."
+        title={locale === "en" ? "Access Denied" : "Không có quyền truy cập"}
+        description={tErr("forbidden")}
       />
     );
   }
@@ -102,8 +108,8 @@ export function AdminCleanupQueue() {
       ) : state.data.length === 0 ? (
         <EmptyState
           testId="admin-cleanup-queue-empty"
-          title="Không có báo cáo chờ duyệt"
-          description="Chưa có báo cáo điểm rác nào cần duyệt."
+          title={tAdmin("cleanupQueueTitle")}
+          description={tAdmin("noItems")}
         />
       ) : (
         <ul className="flex min-w-0 flex-col gap-4">
@@ -130,6 +136,8 @@ function AdminCleanupRow({
   onActionComplete: () => void;
   clearSessionAndRedirect: () => void;
 }) {
+  const locale = useLocale();
+  const tAdmin = useTranslations("admin");
   const [submitting, setSubmitting] = useState<"verifying" | "rejecting" | null>(
     null,
   );
@@ -186,10 +194,12 @@ function AdminCleanupRow({
         <div className="min-w-0 flex-1">
           <p className="font-medium text-ink">{report.description}</p>
           {locationText ? (
-            <p className="mt-1 text-sm text-muted">Địa điểm: {locationText}</p>
+            <p className="mt-1 text-sm text-muted">
+              {locale === "en" ? "Location: " : "Địa điểm: "}{locationText}
+            </p>
           ) : null}
           <p className="mt-1 text-xs text-muted">
-            Thời gian: {new Date(report.createdAt).toLocaleString("vi-VN")}
+            {locale === "en" ? "Submitted: " : "Thời gian: "}{formatDateTime(report.createdAt, locale)}
           </p>
         </div>
       </div>
@@ -199,17 +209,17 @@ function AdminCleanupRow({
           type="button"
           disabled={submitting !== null}
           onClick={() => void onVerify()}
-          className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-eco-sm transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
         >
-          {submitting === "verifying" ? "Đang xử lý…" : "Xác minh"}
+          {submitting === "verifying" ? tAdmin("processing") : tAdmin("verifyReport")}
         </button>
         <button
           type="button"
           disabled={submitting !== null}
           onClick={() => void onReject()}
-          className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-accent disabled:opacity-60"
+          className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-primary disabled:opacity-60"
         >
-          {submitting === "rejecting" ? "Đang xử lý…" : "Từ chối"}
+          {submitting === "rejecting" ? tAdmin("processing") : tAdmin("rejectReport")}
         </button>
       </div>
 

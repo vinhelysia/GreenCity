@@ -1,22 +1,28 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
+import { Link, type Pathnames } from "@/i18n/routing";
 
-const ADMIN_LINKS = [
-  { href: "/admin/giao-dich", label: "Xác nhận giao dịch" },
-  { href: "/admin/bao-gia", label: "Báo giá" },
-  { href: "/admin/dong-gop", label: "Duyệt báo cáo rác" },
-] as const;
+const ADMIN_LINKS: { href: Pathnames; key: "transactionsTab" | "quotesTab" | "cleanupTab"; fallback: string }[] = [
+  { href: "/admin/giao-dich", key: "transactionsTab", fallback: "Xác nhận giao dịch" },
+  { href: "/admin/bao-gia", key: "quotesTab", fallback: "Báo giá" },
+  { href: "/admin/dong-gop", key: "cleanupTab", fallback: "Duyệt báo cáo rác" },
+];
 
 /** Moves between the three admin queues. Deliberately absent from public nav. */
 export function AdminNav() {
   const pathname = usePathname();
+  const tAdmin = useTranslations("admin");
+  const tCommon = useTranslations("common");
+
+  const cleanPath = pathname?.replace(/^\/en(?=\/|$)/, "") || "/";
+
   return (
-    <nav aria-label="Khu vực quản trị" className="min-w-0">
+    <nav aria-label={tCommon("adminNavigation")} className="min-w-0">
       <ul className="flex min-w-0 flex-wrap items-center gap-2 border-b border-edge pb-3">
-        {ADMIN_LINKS.map(({ href, label }) => {
-          const active = pathname === href;
+        {ADMIN_LINKS.map(({ href, key, fallback }) => {
+          const active = cleanPath === href || cleanPath.startsWith(`${href}/`);
           return (
             <li key={href}>
               <Link
@@ -29,7 +35,7 @@ export function AdminNav() {
                     : "bg-card border border-edge text-muted hover:border-primary/40 hover:text-ink",
                 ].join(" ")}
               >
-                {label}
+                {tAdmin(key) || fallback}
               </Link>
             </li>
           );

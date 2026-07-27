@@ -1,21 +1,20 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { FormEvent, useId, useState } from "react";
 import { LoginRequestSchema } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { Link } from "@/i18n/routing";
 import { firstFieldErrors } from "@/lib/api";
 
 type FormState = "idle" | "submitting" | "success";
 
-const GENERIC_CREDENTIALS =
-  "Email hoặc mật khẩu không đúng. Vui lòng thử lại.";
-
-/**
- * Real login form — same-origin POST /api/auth/login with credentials.
- * Never accepts roles/status; never logs passwords.
- */
 export function LoginForm() {
+  const locale = useLocale();
+  const tAuth = useTranslations("auth");
+  const tVal = useTranslations("validation");
+  const tErr = useTranslations("errors");
+
   const emailId = useId();
   const passwordId = useId();
   const formErrorId = useId();
@@ -26,6 +25,11 @@ export function LoginForm() {
   const [formState, setFormState] = useState<FormState>("idle");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
+
+  const genericCredentials =
+    locale === "en"
+      ? "Incorrect email or password. Please try again."
+      : "Email hoặc mật khẩu không đúng. Vui lòng thử lại.";
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,8 +47,8 @@ export function LoginForm() {
       const flat = firstFieldErrors(parsed.error.flatten().fieldErrors);
       const localized: Record<string, string> = {};
       for (const [key, msg] of Object.entries(flat)) {
-        if (key === "email") localized[key] = "Email không hợp lệ.";
-        else if (key === "password") localized[key] = "Vui lòng nhập mật khẩu.";
+        if (key === "email") localized[key] = tVal("invalidEmail");
+        else if (key === "password") localized[key] = tVal("required");
         else localized[key] = msg;
       }
       setFieldErrors(localized);
@@ -55,18 +59,16 @@ export function LoginForm() {
     setFormState("submitting");
     const result = await login(parsed.data);
     if (!result.ok) {
-      // Never distinguish unknown email vs wrong password.
       if (
         result.status === 401 ||
         result.error.code === "INVALID_CREDENTIALS"
       ) {
-        setServerError(GENERIC_CREDENTIALS);
+        setServerError(genericCredentials);
       } else if (result.status === 429) {
-        setServerError("Quá nhiều lần thử. Vui lòng đợi một chút rồi thử lại.");
+        setServerError(locale === "en" ? "Too many attempts. Please try again in a moment." : "Quá nhiều lần thử. Vui lòng đợi một chút rồi thử lại.");
       } else {
         setServerError(
-          result.error.message ||
-            "Không thể đăng nhập. Vui lòng thử lại sau.",
+          result.error.message || tErr("generic"),
         );
       }
       setFormState("idle");
@@ -80,7 +82,7 @@ export function LoginForm() {
     return (
       <div className="mt-8 max-w-md" role="status">
         <p className="text-sm leading-relaxed text-ink">
-          Bạn đã đăng nhập với{" "}
+          {locale === "en" ? "Signed in as " : "Bạn đã đăng nhập với "}
           <span className="font-medium">{user.email}</span>.
         </p>
       </div>
@@ -101,7 +103,7 @@ export function LoginForm() {
     >
       <div>
         <label htmlFor={emailId} className="block text-sm font-medium text-ink">
-          Email
+          {tAuth("emailLabel")}
         </label>
         <input
           id={emailId}
@@ -113,8 +115,8 @@ export function LoginForm() {
           disabled={formState === "submitting"}
           aria-invalid={emailError ? true : undefined}
           aria-describedby={emailError ? emailErrorId : undefined}
-        className="mt-1.5 w-full min-h-11 rounded-xl border border-edge bg-card px-3.5 py-2.5 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          placeholder="ban@example.com"
+          className="mt-1.5 w-full min-h-11 rounded-xl border border-edge bg-card px-3.5 py-2.5 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          placeholder={tAuth("emailPlaceholder")}
         />
         {emailError ? (
           <p id={emailErrorId} className="mt-1.5 text-sm font-medium text-red-600" role="alert">
@@ -125,7 +127,7 @@ export function LoginForm() {
 
       <div>
         <label htmlFor={passwordId} className="block text-sm font-semibold text-ink">
-          Mật khẩu
+          {tAuth("passwordLabel")}
         </label>
         <div className="mt-1.5 flex min-w-0 gap-2">
           <input
@@ -137,6 +139,7 @@ export function LoginForm() {
             disabled={formState === "submitting"}
             aria-invalid={passwordError ? true : undefined}
             aria-describedby={passwordError ? passwordErrorId : undefined}
+            placeholder={tAuth("passwordPlaceholder")}
             className="min-h-11 min-w-0 flex-1 rounded-xl border border-edge bg-card px-3.5 py-2.5 text-base text-ink focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
@@ -146,8 +149,8 @@ export function LoginForm() {
             aria-controls={passwordId}
             onClick={() => setShowPassword((value) => !value)}
           >
-            {showPassword ? "Ẩn" : "Hiện"}
-            <span className="sr-only"> mật khẩu</span>
+            {showPassword ? (locale === "en" ? "Hide" : "Ẩn") : (locale === "en" ? "Show" : "Hiện")}
+            <span className="sr-only"> {tAuth("passwordLabel")}</span>
           </button>
         </div>
         {passwordError ? (
@@ -166,7 +169,7 @@ export function LoginForm() {
         disabled={formState === "submitting"}
         className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-5 py-3 text-base font-semibold text-white shadow-eco transition-colors hover:bg-primary-hover disabled:opacity-60"
       >
-        {formState === "submitting" ? "Đang đăng nhập…" : "Đăng nhập"}
+        {formState === "submitting" ? tAuth("loggingIn") : tAuth("loginButton")}
       </button>
 
       {serverError ? (
@@ -185,16 +188,16 @@ export function LoginForm() {
         className="text-sm leading-relaxed text-muted"
       >
         {formState === "submitting"
-          ? "Đang gửi yêu cầu đăng nhập…"
+          ? tAuth("loggingIn")
           : formState === "success"
-            ? "Đăng nhập thành công."
-            : "Chưa có tài khoản? "}
+            ? tAuth("loginSuccess")
+            : tAuth("noAccount")}
         {formState === "idle" && !serverError ? (
           <Link
             href="/dang-ky"
-            className="font-medium text-accent underline-offset-4 hover:underline"
+            className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Đăng ký
+            {tAuth("registerNow")}
           </Link>
         ) : null}
       </p>

@@ -1,29 +1,24 @@
 "use client";
 
-import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import type { SubscriptionState } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EcoBadge } from "@/components/eco-badge";
 import { IconShieldCheck, IconSparkles } from "@/components/eco-icons";
+import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   createSubscriptionPayment,
   fetchSubscriptionPaymentStatus,
   paymentErrorMessage,
 } from "@/lib/api";
+import { formatDate, formatVnd } from "@/lib/format";
 
-/**
- * Survives the round trip to payOS and back, and no longer: the pass belongs to
- * the tab that started it, and a value left in localStorage would still be
- * there weeks later pointing at a payment nobody remembers.
- */
 const PENDING_PAYMENT_KEY = "greencity.pendingSubscriptionPaymentId";
 
 const POLL_INTERVAL_MS = 2_000;
 const MAX_POLL_ATTEMPTS = 30;
-
-const PRICE_LABEL = "50.000đ";
 
 type PollState =
   | { kind: "checking" }
@@ -33,7 +28,6 @@ type PollState =
   | { kind: "failed"; message: string }
   | { kind: "unconfirmed" };
 
-/** What the parent knows about the subscription, including "we could not ask". */
 export type SubscriptionLoad =
   | { kind: "loading" }
   | { kind: "error" }
@@ -51,7 +45,7 @@ function clearPendingPaymentId(): void {
   try {
     window.sessionStorage.removeItem(PENDING_PAYMENT_KEY);
   } catch {
-    /* nothing to clean up if storage was never writable */
+    /* storage unavailable */
   }
 }
 
@@ -62,11 +56,17 @@ export function BuyerPassPanel({
   load: SubscriptionLoad;
   onSubscriptionChange: () => void;
 }) {
+  const locale = useLocale();
+  const tMkt = useTranslations("marketplace");
+  const tSub = useTranslations("subscription");
+  const tCommon = useTranslations("common");
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [starting, setStarting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [poll, setPoll] = useState<PollState>({ kind: "checking" });
   const [pollRun, setPollRun] = useState(0);
+
+  const priceLabel = formatVnd(50000, locale);
 
   useEffect(() => {
     if (authStatus !== "authenticated") return;
@@ -117,7 +117,7 @@ export function BuyerPassPanel({
         clearPendingPaymentId();
         setPoll({
           kind: "failed",
-          message: "Giao dịch không thành công. Bạn có thể thử lại.",
+          message: locale === "en" ? "Payment failed. You may try again." : "Giao dịch không thành công. Bạn có thể thử lại.",
         });
         return;
       }
@@ -135,7 +135,7 @@ export function BuyerPassPanel({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [authStatus, clearSessionAndRedirect, onSubscriptionChange, pollRun]);
+  }, [authStatus, clearSessionAndRedirect, onSubscriptionChange, pollRun, locale]);
 
   const onCheckout = useCallback(async () => {
     if (starting) return;
@@ -176,7 +176,7 @@ export function BuyerPassPanel({
           data-testid="payment-polling"
           className="mt-3 text-sm font-medium text-primary"
         >
-          Đang xác nhận giao dịch với ngân hàng…
+          {locale === "en" ? "Confirming payment with bank..." : "Đang xác nhận giao dịch với ngân hàng…"}
         </p>
       );
     }
@@ -189,9 +189,9 @@ export function BuyerPassPanel({
           className="mt-3 rounded-xl bg-yellow/10 p-4 text-sm text-ink border border-yellow/30"
         >
           <p>
-            Chưa xác nhận được giao dịch. Chúng tôi chưa biết ngân hàng đã ghi
-            nhận hay chưa, nên bạn đừng thanh toán lại. Hãy kiểm tra lại sau ít
-            phút, hoặc mở ứng dụng ngân hàng để xem lịch sử giao dịch.
+            {locale === "en"
+              ? "Payment unconfirmed. Please check your bank history or retry in a few moments."
+              : "Chưa xác nhận được giao dịch. Chúng tôi chưa biết ngân hàng đã ghi nhận hay chưa, nên bạn đừng thanh toán lại. Hãy kiểm tra lại sau ít phút, hoặc mở ứng dụng ngân hàng để xem lịch sử giao dịch."}
           </p>
           <button
             type="button"
@@ -199,7 +199,7 @@ export function BuyerPassPanel({
             onClick={() => setPollRun((n) => n + 1)}
             className="mt-3 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40"
           >
-            Kiểm tra lại
+            {tCommon("retry")}
           </button>
         </div>
       );
@@ -212,7 +212,7 @@ export function BuyerPassPanel({
           data-testid="payment-applying"
           className="mt-3 text-sm font-semibold text-primary"
         >
-          Đã nhận thanh toán, đang cập nhật quyền cho tài khoản của bạn…
+          {locale === "en" ? "Payment received, updating your Buyer Pass status..." : "Đã nhận thanh toán, đang cập nhật quyền cho tài khoản của bạn…"}
         </p>
       );
     }
@@ -225,7 +225,7 @@ export function BuyerPassPanel({
             data-testid="payment-success"
             className="mt-3 text-sm font-semibold text-primary"
           >
-            Thanh toán thành công. Gói người mua của bạn đã được kích hoạt.
+            {locale === "en" ? "Payment successful. Your Buyer Pass is now active." : "Thanh toán thành công. Gói người mua của bạn đã được kích hoạt."}
           </p>
         ) : null}
 
@@ -242,11 +242,11 @@ export function BuyerPassPanel({
         {active ? (
           <div className="mt-3 flex items-center gap-2">
             <EcoBadge variant="primary" icon={<IconShieldCheck className="h-4 w-4" />}>
-              Đang hoạt động
+              {tMkt("passActive")}
             </EcoBadge>
             {expiresAt ? (
               <span className="text-sm text-muted">
-                hết hạn {new Date(expiresAt).toLocaleDateString("vi-VN")}
+                {tMkt("passExpires", { date: formatDate(expiresAt, locale) })}
               </span>
             ) : null}
           </div>
@@ -258,8 +258,8 @@ export function BuyerPassPanel({
           >
             <p>
               {poll.kind === "paid"
-                ? "Thanh toán đã được ghi nhận, nhưng chúng tôi chưa kiểm tra được trạng thái gói người mua của bạn."
-                : "Không kiểm tra được trạng thái gói người mua."}
+                ? (locale === "en" ? "Payment recorded, but unable to check pass status." : "Thanh toán đã được ghi nhận, nhưng chúng tôi chưa kiểm tra được trạng thái gói người mua của bạn.")
+                : (locale === "en" ? "Unable to check Buyer Pass status." : "Không kiểm tra được trạng thái gói người mua.")}
             </p>
             <button
               type="button"
@@ -267,16 +267,16 @@ export function BuyerPassPanel({
               onClick={onSubscriptionChange}
               className="mt-3 inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40"
             >
-              Thử lại
+              {tCommon("retry")}
             </button>
           </div>
         ) : load.kind === "ready" && load.state.checkoutAvailable ? (
           <>
             <p className="mt-3 text-sm leading-relaxed text-muted">
               <span className="font-semibold text-ink">
-                {PRICE_LABEL} / 30 ngày
+                {tMkt("passPrice")}
               </span>
-              {" · chuyển khoản VietQR một lần · không tự động gia hạn"}
+              {locale === "en" ? " · one-time VietQR transfer · no auto-renewal" : " · chuyển khoản VietQR một lần · không tự động gia hạn"}
             </p>
             <button
               type="button"
@@ -288,8 +288,8 @@ export function BuyerPassPanel({
               <IconSparkles className="h-4 w-4" />
               <span>
                 {starting
-                  ? "Đang chuyển tới trang thanh toán…"
-                  : `Chuyển khoản ${PRICE_LABEL} qua VietQR`}
+                  ? tSub("processing")
+                  : (locale === "en" ? `Pay ${priceLabel} via VietQR` : `Chuyển khoản ${priceLabel} qua VietQR`)}
               </span>
             </button>
             {checkoutError ? (
@@ -307,8 +307,7 @@ export function BuyerPassPanel({
             data-testid="checkout-unavailable"
             className="mt-3 max-w-prose text-sm leading-relaxed text-muted"
           >
-            Thanh toán VietQR chưa được mở trên môi trường này, nên tạm thời chưa
-            mua gói người mua được.
+            {locale === "en" ? "VietQR checkout unavailable in this environment." : "Thanh toán VietQR chưa được mở trên môi trường này, nên tạm thời chưa mua gói người mua được."}
           </p>
         )}
       </>
@@ -320,14 +319,13 @@ export function BuyerPassPanel({
       return (
         <>
           <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted">
-            Gói người mua cho phép bạn đặt giữ phế liệu trên chợ. Người bán vẫn
-            đăng tin và xem giá bình thường mà không cần gói này.
+            {tSub("desc")}
           </p>
           <Link
             href="/dang-nhap"
             className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
-            Đăng nhập để mua gói &rarr;
+            {tMkt("loginToBuyPass")} &rarr;
           </Link>
         </>
       );
@@ -348,9 +346,9 @@ export function BuyerPassPanel({
           id="buyer-pass-heading"
           className="font-display text-xl font-bold tracking-tight text-ink"
         >
-          Gói người mua
+          {tSub("title")}
         </h2>
-        <EcoBadge variant="mint">30 Ngày</EcoBadge>
+        <EcoBadge variant="mint">{tSub("duration")}</EcoBadge>
       </div>
       {body()}
     </section>

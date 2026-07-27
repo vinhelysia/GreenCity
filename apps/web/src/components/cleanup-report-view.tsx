@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   CreateCleanupReportSchema,
   type CleanupReportDto,
@@ -32,12 +33,6 @@ type LoadState<T> =
   | { status: "error"; message: string }
   | { status: "ready"; data: T };
 
-const STATUS_LABEL: Record<CleanupReportStatus, string> = {
-  SUBMITTED: "Đã gửi",
-  VERIFIED: "Đã xác minh",
-  REJECTED: "Đã từ chối",
-};
-
 const STATUS_VARIANT: Record<CleanupReportStatus, "mint" | "primary" | "coral"> = {
   SUBMITTED: "mint",
   VERIFIED: "primary",
@@ -45,21 +40,29 @@ const STATUS_VARIANT: Record<CleanupReportStatus, "mint" | "primary" | "coral"> 
 };
 
 function StatusBadge({ status }: { status: CleanupReportStatus }) {
+  const tCleanup = useTranslations("cleanup");
+  const labels: Record<CleanupReportStatus, string> = {
+    SUBMITTED: tCleanup("statusPending") || "Chờ xác minh",
+    VERIFIED: tCleanup("statusVerified") || "Đã xác minh (+50 điểm)",
+    REJECTED: tCleanup("statusRejected") || "Từ chối",
+  };
+
   return (
     <EcoBadge variant={STATUS_VARIANT[status]} className="text-xs uppercase tracking-wider">
-      {STATUS_LABEL[status]}
+      {labels[status]}
     </EcoBadge>
   );
 }
 
 export function CleanupReportView() {
+  const tCommon = useTranslations("common");
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [refreshCounter, setRefreshCounter] = useState(0);
 
   if (authStatus === "loading") {
     return (
       <p role="status" className="text-sm text-muted">
-        Đang kiểm tra đăng nhập…
+        {tCommon("loading")}
       </p>
     );
   }
@@ -94,6 +97,10 @@ function SubmitCleanupReportForm({
   clearSessionAndRedirect: () => void;
   onSubmitted: () => void;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("cleanup");
+  const tVal = useTranslations("validation");
+
   const descriptionId = useId();
   const photoId = useId();
   const addressId = useId();
@@ -140,7 +147,6 @@ function SubmitCleanupReportForm({
     setServerError(null);
     setFieldErrors({});
 
-    // Capture form before any await
     const form = event.currentTarget;
     const fd = new FormData(form);
     const description = String(fd.get("description") ?? "").trim();
@@ -164,9 +170,9 @@ function SubmitCleanupReportForm({
       const localized: Record<string, string> = {};
       for (const [key, msg] of Object.entries(flat)) {
         if (key === "description")
-          localized[key] = "Mô tả phải từ 10 đến 1000 ký tự.";
+          localized[key] = locale === "en" ? "Description must be 10-1000 characters." : "Mô tả phải từ 10 đến 1000 ký tự.";
         else if (key === "mediaAssetId")
-          localized[key] = "Vui lòng tải lên một ảnh.";
+          localized[key] = tVal("required");
         else localized[key] = msg;
       }
       setFieldErrors(localized);
@@ -201,7 +207,7 @@ function SubmitCleanupReportForm({
         id="cleanup-form-heading"
         className="font-display text-xl font-semibold tracking-tight text-ink"
       >
-        Gửi báo cáo điểm rác
+        {t("formTitle")}
       </h2>
       <form
         className="mt-4 flex max-w-md min-w-0 flex-col gap-5"
@@ -214,7 +220,7 @@ function SubmitCleanupReportForm({
             htmlFor={photoId}
             className="block text-sm font-medium text-ink"
           >
-            Ảnh rác thải (một ảnh)
+            {t("photoLabel")}
           </label>
           <input
             id={photoId}
@@ -228,7 +234,7 @@ function SubmitCleanupReportForm({
             className="mt-1.5 block w-full min-w-0 text-sm text-ink file:mr-3 file:min-h-11 file:rounded-md file:border file:border-edge file:bg-paper file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink"
           />
           <div role="status" className="mt-2 text-sm text-muted">
-            {photoState.status === "uploading" ? "Đang tải ảnh lên…" : null}
+            {photoState.status === "uploading" ? (locale === "en" ? "Uploading image..." : "Đang tải ảnh lên…") : null}
             {photoState.status === "error" ? (
               <span role="alert" className="text-red-800">
                 {photoState.message}
@@ -238,7 +244,7 @@ function SubmitCleanupReportForm({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={photoState.previewUrl}
-                alt="Ảnh báo cáo đã chọn"
+                alt="Selected site preview"
                 className="mt-1 h-24 w-24 rounded-md border border-edge object-cover"
               />
             ) : null}
@@ -255,7 +261,7 @@ function SubmitCleanupReportForm({
             htmlFor={descriptionId}
             className="block text-sm font-medium text-ink"
           >
-            Mô tả
+            {t("descLabel")}
           </label>
           <textarea
             id={descriptionId}
@@ -270,7 +276,7 @@ function SubmitCleanupReportForm({
               descriptionError ? `${descriptionId}-error` : undefined
             }
             className="mt-1.5 w-full min-w-0 rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
-            placeholder="Mô tả vị trí, tình trạng rác thải (tối thiểu 10 ký tự)…"
+            placeholder={t("descPlaceholder")}
           />
           {descriptionError ? (
             <p
@@ -288,7 +294,7 @@ function SubmitCleanupReportForm({
             htmlFor={addressId}
             className="block text-sm font-medium text-ink"
           >
-            Địa chỉ <span className="font-normal text-muted">(tuỳ chọn)</span>
+            {t("locationLabel")}
           </label>
           <input
             id={addressId}
@@ -297,7 +303,7 @@ function SubmitCleanupReportForm({
             maxLength={240}
             disabled={submitState === "submitting"}
             className="mt-1.5 min-h-11 w-full rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
-            placeholder="Ví dụ: Số 123 Đường ABC"
+            placeholder={t("locationPlaceholder")}
           />
         </div>
 
@@ -307,7 +313,7 @@ function SubmitCleanupReportForm({
               htmlFor={wardId}
               className="block text-sm font-medium text-ink"
             >
-              Phường <span className="font-normal text-muted">(tuỳ chọn)</span>
+              {locale === "en" ? "Ward" : "Phường"}
             </label>
             <input
               id={wardId}
@@ -324,7 +330,7 @@ function SubmitCleanupReportForm({
               htmlFor={districtId}
               className="block text-sm font-medium text-ink"
             >
-              Quận <span className="font-normal text-muted">(tuỳ chọn)</span>
+              {locale === "en" ? "District" : "Quận"}
             </label>
             <input
               id={districtId}
@@ -341,8 +347,7 @@ function SubmitCleanupReportForm({
               htmlFor={cityId}
               className="block text-sm font-medium text-ink"
             >
-              Thành phố{" "}
-              <span className="font-normal text-muted">(tuỳ chọn)</span>
+              {locale === "en" ? "City" : "Thành phố"}
             </label>
             <input
               id={cityId}
@@ -362,7 +367,7 @@ function SubmitCleanupReportForm({
           }
           className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
         >
-          {submitState === "submitting" ? "Đang gửi…" : "Gửi báo cáo"}
+          {submitState === "submitting" ? t("submitting") : t("submitReport")}
         </button>
 
         {serverError ? (
@@ -377,7 +382,7 @@ function SubmitCleanupReportForm({
           className="text-sm leading-relaxed text-muted"
         >
           {submitState === "success"
-            ? "Đã gửi báo cáo. Xem trong danh sách bên dưới."
+            ? (locale === "en" ? "Report submitted successfully. See history below." : "Đã gửi báo cáo. Xem trong danh sách bên dưới.")
             : null}
         </p>
       </form>
@@ -392,6 +397,8 @@ function MyCleanupReports({
   refreshKey: number;
   clearSessionAndRedirect: () => void;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("cleanup");
   const [state, setState] = useState<LoadState<CleanupReportDto[]>>({
     status: "loading",
   });
@@ -422,7 +429,7 @@ function MyCleanupReports({
         id="my-cleanup-heading"
         className="font-display text-xl font-semibold tracking-tight text-ink"
       >
-        Báo cáo của tôi
+        {t("myReportsTitle")}
       </h2>
       <div className="mt-4" role="status" aria-live="polite">
         {state.status === "loading" ? (
@@ -437,8 +444,8 @@ function MyCleanupReports({
         ) : state.data.length === 0 ? (
           <EmptyState
             testId="my-cleanup-reports-empty"
-            title="Chưa có báo cáo nào"
-            description="Gửi báo cáo điểm rác ở trên để bắt đầu."
+            title={locale === "en" ? "No reports submitted yet" : "Chưa có báo cáo nào"}
+            description={t("noReports")}
           />
         ) : (
           <ul className="flex min-w-0 flex-col gap-4">
@@ -469,7 +476,7 @@ function MyCleanupReports({
                         <p className="font-medium text-ink">{report.description}</p>
                         {locationText ? (
                           <p className="mt-1 text-sm text-muted">
-                            Địa điểm: {locationText}
+                            {locale === "en" ? "Location: " : "Địa điểm: "}{locationText}
                           </p>
                         ) : null}
                       </div>

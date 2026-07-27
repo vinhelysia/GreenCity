@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { APP_NAME } from "@greencity/shared";
+import { Link } from "@/i18n/routing";
 import { IconLeaf } from "./eco-icons";
 import { HeaderLoginLink } from "./header-login-link";
 import { SiteNav } from "./site-nav";

@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useLocale } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const DURATION_MS = 500;
-const formatter = new Intl.NumberFormat("vi-VN");
 
 /** Exponential ease-out, the curve --ease-out uses: fast, then settling. */
 function easeOut(t: number): number {
@@ -29,6 +29,13 @@ export function CountUp({
 }) {
   const [shown, setShown] = useState(0);
   const from = useRef(0);
+  // Follows the page's locale, not the machine's: on /en these figures are
+  // English ("43.5"), on Vietnamese pages they stay "43,5".
+  const locale = useLocale();
+  const formatter = useMemo(
+    () => new Intl.NumberFormat(locale === "en" ? "en-US" : "vi-VN"),
+    [locale],
+  );
 
   useEffect(() => {
     const target = value;

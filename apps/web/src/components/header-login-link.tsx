@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useAuth } from "@/components/auth-provider";
+import { Link, usePathname } from "@/i18n/routing";
 
 /**
  * Header auth control: login CTA when signed out, identity + logout when signed in.
@@ -11,8 +11,13 @@ import { useAuth } from "@/components/auth-provider";
 export function HeaderLoginLink() {
   const pathname = usePathname();
   const { user, status, logout } = useAuth();
-  const loginActive = pathname === "/dang-nhap";
-  const registerActive = pathname === "/dang-ky";
+  const tNav = useTranslations("navigation");
+  const tAuth = useTranslations("auth");
+  const tFooter = useTranslations("footer");
+
+  const cleanPath = pathname?.replace(/^\/en(?=\/|$)/, "") || "/";
+  const loginActive = cleanPath === "/dang-nhap";
+  const registerActive = cleanPath === "/dang-ky";
 
   if (status === "loading") {
     return (
@@ -30,22 +35,19 @@ export function HeaderLoginLink() {
     const isAdmin = user.roles.includes("ADMIN");
     return (
       <div className="flex min-w-0 items-center gap-2">
-        {/* Admin screens are not in the public nav and an admin had no way to
-            reach them but to type the URL. Shown only to admins; the routes
-            are guarded server-side regardless. */}
         {isAdmin ? (
           <Link
             href="/admin/giao-dich"
             data-testid="header-admin"
-            aria-current={pathname.startsWith("/admin") ? "page" : undefined}
+            aria-current={cleanPath.startsWith("/admin") ? "page" : undefined}
             className={[
               "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md px-2 py-2 text-sm font-medium transition-colors duration-quick ease-out sm:px-3",
-              pathname.startsWith("/admin")
-                ? "text-accent underline decoration-accent decoration-2 underline-offset-4"
+              cleanPath.startsWith("/admin")
+                ? "text-primary font-bold underline decoration-primary decoration-2 underline-offset-4"
                 : "text-muted hover:text-ink",
             ].join(" ")}
           >
-            Quản trị
+            {tNav("admin")}
           </Link>
         ) : null}
         <span
@@ -58,12 +60,12 @@ export function HeaderLoginLink() {
         <button
           type="button"
           data-testid="header-logout"
-          className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-3 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-accent hover:text-accent sm:px-4"
+          className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-3 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-primary hover:text-primary sm:px-4"
           onClick={() => {
             void logout();
           }}
         >
-          Đăng xuất
+          {tAuth("signOut")}
         </button>
       </div>
     );
@@ -81,7 +83,7 @@ export function HeaderLoginLink() {
             : "text-muted hover:text-ink",
         ].join(" ")}
       >
-        Đăng ký
+        {tFooter("register")}
       </Link>
       <Link
         href="/dang-nhap"
@@ -94,7 +96,7 @@ export function HeaderLoginLink() {
             : "bg-primary text-white hover:bg-primary-hover",
         ].join(" ")}
       >
-        Đăng nhập
+        {tFooter("login")}
       </Link>
     </div>
   );
