@@ -1,20 +1,31 @@
+import Image from "next/image";
 import Link from "next/link";
 import { EcoBadge } from "./eco-badge";
-import { EcoCityHeroIllustration } from "./eco-city-hero-illustration";
 import { IconArrowRight, IconLeaf, IconShieldCheck, IconSparkles } from "./eco-icons";
 
 /**
  * Opening hero section — Server Component.
- * Proposition left column, controlled eco-city vector illustration right column.
+ * Proposition over a controlled, decorative eco-city panorama.
  * Exact H1: "Rác có người mua. Điểm rác có người báo."
  */
 export function HomeHero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="grid min-w-0 grid-cols-1 items-center gap-8 pb-12 sm:pb-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-12"
+      className="home-hero relative isolate min-w-0 overflow-hidden rounded-[2rem] border border-edge px-5 py-10 shadow-eco sm:px-8 sm:py-14 lg:min-h-[38rem] lg:px-12 lg:py-16"
     >
-      <div className="min-w-0">
+      <Image
+        src="/eco-city-hero.png"
+        alt=""
+        fill
+        priority
+        quality={88}
+        sizes="(max-width: 768px) 100vw, 1440px"
+        className="home-hero-image object-cover"
+      />
+      <div aria-hidden="true" className="home-hero-veil absolute inset-0" />
+
+      <div className="relative z-10 min-w-0 max-w-2xl">
         <div className="mb-4 inline-flex items-center gap-2">
           <EcoBadge variant="mint" icon={<IconLeaf className="h-3.5 w-3.5" />}>
             Nền tảng sinh thái số GreenCity
@@ -77,14 +88,6 @@ export function HomeHero() {
         </div>
       </div>
 
-      <figure className="relative min-w-0">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl border border-edge bg-card p-4 shadow-eco">
-          <EcoCityHeroIllustration />
-        </div>
-        <figcaption className="mt-2.5 text-center text-xs leading-relaxed text-muted">
-          Mô phỏng đô thị xanh thông minh & chuỗi tuần hoàn tài nguyên sinh thái GreenCity.
-        </figcaption>
-      </figure>
     </section>
   );
 }
