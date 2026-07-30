@@ -213,34 +213,6 @@ const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   CLEANUP_REPORT_NOT_PENDING: "Báo cáo không còn ở trạng thái chờ duyệt.",
 };
 
-/**
- * Vietnamese copy for the payment error codes. Branching on `code` and never on
- * the server's message: the message is prose that may change, the code is the
- * contract.
- */
-const PAYMENT_ERROR_MESSAGES: Record<string, string> = {
-  PAYMENT_NOT_CONFIGURED:
-    "Thanh toán VietQR chưa được mở trên môi trường này. Bạn thử lại sau nhé.",
-  PAYMENT_PROVIDER_UNAVAILABLE:
-    "Chưa kết nối được cổng thanh toán. Bạn thử lại sau ít phút.",
-  // Raised while the order is being created, before the payer has picked a
-  // bank account, so advice about switching accounts would be nonsense.
-  PAYMENT_PROVIDER_REJECTED:
-    "Cổng thanh toán chưa tạo được giao dịch. Bạn thử lại sau.",
-  PAYMENT_NOT_FOUND: "Giao dịch này không còn hợp lệ. Bạn hãy tạo giao dịch mới.",
-  PAYMENT_CHECKOUT_IN_PROGRESS:
-    "Giao dịch đang được tạo. Bạn đợi một chút rồi thử lại; hệ thống sẽ không tạo giao dịch mới.",
-  NETWORK_ERROR: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
-};
-
-/** Localize a payment ApiError. Never surfaces the server's own wording. */
-export function paymentErrorMessage(error: ParsedApiError): string {
-  return (
-    PAYMENT_ERROR_MESSAGES[error.code] ??
-    "Không thể hoàn tất thanh toán. Bạn thử lại sau nhé."
-  );
-}
-
 /** Localize a marketplace ApiError. Falls back to the server message. */
 export function marketplaceErrorMessage(error: ParsedApiError): string {
   return (

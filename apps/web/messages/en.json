@@ -234,7 +234,17 @@
     "feature2": "Priority notifications for new scrap lots",
     "feature3": "Direct support from GreenCity team",
     "payWithPayOS": "Secure checkout via payOS",
-    "processing": "Redirecting to checkout..."
+    "processing": "Redirecting to checkout...",
+    "paymentErrors": {
+      "notConfigured": "VietQR checkout is not available in this environment. Please try again later.",
+      "providerUnavailable": "Unable to connect to the payment provider. Please try again in a few minutes.",
+      "providerRejected": "The payment provider could not create the transaction. Please try again.",
+      "notFound": "This transaction is no longer valid. Please create a new one.",
+      "inProgress": "The transaction is being created. Please wait a moment and try again; no duplicate transaction will be created.",
+      "network": "Unable to connect to the server. Check your network and try again.",
+      "failed": "Payment failed. You may try again.",
+      "generic": "Unable to complete payment. Please try again later."
+    }
   },
   "cleanup": {
     "title": "Community Reporting",

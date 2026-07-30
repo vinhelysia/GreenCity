@@ -200,7 +200,7 @@ test("shows the pass offer once, with its price and no auto-renewal", async ({
   assertCleanRuntime(issues, "buyer-pass-offer");
 });
 
-test("carries a payment through payOS and unlocks reserving", async ({
+test("carries a payment through payOS and unlocks reserving", { tag: "@critical" }, async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page);
@@ -359,7 +359,7 @@ test("ignores a payment result forged in the query string", async ({ page }) => 
   assertCleanRuntime(issues, "buyer-pass-forged-query");
 });
 
-test("keeps the page usable when starting a checkout fails", async ({
+test("keeps the page usable when starting a checkout fails", { tag: "@critical" }, async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
@@ -415,7 +415,37 @@ test("keeps the page usable when starting a checkout fails", async ({
   assertCleanRuntime(issues, "buyer-pass-checkout-error");
 });
 
-test("uses a new checkout key after the signed-in user changes", async ({
+test("localizes checkout errors on the English route", { tag: "@critical" }, async ({
+  page,
+}) => {
+  const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
+  await installApiMock(page, ({ path, method }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      return reply(
+        {
+          error: {
+            code: "PAYMENT_PROVIDER_UNAVAILABLE",
+            message: "Provider details must not reach the UI",
+          },
+        },
+        503,
+      );
+    }
+    return null;
+  });
+
+  await registerAndSignIn(page, "checkout-error-en");
+  await page.goto("/en/marketplace", { waitUntil: "networkidle" });
+  await page.getByTestId("buyer-pass-checkout").click();
+
+  await expect(page.getByTestId("checkout-error")).toHaveText(
+    "Unable to connect to the payment provider. Please try again in a few minutes.",
+  );
+  assertCleanRuntime(issues, "buyer-pass-checkout-error-en");
+});
+
+test("uses a new checkout key after the signed-in user changes", { tag: "@critical" }, async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });

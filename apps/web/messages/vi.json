@@ -234,7 +234,17 @@
     "feature2": "Ưu tiên nhận thông báo lô phế liệu mới",
     "feature3": "Hỗ trợ trực tiếp từ đội ngũ GreenCity",
     "payWithPayOS": "Thanh toán an toàn qua payOS",
-    "processing": "Đang khởi tạo thanh toán..."
+    "processing": "Đang khởi tạo thanh toán...",
+    "paymentErrors": {
+      "notConfigured": "Thanh toán VietQR chưa được mở trên môi trường này. Bạn thử lại sau nhé.",
+      "providerUnavailable": "Chưa kết nối được cổng thanh toán. Bạn thử lại sau ít phút.",
+      "providerRejected": "Cổng thanh toán chưa tạo được giao dịch. Bạn thử lại sau.",
+      "notFound": "Giao dịch này không còn hợp lệ. Bạn hãy tạo giao dịch mới.",
+      "inProgress": "Giao dịch đang được tạo. Bạn đợi một chút rồi thử lại; hệ thống sẽ không tạo giao dịch mới.",
+      "network": "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+      "failed": "Giao dịch không thành công. Bạn có thể thử lại.",
+      "generic": "Không thể hoàn tất thanh toán. Bạn thử lại sau nhé."
+    }
   },
   "cleanup": {
     "title": "Đóng góp",

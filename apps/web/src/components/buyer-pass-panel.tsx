@@ -11,7 +11,6 @@ import {
   checkAuthExpiry,
   createSubscriptionPayment,
   fetchSubscriptionPaymentStatus,
-  paymentErrorMessage,
 } from "@/lib/api";
 import { formatDate, formatVnd } from "@/lib/format";
 
@@ -20,6 +19,25 @@ const PENDING_CHECKOUT_KEY = "greencity.pendingSubscriptionCheckoutKey";
 
 const POLL_INTERVAL_MS = 2_000;
 const MAX_POLL_ATTEMPTS = 30;
+
+function paymentErrorKey(code: string) {
+  switch (code) {
+    case "PAYMENT_NOT_CONFIGURED":
+      return "paymentErrors.notConfigured";
+    case "PAYMENT_PROVIDER_UNAVAILABLE":
+      return "paymentErrors.providerUnavailable";
+    case "PAYMENT_PROVIDER_REJECTED":
+      return "paymentErrors.providerRejected";
+    case "PAYMENT_NOT_FOUND":
+      return "paymentErrors.notFound";
+    case "PAYMENT_CHECKOUT_IN_PROGRESS":
+      return "paymentErrors.inProgress";
+    case "NETWORK_ERROR":
+      return "paymentErrors.network";
+    default:
+      return "paymentErrors.generic";
+  }
+}
 
 type PollState =
   | { kind: "checking" }
@@ -120,7 +138,7 @@ export function BuyerPassPanel({
           clearPendingPaymentId();
           setPoll({
             kind: "failed",
-            message: paymentErrorMessage(result.error),
+            message: tSub(paymentErrorKey(result.error.code)),
           });
           return;
         }
@@ -143,7 +161,7 @@ export function BuyerPassPanel({
         clearPendingPaymentId();
         setPoll({
           kind: "failed",
-          message: locale === "en" ? "Payment failed. You may try again." : "Giao dịch không thành công. Bạn có thể thử lại.",
+          message: tSub("paymentErrors.failed"),
         });
         return;
       }
@@ -161,7 +179,14 @@ export function BuyerPassPanel({
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [authStatus, clearSessionAndRedirect, onSubscriptionChange, pollRun, locale]);
+  }, [
+    authStatus,
+    clearSessionAndRedirect,
+    onSubscriptionChange,
+    pollRun,
+    locale,
+    tSub,
+  ]);
 
   const onCheckout = useCallback(async () => {
     if (starting || !user) return;
@@ -176,7 +201,7 @@ export function BuyerPassPanel({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setCheckoutError(paymentErrorMessage(result.error));
+      setCheckoutError(tSub(paymentErrorKey(result.error.code)));
       setStarting(false);
       if (
         result.status === 400 ||
@@ -196,7 +221,7 @@ export function BuyerPassPanel({
     clearPendingCheckoutKey(user.id);
     checkoutKeyRef.current = null;
     window.location.assign(result.data.payUrl);
-  }, [starting, user, clearSessionAndRedirect]);
+  }, [starting, user, clearSessionAndRedirect, tSub]);
 
   const active = load.kind === "ready" && load.state.eligible;
   const expiresAt =
