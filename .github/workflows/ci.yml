@@ -166,7 +166,9 @@ jobs:
         run: pnpm --filter web exec playwright install --with-deps chromium
 
       - name: Critical payment E2E
-        run: pnpm --filter web test:e2e -- subscription-payment.spec.ts --grep "@critical"
+        run: |
+          pnpm --filter web build
+          pnpm --filter web exec playwright test subscription-payment.spec.ts --grep "@critical"
 
       - name: Upload payment E2E report
         if: ${{ !cancelled() }}
