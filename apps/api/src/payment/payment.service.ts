@@ -1,10 +1,12 @@
 import {
+  BadGatewayException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import {
   CreateSubscriptionPaymentResponseSchema,
@@ -15,7 +17,10 @@ import {
 import { AuditService } from '../audit/audit.service';
 import { loadEnv } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { createPayosPayment } from './payos-client';
+import {
+  createPayosPayment,
+  recoverPayosPayment,
+} from './payos-client';
 import {
   PAYOS_DESCRIPTION,
   PAYOS_ORDER_CODE_MAX,
@@ -65,6 +70,13 @@ function nextOrderCode(): number {
   return code;
 }
 
+function paymentProviderRejected(): BadGatewayException {
+  return new BadGatewayException({
+    code: 'PAYMENT_PROVIDER_REJECTED',
+    message: 'Payment provider rejected the request',
+  });
+}
+
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
@@ -75,14 +87,13 @@ export class PaymentService {
   ) {}
 
   /**
-   * Starts a checkout: the PENDING row is written before payOS is called and is
-   * left PENDING however that call ends — no delete, no FAILED. A timeout is
-   * ambiguous: payOS may have accepted the order and a valid webhook may still
-   * arrive. Marking the row FAILED here would make processVerifiedNotification
-   * treat that later webhook as a duplicate and silently drop paid access.
+   * Writes PENDING before calling payOS. Ambiguous transport failures remain
+   * recoverable because payOS may have accepted the order; an explicit payOS
+   * rejection is terminal and is recorded as FAILED.
    */
   async startCheckout(
     userId: string,
+    idempotencyKey: string,
     requestId?: string,
   ): Promise<CreateSubscriptionPaymentResponse> {
     const config = resolvePayosCheckoutConfig(loadEnv());
@@ -94,8 +105,47 @@ export class PaymentService {
       });
     }
 
-    const payment = await this.createPendingPayment(userId);
+    const { payment, created: isNew } =
+      await this.findOrCreatePendingPayment(userId, idempotencyKey);
 
+    if (!isNew && payment.providerCheckoutUrl) {
+      if (payment.status === 'FAILED') {
+        throw paymentProviderRejected();
+      }
+      return CreateSubscriptionPaymentResponseSchema.parse({
+        paymentId: payment.id,
+        payUrl: payment.providerCheckoutUrl,
+      });
+    }
+
+    if (!isNew) {
+      if (payment.status === 'FAILED') {
+        throw paymentProviderRejected();
+      }
+      const recovered = await recoverPayosPayment(config, {
+        orderCode: Number(payment.providerOrderId),
+        amount: payment.amountVnd,
+      });
+      if (recovered) {
+        await this.prisma.subscriptionPayment.update({
+          where: { id: payment.id },
+          data: {
+            providerPaymentId: recovered.providerPaymentId,
+            providerCheckoutUrl: recovered.payUrl,
+          },
+        });
+        return CreateSubscriptionPaymentResponseSchema.parse({
+          paymentId: payment.id,
+          payUrl: recovered.payUrl,
+        });
+      }
+      if (!(await this.claimStaleCheckout(payment.id, payment.updatedAt))) {
+        throw new ConflictException({
+          code: 'PAYMENT_CHECKOUT_IN_PROGRESS',
+          message: 'Payment checkout is still being created',
+        });
+      }
+    }
     await this.audit.record({
       actorId: userId,
       action: 'subscription_payment.create',
@@ -117,13 +167,31 @@ export class PaymentService {
       // influence what it is charged.
       amount: payment.amountVnd,
       description: payment.providerDescription ?? PAYOS_DESCRIPTION,
+    }).catch(async (error: unknown) => {
+      if (error instanceof BadGatewayException) {
+        if (!isNew) {
+          const recovered = await recoverPayosPayment(config, {
+            orderCode: Number(payment.providerOrderId),
+            amount: payment.amountVnd,
+          });
+          if (recovered) return recovered;
+        }
+        await this.prisma.subscriptionPayment.update({
+          where: { id: payment.id },
+          data: { status: 'FAILED' },
+        });
+      }
+      throw error;
     });
 
     // Learned only now, and only when payOS answered. A create that times out
     // leaves this null, and a later signed webhook may claim it.
     await this.prisma.subscriptionPayment.update({
       where: { id: payment.id },
-      data: { providerPaymentId: created.providerPaymentId },
+      data: {
+        providerPaymentId: created.providerPaymentId,
+        providerCheckoutUrl: created.payUrl,
+      },
     });
 
     return CreateSubscriptionPaymentResponseSchema.parse({
@@ -163,9 +231,25 @@ export class PaymentService {
    * random digits is the only way to reach it.
    */
   async createPendingPayment(userId: string, attempts = 5) {
+    const result = await this.findOrCreatePendingPayment(
+      userId,
+      randomUUID(),
+      attempts,
+    );
+    return result.payment;
+  }
+
+  private async findOrCreatePendingPayment(
+    userId: string,
+    idempotencyKey: string,
+    attempts = 5,
+  ) {
+    const existing = await this.findOwnedCheckout(userId, idempotencyKey);
+    if (existing) return { payment: existing, created: false };
+
     for (let attempt = 1; ; attempt += 1) {
       try {
-        return await this.prisma.subscriptionPayment.create({
+        const payment = await this.prisma.subscriptionPayment.create({
           data: {
             userId,
             amountVnd: 50000,
@@ -174,15 +258,54 @@ export class PaymentService {
             provider: 'PAYOS',
             providerOrderId: String(nextOrderCode()),
             providerDescription: PAYOS_DESCRIPTION,
+            idempotencyKey,
           },
         });
+        return { payment, created: true };
       } catch (error) {
         const collision =
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2002';
-        if (!collision || attempt >= attempts) throw error;
+        if (!collision) throw error;
+
+        const replay = await this.findOwnedCheckout(userId, idempotencyKey);
+        if (replay) return { payment: replay, created: false };
+        if (attempt >= attempts) throw error;
       }
     }
+  }
+
+  private async findOwnedCheckout(userId: string, idempotencyKey: string) {
+    const payment = await this.prisma.subscriptionPayment.findUnique({
+      where: { idempotencyKey },
+    });
+    if (payment && payment.userId !== userId) {
+      throw new ConflictException({
+        code: 'PAYMENT_CHECKOUT_IN_PROGRESS',
+        message: 'Payment checkout is still being created',
+      });
+    }
+    return payment;
+  }
+
+  private async claimStaleCheckout(
+    paymentId: string,
+    lastAttemptAt: Date,
+  ): Promise<boolean> {
+    // ponytail: a one-minute DB lease covers the 20s provider timeout; use an
+    // outbox if checkout creation ever spans regions or regularly exceeds it.
+    const staleBefore = new Date(Date.now() - 60_000);
+    if (lastAttemptAt > staleBefore) return false;
+    const claimed = await this.prisma.subscriptionPayment.updateMany({
+      where: {
+        id: paymentId,
+        status: 'PENDING',
+        providerCheckoutUrl: null,
+        updatedAt: { lte: staleBefore },
+      },
+      data: { updatedAt: new Date() },
+    });
+    return claimed.count === 1;
   }
 
   async processVerifiedNotification(
