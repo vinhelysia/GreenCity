@@ -85,6 +85,7 @@ jobs:
   integration:
     name: PostgreSQL + PostGIS integration
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: unit
     services:
       postgres:
@@ -160,3 +161,20 @@ jobs:
 
       - name: Phase 1 integration tests (real database)
         run: pnpm test:integration
+
+      - name: Install Playwright Chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Critical payment E2E
+        run: pnpm --filter web test:e2e -- subscription-payment.spec.ts --grep "@critical"
+
+      - name: Upload payment E2E report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: payment-e2e-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
