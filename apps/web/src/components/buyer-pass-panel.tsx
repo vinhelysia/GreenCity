@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SubscriptionState } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EcoBadge } from "@/components/eco-badge";
@@ -16,6 +16,7 @@ import {
 import { formatDate, formatVnd } from "@/lib/format";
 
 const PENDING_PAYMENT_KEY = "greencity.pendingSubscriptionPaymentId";
+const PENDING_CHECKOUT_KEY = "greencity.pendingSubscriptionCheckoutKey";
 
 const POLL_INTERVAL_MS = 2_000;
 const MAX_POLL_ATTEMPTS = 30;
@@ -49,6 +50,27 @@ function clearPendingPaymentId(): void {
   }
 }
 
+function readOrCreateCheckoutKey(userId: string): string {
+  const storageKey = `${PENDING_CHECKOUT_KEY}:${userId}`;
+  const key = crypto.randomUUID();
+  try {
+    const existing = window.sessionStorage.getItem(storageKey);
+    if (existing) return existing;
+    window.sessionStorage.setItem(storageKey, key);
+  } catch {
+    /* the component ref still keeps this attempt stable until navigation */
+  }
+  return key;
+}
+
+function clearPendingCheckoutKey(userId: string): void {
+  try {
+    window.sessionStorage.removeItem(`${PENDING_CHECKOUT_KEY}:${userId}`);
+  } catch {
+    /* nothing to clean up if storage was never writable */
+  }
+}
+
 export function BuyerPassPanel({
   load,
   onSubscriptionChange,
@@ -60,12 +82,16 @@ export function BuyerPassPanel({
   const tMkt = useTranslations("marketplace");
   const tSub = useTranslations("subscription");
   const tCommon = useTranslations("common");
-  const { status: authStatus, clearSessionAndRedirect } = useAuth();
+  const { status: authStatus, user, clearSessionAndRedirect } = useAuth();
   const [starting, setStarting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [poll, setPoll] = useState<PollState>({ kind: "checking" });
+  const checkoutKeyRef = useRef<string | null>(null);
   const [pollRun, setPollRun] = useState(0);
 
+  useEffect(() => {
+    checkoutKeyRef.current = null;
+  }, [user?.id]);
   const priceLabel = formatVnd(50000, locale);
 
   useEffect(() => {
@@ -138,17 +164,27 @@ export function BuyerPassPanel({
   }, [authStatus, clearSessionAndRedirect, onSubscriptionChange, pollRun, locale]);
 
   const onCheckout = useCallback(async () => {
-    if (starting) return;
+    if (starting || !user) return;
     setStarting(true);
     setCheckoutError(null);
 
+    const idempotencyKey =
+      checkoutKeyRef.current ?? readOrCreateCheckoutKey(user.id);
+    checkoutKeyRef.current = idempotencyKey;
     const result = checkAuthExpiry(
-      await createSubscriptionPayment(),
+      await createSubscriptionPayment(idempotencyKey),
       clearSessionAndRedirect,
     );
     if (!result.ok) {
       setCheckoutError(paymentErrorMessage(result.error));
       setStarting(false);
+      if (
+        result.status === 400 ||
+        result.error.code === "PAYMENT_PROVIDER_REJECTED"
+      ) {
+        clearPendingCheckoutKey(user.id);
+        checkoutKeyRef.current = null;
+      }
       return;
     }
 
@@ -157,8 +193,10 @@ export function BuyerPassPanel({
     } catch {
       /* storage unavailable */
     }
+    clearPendingCheckoutKey(user.id);
+    checkoutKeyRef.current = null;
     window.location.assign(result.data.payUrl);
-  }, [starting, clearSessionAndRedirect]);
+  }, [starting, user, clearSessionAndRedirect]);
 
   const active = load.kind === "ready" && load.state.eligible;
   const expiresAt =

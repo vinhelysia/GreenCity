@@ -52,6 +52,22 @@ const CreateResponseSchema = z.object({
   signature: z.string().optional(),
 });
 
+const RecoverResponseDataSchema = z
+  .object({
+    id: z.string().min(1).regex(/^[A-Za-z0-9_-]+$/),
+    orderCode: z.number().int().safe(),
+    amount: z.number().int(),
+    status: z.string(),
+  })
+  .passthrough();
+
+const RecoverResponseSchema = z.object({
+  code: z.string(),
+  desc: z.string().optional(),
+  data: RecoverResponseDataSchema.nullish(),
+  signature: z.string().optional(),
+});
+
 /** Errors carry a shared code only — never a provider body, signature, or key. */
 function providerUnavailable(): ServiceUnavailableException {
   return new ServiceUnavailableException({
@@ -206,5 +222,76 @@ export async function createPayosPayment(
   return {
     payUrl: safeCheckoutUrl(data.checkoutUrl, data.paymentLinkId),
     providerPaymentId: data.paymentLinkId,
+  };
+}
+
+/**
+ * Recovers a link when create may have reached payOS but its response did not
+ * reach us. The merchant orderCode is stable, so this never creates a second
+ * payment request.
+ */
+export async function recoverPayosPayment(
+  config: PayosCheckoutConfig,
+  input: { orderCode: number; amount: number },
+): Promise<PayosCreatePaymentResult | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${PAYOS_CREATE_ENDPOINT}/${input.orderCode}`, {
+      method: 'GET',
+      headers: {
+        'x-client-id': config.clientId,
+        'x-api-key': config.apiKey,
+      },
+      redirect: 'error',
+      signal: AbortSignal.timeout(CREATE_TIMEOUT_MS),
+    });
+  } catch {
+    throw providerUnavailable();
+  }
+
+  // A concurrent retry can arrive before payOS has indexed the create request.
+  if (response.status === 404) return null;
+  if (!response.ok) throw providerUnavailable();
+
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    throw providerUnavailable();
+  }
+
+  const parsed = RecoverResponseSchema.safeParse(body);
+  if (!parsed.success) throw providerUnavailable();
+  if (parsed.data.code !== PAYOS_SUCCESS_CODE) return null;
+  if (!parsed.data.data) throw providerUnavailable();
+
+  const rawData = (body as { data?: Record<string, unknown> }).data;
+  if (
+    !parsed.data.signature ||
+    !rawData ||
+    !verifyPayosDataSignature(
+      rawData,
+      parsed.data.signature,
+      config.checksumKey,
+    )
+  ) {
+    throw providerUnavailable();
+  }
+
+  const data = parsed.data.data;
+  if (
+    data.orderCode !== input.orderCode ||
+    data.amount !== input.amount ||
+    data.status !== PAYOS_INITIAL_STATUS
+  ) {
+    throw providerUnavailable();
+  }
+
+  return {
+    payUrl: safeCheckoutUrl(
+      `https://${PAYOS_CHECKOUT_HOST}/web/${data.id}`,
+      data.id,
+    ),
+    providerPaymentId: data.id,
   };
 }

@@ -228,6 +228,8 @@ const PAYMENT_ERROR_MESSAGES: Record<string, string> = {
   PAYMENT_PROVIDER_REJECTED:
     "Cổng thanh toán chưa tạo được giao dịch. Bạn thử lại sau.",
   PAYMENT_NOT_FOUND: "Giao dịch này không còn hợp lệ. Bạn hãy tạo giao dịch mới.",
+  PAYMENT_CHECKOUT_IN_PROGRESS:
+    "Giao dịch đang được tạo. Bạn đợi một chút rồi thử lại; hệ thống sẽ không tạo giao dịch mới.",
   NETWORK_ERROR: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
 };
 
@@ -356,12 +358,13 @@ export async function fetchSubscriptionState(): Promise<
  * The body is an empty object and must stay that way: the server refuses
  * anything else, because price and duration are its decision, not the client's.
  */
-export async function createSubscriptionPayment(): Promise<
+export async function createSubscriptionPayment(idempotencyKey: string): Promise<
   ApiResult<CreateSubscriptionPaymentResponse>
 > {
   const result = await apiFetch<unknown>("/api/subscription-payments", {
     method: "POST",
     body: JSON.stringify({}),
+    headers: { "Idempotency-Key": idempotencyKey },
   });
   if (!result.ok) return result;
   const parsed = CreateSubscriptionPaymentResponseSchema.safeParse(result.data);

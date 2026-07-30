@@ -71,7 +71,12 @@ function subscriptionState(eligible: boolean) {
   };
 }
 
-type MockRequest = { path: string; method: string; body: string | null };
+type MockRequest = {
+  path: string;
+  method: string;
+  body: string | null;
+  headers: Record<string, string>;
+};
 type MockReply = { status: number; json: unknown };
 type MockHandler = (
   req: MockRequest,
@@ -120,6 +125,11 @@ async function installApiMock(
         init?.method ?? (input instanceof Request ? input.method : "GET")
       ).toUpperCase();
       const body = typeof init?.body === "string" ? init.body : null;
+      const headers = Object.fromEntries(
+        new Headers(
+          init?.headers ?? (input instanceof Request ? input.headers : undefined),
+        ).entries(),
+      );
       const handled = await (
         window as unknown as {
           __gcApiMock: (r: MockRequest) => Promise<{
@@ -127,7 +137,7 @@ async function installApiMock(
             body: string;
           } | null>;
         }
-      ).__gcApiMock({ path: pathname, method, body });
+      ).__gcApiMock({ path: pathname, method, body, headers });
       if (!handled) return original(input, init);
       return new Response(handled.body, {
         status: handled.status,
@@ -197,12 +207,14 @@ test("carries a payment through payOS and unlocks reserving", async ({
   let paid = false;
   let statusCalls = 0;
   let createdBody: string | null = null;
+  let createdIdempotencyKey: string | undefined;
 
-  await installApiMock(page, ({ path, method, body }) => {
+  await installApiMock(page, ({ path, method, body, headers }) => {
     if (path === LISTINGS_PATH) return reply(LISTINGS);
     if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(paid));
     if (path === PAYMENTS_PATH && method === "POST") {
       createdBody = body;
+      createdIdempotencyKey = headers["idempotency-key"];
       return reply(
         {
           paymentId: PAYMENT_ID,
@@ -240,6 +252,7 @@ test("carries a payment through payOS and unlocks reserving", async ({
 
   // The body must be exactly {} — the server rejects a client-priced request.
   expect(createdBody).toBe("{}");
+  expect(createdIdempotencyKey).toMatch(/^[0-9a-f-]{36}$/i);
 
   await expect(page.getByTestId("payment-success")).toBeVisible({
     timeout: 15_000,
@@ -350,17 +363,22 @@ test("keeps the page usable when starting a checkout fails", async ({
   page,
 }) => {
   const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
-  await installApiMock(page, ({ path, method }) => {
+  const checkoutKeys: string[] = [];
+  await installApiMock(page, ({ path, method, headers }) => {
     if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
     if (path === PAYMENTS_PATH && method === "POST") {
+      checkoutKeys.push(headers["idempotency-key"] ?? "");
       return reply(
         {
           error: {
-            code: "PAYMENT_PROVIDER_UNAVAILABLE",
-            message: "Payment provider is unavailable",
+            code:
+              checkoutKeys.length <= 2
+                ? "PAYMENT_PROVIDER_UNAVAILABLE"
+                : "PAYMENT_PROVIDER_REJECTED",
+            message: "Payment provider failed",
           },
         },
-        503,
+        checkoutKeys.length <= 2 ? 503 : 502,
       );
     }
     return null;
@@ -382,9 +400,60 @@ test("keeps the page usable when starting a checkout fails", async ({
   ).toBeNull();
   await expect(page.getByTestId("buyer-pass-checkout")).toBeEnabled();
 
+  await page.getByTestId("buyer-pass-checkout").click();
+  await expect(alert).toBeVisible();
+  expect(checkoutKeys).toHaveLength(2);
+  expect(checkoutKeys[1]).toBe(checkoutKeys[0]);
+
+  await page.getByTestId("buyer-pass-checkout").click();
+  await expect(alert).toBeVisible();
+  await page.getByTestId("buyer-pass-checkout").click();
+  await expect(alert).toBeVisible();
+  expect(checkoutKeys).toHaveLength(4);
+  expect(checkoutKeys[3]).not.toBe(checkoutKeys[2]);
+
   assertCleanRuntime(issues, "buyer-pass-checkout-error");
 });
 
+test("uses a new checkout key after the signed-in user changes", async ({
+  page,
+}) => {
+  const issues = attachRuntimeGuards(page, { allowServiceUnavailable: true });
+  const checkoutKeys: string[] = [];
+  await installApiMock(page, ({ path, method, headers }) => {
+    if (path === SUBSCRIPTIONS_PATH) return reply(subscriptionState(false));
+    if (path === PAYMENTS_PATH && method === "POST") {
+      checkoutKeys.push(headers["idempotency-key"] ?? "");
+      return reply(
+        {
+          error: {
+            code: "PAYMENT_PROVIDER_UNAVAILABLE",
+            message: "Payment provider is unavailable",
+          },
+        },
+        503,
+      );
+    }
+    return null;
+  });
+
+  await registerAndSignIn(page, "key-owner-a");
+  await page.goto("/cho-online", { waitUntil: "networkidle" });
+  await page.getByTestId("buyer-pass-checkout").click();
+  await expect(page.getByTestId("checkout-error")).toBeVisible();
+
+  await page.getByTestId("header-logout").click();
+  await expect(page.getByTestId("header-logout")).toHaveCount(0);
+  await registerAndSignIn(page, "key-owner-b");
+  await page.goto("/cho-online", { waitUntil: "networkidle" });
+  await page.getByTestId("buyer-pass-checkout").click();
+  await expect(page.getByTestId("checkout-error")).toBeVisible();
+
+  expect(checkoutKeys).toHaveLength(2);
+  expect(checkoutKeys[0]).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(checkoutKeys[1]).not.toBe(checkoutKeys[0]);
+  assertCleanRuntime(issues, "buyer-pass-user-switch");
+});
 test("offers no second checkout while a payment is unresolved", async ({
   page,
 }) => {
