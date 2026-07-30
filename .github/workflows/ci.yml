@@ -180,3 +180,15 @@ jobs:
             apps/web/test-results
           if-no-files-found: ignore
           retention-days: 7
+
+  deploy:
+    name: Deploy backend to Render
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: [unit, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: curl --fail-with-body --silent --show-error --request POST "$RENDER_DEPLOY_HOOK_URL"
