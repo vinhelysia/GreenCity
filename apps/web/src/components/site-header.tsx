@@ -3,6 +3,7 @@ import { APP_NAME } from "@greencity/shared";
 import { Link } from "@/i18n/routing";
 import { IconLeaf } from "./eco-icons";
 import { HeaderLoginLink } from "./header-login-link";
+import { HeaderPointsPill } from "./header-points-pill";
 import { LanguageSwitcher } from "./language-switcher";
 import { SiteNav } from "./site-nav";
 
@@ -40,6 +41,7 @@ export function SiteHeader() {
                 <LanguageSwitcher />
               </Suspense>
             </div>
+            <HeaderPointsPill />
             <HeaderLoginLink />
           </div>
         </div>

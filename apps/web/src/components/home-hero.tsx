@@ -18,7 +18,7 @@ export async function HomeHero() {
   return (
     <section
       aria-labelledby="hero-heading"
-      className="home-hero relative isolate min-w-0 overflow-hidden rounded-[2rem] border border-edge px-5 py-10 shadow-eco sm:px-8 sm:py-14 lg:min-h-[38rem] lg:px-12 lg:py-16"
+      className="home-hero relative isolate min-w-0 overflow-hidden rounded-3xl border border-edge bg-gradient-to-br from-warm-050 via-paper to-mint-surface px-6 py-10 shadow-eco sm:px-8 sm:py-14 lg:min-h-[38rem] lg:px-12 lg:py-16"
     >
       <Image
         src="/eco-city-hero.png"
@@ -44,7 +44,9 @@ export async function HomeHero() {
         >
           {t("heroTitle1")} <br className="hidden sm:inline" />
           <span className="text-primary underline decoration-yellow decoration-4 underline-offset-6">
-            {t("heroTitle2")}
+            {t.rich("heroTitle2", {
+              warm: (chunks) => <span className="text-warm-600">{chunks}</span>,
+            })}
           </span>
         </h1>
 
@@ -55,7 +57,7 @@ export async function HomeHero() {
         <div className="mt-8 flex min-w-0 flex-wrap items-center gap-3.5">
           <Link
             href="/ban-phe-lieu"
-            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-primary px-6 py-3 text-base font-semibold text-white shadow-eco transition-colors hover:bg-primary-hover"
+            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-warm-600 px-6 py-3 text-base font-semibold text-white shadow-warm transition-colors hover:bg-warm-900"
           >
             <span>{t("sellAction")}</span>
             <IconArrowRight className="h-4 w-4" />
@@ -75,16 +77,18 @@ export async function HomeHero() {
           </Link>
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge pt-5 text-xs font-semibold text-muted">
-          <span className="inline-flex items-center gap-1.5">
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted">
             <IconShieldCheck className="h-4 w-4 text-primary" />
             {t("prop1")}
           </span>
-          <span className="inline-flex items-center gap-1.5">
+          <span className="h-3.5 w-px bg-edge" aria-hidden="true" />
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted">
             <IconShieldCheck className="h-4 w-4 text-primary" />
             {t("prop2")}
           </span>
-          <span className="inline-flex items-center gap-1.5">
+          <span className="h-3.5 w-px bg-edge" aria-hidden="true" />
+          <span className="inline-flex items-center gap-1.5 text-sm text-muted">
             <IconShieldCheck className="h-4 w-4 text-primary" />
             {t("prop3")}
           </span>

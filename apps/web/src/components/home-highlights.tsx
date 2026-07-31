@@ -119,32 +119,39 @@ export function HomeHighlights() {
                 {
                   value: statsState.data.availableListings,
                   label: locale === "en" ? "active material listings" : "tin đang bán",
+                  warm: false,
                 },
                 {
                   value: statsState.data.verifiedCleanupReports,
                   label: locale === "en" ? "verified dumping sites" : "điểm rác đã xác minh",
+                  warm: true,
                 },
                 {
                   value: statsState.data.scrapWeightKg,
                   label: locale === "en" ? "kg scrap listed" : "kg phế liệu đã niêm yết",
+                  warm: false,
                 },
                 {
                   value: statsState.data.totalPointsAwarded,
                   label: locale === "en" ? "reward points issued" : "điểm thưởng đã trao",
+                  warm: true,
                 },
               ].map((tile) => (
-                <div key={tile.label} className="min-w-0 rounded-2xl border border-edge bg-card p-5 shadow-eco">
+                <div
+                  key={tile.label}
+                  className={`min-w-0 rounded-2xl border bg-card p-5 shadow-eco ${tile.warm ? "border-warm-100" : "border-edge"}`}
+                >
                   <dd>
                     <CountUp
                       value={tile.value}
-                      className="block font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-primary [overflow-wrap:anywhere] sm:text-5xl"
+                      className={`block font-display text-4xl font-bold leading-none tracking-tight tabular-nums [overflow-wrap:anywhere] sm:text-5xl ${tile.warm ? "text-warm-600" : "text-ink"}`}
                     />
                   </dd>
                   <span
                     aria-hidden="true"
                     className="mt-3 block h-1 w-8 rounded-full bg-yellow"
                   />
-                  <dt className="mt-3 text-sm font-medium text-muted">
+                  <dt className={`mt-3 text-sm font-medium ${tile.warm ? "text-warm-700" : "text-muted"}`}>
                     {tile.label}
                   </dt>
                 </div>
@@ -203,7 +210,7 @@ export function HomeHighlights() {
                         {tCommon("perKg")}
                       </p>
                     </div>
-                    <p className="font-display text-xl font-bold tabular-nums text-ink">
+                    <p className="font-display text-xl font-bold tabular-nums text-warm-600">
                       {formatVnd(listing.estimatedTotalVnd, locale)}
                     </p>
                   </li>

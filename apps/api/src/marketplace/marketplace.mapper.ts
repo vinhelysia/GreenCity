@@ -75,7 +75,9 @@ export function toScrapRequestDto(
  * visibility follows listing state, not asset ownership.
  */
 export function toListingDto(
-  listing: MarketplaceListingRow,
+  listing: MarketplaceListingRow & {
+    scrapRequest: ScrapRequest & { category: ScrapCategory };
+  },
   viewerId: string | null,
 ): MarketplaceListing {
   return {
@@ -86,6 +88,8 @@ export function toListingDto(
     estimatedTotalVnd: Math.round(
       listing.buyerPricePerKgVnd * listing.estimatedWeightKg,
     ),
+    priceBandMinVnd: listing.scrapRequest.category.minPricePerKgVnd,
+    priceBandMaxVnd: listing.scrapRequest.category.maxPricePerKgVnd,
     status: listing.status,
     mediaDownloadPath: `/marketplace/listings/${listing.id}/photo`,
     isOwn: viewerId !== null && viewerId === listing.sellerId,

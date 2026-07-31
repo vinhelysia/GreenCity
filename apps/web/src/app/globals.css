@@ -34,6 +34,16 @@
   --color-coral: #B9472E;
   --color-yellow: #F2C94C;
 
+  /* Warm accent ramp — the action/value layer.
+   * warm-600 is the only one safe for white text (5.1:1). */
+  --color-warm-900: #7A2E12;
+  --color-warm-700: #A64029; /* alias of existing coral, kept for continuity */
+  --color-warm-600: #C4451B;
+  --color-warm-500: #E2661F;
+  --color-warm-300: #F2A03D;
+  --color-warm-100: #FDEBE1;
+  --color-warm-050: #FDF3EC;
+
   /* Backward compatible tokens */
   --color-paper-2: #EAF6EF;
   --color-paper-3: #DDEFE5;
@@ -66,6 +76,9 @@ body {
   overflow-x: clip;
   min-height: 100dvh;
   background-color: var(--color-paper);
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(23, 107, 77, 0.03) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(226, 102, 31, 0.05) 0%, transparent 42%);
   color: var(--color-ink);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -132,21 +145,20 @@ body {
   background: var(--color-paper-2);
 }
 
-.home-hero {
-  background: var(--color-paper-2);
-}
-
 .home-hero-image {
   object-position: 68% center;
   animation: hero-drift var(--dur-ambient) var(--ease-in-out) infinite alternate;
   will-change: transform;
 }
 
+/* Slightly less opaque than a flat paper wash so the warm-to-cool gradient on
+ * .home-hero's own background reads faintly behind the text, instead of being
+ * fully hidden under the opaque hero photo. */
 .home-hero-veil {
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-paper) 98%, transparent) 0%,
-    color-mix(in srgb, var(--color-paper) 92%, transparent) 42%,
+    color-mix(in srgb, var(--color-paper) 90%, transparent) 0%,
+    color-mix(in srgb, var(--color-paper) 84%, transparent) 42%,
     color-mix(in srgb, var(--color-paper) 44%, transparent) 72%,
     transparent 100%
   );
@@ -165,11 +177,11 @@ body {
 @media (max-width: 639px) {
   .home-hero-image {
     object-position: 72% center;
-    opacity: 0.42;
+    opacity: 0.34;
   }
 
   .home-hero-veil {
-    background: color-mix(in srgb, var(--color-paper) 88%, transparent);
+    background: color-mix(in srgb, var(--color-paper) 78%, transparent);
   }
 }
 

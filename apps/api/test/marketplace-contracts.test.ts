@@ -21,6 +21,8 @@ describe('marketplace contracts', () => {
     estimatedWeightKg: 10,
     buyerPricePerKgVnd: 1400,
     estimatedTotalVnd: 14000,
+    priceBandMinVnd: 1200,
+    priceBandMaxVnd: 1600,
     status: 'AVAILABLE',
     mediaDownloadPath: '/api/media/asset-1/content',
     isOwn: false,

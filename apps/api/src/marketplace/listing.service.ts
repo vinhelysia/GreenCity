@@ -35,6 +35,7 @@ export class ListingService {
     const rows = await this.prisma.marketplaceListing.findMany({
       where: { status: 'AVAILABLE' },
       orderBy: { createdAt: 'desc' },
+      include: { scrapRequest: { include: { category: true } } },
     });
     return { listings: rows.map((row) => toListingDto(row, viewerId)) };
   }
@@ -47,6 +48,7 @@ export class ListingService {
     const rows = await this.prisma.marketplaceListing.findMany({
       where: status ? { status } : {},
       orderBy: { createdAt: 'desc' },
+      include: { scrapRequest: { include: { category: true } } },
     });
     // No viewer: an admin is acting on the listing, not shopping for it.
     return { listings: rows.map((row) => toListingDto(row, null)) };

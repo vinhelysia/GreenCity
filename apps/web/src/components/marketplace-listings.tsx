@@ -182,7 +182,13 @@ function ListingCard({
             {tMkt("quantity", { weight: listing.estimatedWeightKg })} ·{" "}
             {tMkt("unitPrice", { price: formatVnd(listing.buyerPricePerKgVnd, locale) })}
           </p>
-          <p className="mt-2 font-display text-xl font-extrabold tabular-nums text-primary">
+          <p className="text-[11px] tabular-nums text-muted">
+            {tMkt("priceBand", {
+              min: formatVnd(listing.priceBandMinVnd, locale),
+              max: formatVnd(listing.priceBandMaxVnd, locale),
+            })}
+          </p>
+          <p className="mt-2 font-display text-xl font-extrabold tabular-nums text-warm-600">
             {formatVnd(listing.estimatedTotalVnd, locale)}
           </p>
         </div>

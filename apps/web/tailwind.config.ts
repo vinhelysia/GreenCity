@@ -23,6 +23,13 @@ const config: Config = {
         "highlight-soft": "var(--color-highlight-soft)",
         coral: "var(--color-coral)",
         yellow: "var(--color-yellow)",
+        "warm-900": "var(--color-warm-900)",
+        "warm-700": "var(--color-warm-700)",
+        "warm-600": "var(--color-warm-600)",
+        "warm-500": "var(--color-warm-500)",
+        "warm-300": "var(--color-warm-300)",
+        "warm-100": "var(--color-warm-100)",
+        "warm-050": "var(--color-warm-050)",
       },
       fontFamily: {
         display: [
@@ -42,6 +49,7 @@ const config: Config = {
         eco: "0 4px 20px -2px rgba(23, 107, 77, 0.08), 0 2px 6px -1px rgba(24, 48, 42, 0.04)",
         "eco-hover": "0 10px 25px -4px rgba(23, 107, 77, 0.12), 0 4px 10px -2px rgba(24, 48, 42, 0.06)",
         "eco-sm": "0 2px 8px 0 rgba(23, 107, 77, 0.06)",
+        warm: "0 8px 20px -4px rgba(196, 69, 27, 0.35)",
       },
       transitionTimingFunction: {
         out: "var(--ease-out)",

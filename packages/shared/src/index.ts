@@ -288,6 +288,9 @@ export const MarketplaceListingSchema = z.object({
   buyerPricePerKgVnd: z.number().int().positive(),
   /** buyerPricePerKgVnd * estimatedWeightKg, rounded. Derived, never stored. */
   estimatedTotalVnd: z.number().int().nonnegative(),
+  /** Public per-kg rate band for this listing's category (ScrapCategory.min/maxPricePerKgVnd). */
+  priceBandMinVnd: z.number().int().positive(),
+  priceBandMaxVnd: z.number().int().positive(),
   status: ListingStatusSchema,
   mediaDownloadPath: z.string(),
   isOwn: z.boolean(),
