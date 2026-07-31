@@ -1,19 +1,29 @@
 import type { SVGProps } from "react";
 
 export function IconRecycle(props: SVGProps<SVGSVGElement>) {
+  const arrowPath =
+    "M22 38 34 17C36.5 12.7 41 10 46 10H59V3L78 20 59 37V29H48C46 29 44.5 30 43.5 31.8L34 47Z";
+
   return (
     <svg
       aria-hidden="true"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      viewBox="0 0 24 24"
+      focusable="false"
+      viewBox="0 0 100 100"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
       {...props}
     >
-      <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.91 1.78 1.78 0 0 1 .068-1.875l.132-.206 2.05-3.52 1.34 2.29M16.5 19H12l-1.5-2.5 3-5.2M7 19l4.5-7.7M16.5 19l2.685.001c.983 0 1.815-.75 1.815-1.733a1.76 1.76 0 0 0-.25-.907l-2.75-4.71-1.5 2.58" />
-      <path d="M12 4.5 9.4 9M12 4.5l2.6 4.5M12 4.5V2" />
+      <path d={arrowPath} />
+
+      <path
+        d={arrowPath}
+        transform="rotate(120 50 50)"
+      />
+
+      <path
+        d={arrowPath}
+        transform="rotate(240 50 50)"
+      />
     </svg>
   );
 }
