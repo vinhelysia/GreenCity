@@ -94,13 +94,13 @@ export function LoginForm() {
 
   return (
     <form
-      className="mt-8 flex max-w-md flex-col gap-5"
+      className="mt-6 flex max-w-md flex-col gap-5 rounded-2xl border border-edge bg-card p-6 shadow-eco"
       onSubmit={onSubmit}
       noValidate
       aria-describedby={statusId}
     >
       <div>
-        <label htmlFor={emailId} className="block text-sm font-medium text-ink">
+        <label htmlFor={emailId} className="block text-sm font-semibold text-ink">
           Email
         </label>
         <input
@@ -113,18 +113,18 @@ export function LoginForm() {
           disabled={formState === "submitting"}
           aria-invalid={emailError ? true : undefined}
           aria-describedby={emailError ? emailErrorId : undefined}
-          className="mt-1.5 w-full min-h-11 rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
+          className="mt-1.5 w-full min-h-11 rounded-lg border border-edge bg-paper px-3.5 py-2 text-base text-ink transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="ban@example.com"
         />
         {emailError ? (
-          <p id={emailErrorId} className="mt-1.5 text-sm text-red-800" role="alert">
+          <p id={emailErrorId} className="mt-1.5 text-xs font-semibold text-red-800" role="alert">
             {emailError}
           </p>
         ) : null}
       </div>
 
       <div>
-        <label htmlFor={passwordId} className="block text-sm font-medium text-ink">
+        <label htmlFor={passwordId} className="block text-sm font-semibold text-ink">
           Mật khẩu
         </label>
         <div className="mt-1.5 flex min-w-0 gap-2">
@@ -137,11 +137,11 @@ export function LoginForm() {
             disabled={formState === "submitting"}
             aria-invalid={passwordError ? true : undefined}
             aria-describedby={passwordError ? passwordErrorId : undefined}
-            className="min-h-11 min-w-0 flex-1 rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
+            className="min-h-11 min-w-0 flex-1 rounded-lg border border-edge bg-paper px-3.5 py-2 text-base text-ink transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
             type="button"
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink hover:border-accent"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg border border-edge bg-paper px-3.5 text-sm font-semibold text-ink transition-colors hover:border-primary hover:text-primary"
             aria-pressed={showPassword}
             aria-controls={passwordId}
             onClick={() => setShowPassword((value) => !value)}
@@ -153,7 +153,7 @@ export function LoginForm() {
         {passwordError ? (
           <p
             id={passwordErrorId}
-            className="mt-1.5 text-sm text-red-800"
+            className="mt-1.5 text-xs font-semibold text-red-800"
             role="alert"
           >
             {passwordError}
@@ -164,7 +164,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={formState === "submitting"}
-        className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
+        className="inline-flex min-h-12 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-eco transition hover:bg-primary-hover disabled:opacity-60"
       >
         {formState === "submitting" ? "Đang đăng nhập…" : "Đăng nhập"}
       </button>
@@ -173,7 +173,7 @@ export function LoginForm() {
         <p
           id={formErrorId}
           role="alert"
-          className="text-sm leading-relaxed text-red-800"
+          className="text-xs font-semibold leading-relaxed text-red-800 bg-red-50 p-3 rounded-lg border border-red-200"
         >
           {serverError}
         </p>
@@ -182,7 +182,7 @@ export function LoginForm() {
       <p
         id={statusId}
         role="status"
-        className="text-sm leading-relaxed text-muted"
+        className="text-xs leading-relaxed text-muted text-center pt-2"
       >
         {formState === "submitting"
           ? "Đang gửi yêu cầu đăng nhập…"
@@ -192,9 +192,9 @@ export function LoginForm() {
         {formState === "idle" && !serverError ? (
           <Link
             href="/dang-ky"
-            className="font-medium text-accent underline-offset-4 hover:underline"
+            className="font-semibold text-primary underline-offset-4 hover:underline"
           >
-            Đăng ký
+            Đăng ký tài khoản
           </Link>
         ) : null}
       </p>

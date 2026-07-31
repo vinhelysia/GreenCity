@@ -15,6 +15,7 @@ import {
   type ScrapRequestStatus,
 } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
 import { SignInRequired } from "@/components/sign-in-required";
 import {
@@ -43,11 +44,18 @@ const STATUS_LABEL: Record<ScrapRequestStatus, string> = {
   REJECTED: "Đã từ chối",
 };
 
+const STATUS_VARIANT: Record<ScrapRequestStatus, "mint" | "yellow" | "primary" | "coral"> = {
+  SUBMITTED: "mint",
+  QUOTED: "yellow",
+  ACCEPTED: "primary",
+  REJECTED: "coral",
+};
+
 function StatusBadge({ status }: { status: ScrapRequestStatus }) {
   return (
-    <span className="inline-flex items-center rounded-sm border border-edge bg-paper-2 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-muted">
+    <EcoBadge variant={STATUS_VARIANT[status]} className="text-xs uppercase tracking-wider">
       {STATUS_LABEL[status]}
-    </span>
+    </EcoBadge>
   );
 }
 
@@ -63,35 +71,37 @@ function PriceBandTable({ categories }: { categories: ScrapCategory[] }) {
     );
   }
   return (
-    <div className="min-w-0 overflow-x-auto rounded-md border border-edge">
-      <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
-        <thead>
-          <tr className="border-b border-edge bg-paper-2">
-            <th scope="col" className="px-3 py-2.5 font-medium text-ink">
-              Loại phế liệu
-            </th>
-            <th scope="col" className="px-3 py-2.5 font-medium text-ink">
-              Giá tối thiểu
-            </th>
-            <th scope="col" className="px-3 py-2.5 font-medium text-ink">
-              Giá tối đa
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {categories.map((category) => (
-            <tr key={category.id} className="border-b border-rule last:border-0">
-              <td className="px-3 py-2.5 text-ink">{category.name}</td>
-              <td className="px-3 py-2.5 text-muted">
-                {formatVnd(category.minPricePerKgVnd)}/kg
-              </td>
-              <td className="px-3 py-2.5 text-muted">
-                {formatVnd(category.maxPricePerKgVnd)}/kg
-              </td>
+    <div className="min-w-0 overflow-hidden rounded-xl border border-edge bg-card shadow-eco-sm">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+          <thead>
+            <tr className="border-b border-edge bg-mint-surface/60">
+              <th scope="col" className="px-4 py-3.5 font-bold text-ink">
+                Loại phế liệu
+              </th>
+              <th scope="col" className="px-4 py-3.5 font-bold text-ink">
+                Giá tối thiểu
+              </th>
+              <th scope="col" className="px-4 py-3.5 font-bold text-ink">
+                Giá tối đa
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-edge/60">
+            {categories.map((category) => (
+              <tr key={category.id} className="transition-colors hover:bg-mint-surface/20">
+                <td className="px-4 py-3.5 font-semibold text-ink">{category.name}</td>
+                <td className="px-4 py-3.5 font-medium tabular-nums text-muted">
+                  {formatVnd(category.minPricePerKgVnd)}/kg
+                </td>
+                <td className="px-4 py-3.5 font-medium tabular-nums text-primary">
+                  {formatVnd(category.maxPricePerKgVnd)}/kg
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

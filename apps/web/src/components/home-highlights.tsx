@@ -8,6 +8,15 @@ import type {
   PublicCleanupReport,
 } from "@greencity/shared";
 import { CountUp } from "@/components/count-up";
+import { EcoBadge } from "@/components/eco-badge";
+import {
+  IconArrowRight,
+  IconDumpster,
+  IconLeaf,
+  IconPackage,
+  IconPoints,
+  IconRecycle,
+} from "@/components/eco-icons";
 import { EmptyState } from "@/components/empty-state";
 import { Section } from "@/components/section";
 import {
@@ -81,83 +90,102 @@ export function HomeHighlights() {
   }, []);
 
   return (
-    <div className="min-w-0">
-      {/* Impact — a tinted band, not another bordered card. Every number here is
-          a live count from the database. */}
+    <div className="min-w-0 space-y-12 sm:space-y-16">
+      {/* Impact Section — Modern Eco Metrics Cards */}
       <Section
         id="tac-dong"
         title="Tác động đến nay"
         tone="band"
-        lede="Số liệu đọc thẳng từ hệ thống đang chạy. Không có con số nào dựng sẵn."
+        lede="Số liệu cập nhật trực tiếp từ hệ thống thực tế đang hoạt động của GreenCity."
       >
         <div role="status" aria-live="polite">
           {statsState.status === "loading" ? (
             <div
               aria-hidden="true"
-              className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             >
-              <div className="skeleton h-16 w-full" />
-              <div className="skeleton h-16 w-full" />
-              <div className="skeleton h-16 w-full" />
-              <div className="skeleton h-16 w-full" />
+              <div className="skeleton h-24 w-full rounded-xl" />
+              <div className="skeleton h-24 w-full rounded-xl" />
+              <div className="skeleton h-24 w-full rounded-xl" />
+              <div className="skeleton h-24 w-full rounded-xl" />
             </div>
           ) : statsState.status === "error" ? (
             <p role="alert" className="text-sm leading-relaxed text-red-800">
               {statsState.message}
             </p>
           ) : (
-            <dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
                   value: statsState.data.availableListings,
-                  label: "tin đang bán",
+                  label: "Tin đang bán trên chợ",
+                  icon: <IconPackage className="h-5 w-5 text-primary" />,
+                  badge: "Đang niêm yết",
                 },
                 {
                   value: statsState.data.verifiedCleanupReports,
-                  label: "điểm rác đã xác minh",
+                  label: "Điểm rác đã xác minh",
+                  icon: <IconDumpster className="h-5 w-5 text-coral" />,
+                  badge: "Cộng đồng báo",
                 },
-                { value: statsState.data.scrapWeightKg, label: "kg phế liệu" },
+                {
+                  value: statsState.data.scrapWeightKg,
+                  label: "kg phế liệu đã niêm yết",
+                  icon: <IconRecycle className="h-5 w-5 text-primary" />,
+                  badge: "Khối lượng",
+                },
                 {
                   value: statsState.data.totalPointsAwarded,
-                  label: "điểm thưởng đã trao",
+                  label: "Điểm thưởng đã trao",
+                  icon: <IconPoints className="h-5 w-5 text-coral" />,
+                  badge: "Ghi nhận",
                 },
               ].map((tile) => (
-                <div key={tile.label} className="min-w-0">
-                  <dd>
+                <li
+                  key={tile.label}
+                  className="group min-w-0 rounded-xl border border-edge bg-card p-5 shadow-eco-sm transition duration-quick hover:border-primary/40 hover:shadow-eco hover:-translate-y-0.5"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-mint-surface">
+                      {tile.icon}
+                    </span>
+                    <EcoBadge variant="mint" className="text-[10px] px-2 py-0.5">
+                      {tile.badge}
+                    </EcoBadge>
+                  </div>
+                  <p className="mt-4">
                     <CountUp
                       value={tile.value}
-                      className="block font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-accent [overflow-wrap:anywhere] sm:text-5xl"
+                      className="block font-display text-3xl font-extrabold leading-none tracking-tight tabular-nums text-ink [overflow-wrap:anywhere] sm:text-4xl"
                     />
-                  </dd>
-                  <span
-                    aria-hidden="true"
-                    className="mt-3 block h-1 w-8 rounded-full bg-highlight"
-                  />
-                  <dt className="mt-3 text-sm font-medium text-muted">
+                  </p>
+                  <p className="mt-2 text-xs font-semibold text-muted">
                     {tile.label}
-                  </dt>
-                </div>
+                  </p>
+                </li>
               ))}
-            </dl>
+            </ul>
           )}
         </div>
       </Section>
 
-      {/* Listings lead with type and price — what a buyer actually scans for. */}
+      {/* Featured Marketplace Section */}
       <Section
         id="tin-dang-noi-bat"
         title="Đang bán trên chợ"
         tone="open"
-        lede="Giá niêm yết theo khung công khai của từng loại phế liệu."
+        lede="Các lô phế liệu tái chế được niêm yết với mức giá minh bạch."
       >
         <div role="status" aria-live="polite" className="min-w-0">
           {listingsState.status === "loading" ? (
             <div
               aria-hidden="true"
-              className="grid grid-cols-1 gap-px overflow-hidden rounded-md border border-edge bg-rule sm:grid-cols-2"
+              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             >
-              <div className="skeleton h-28 w-full" />
-              <div className="skeleton h-28 w-full" />
+              <div className="skeleton h-36 w-full rounded-xl" />
+              <div className="skeleton h-36 w-full rounded-xl" />
+              <div className="skeleton h-36 w-full rounded-xl" />
+              <div className="skeleton h-36 w-full rounded-xl" />
             </div>
           ) : listingsState.status === "error" ? (
             <EmptyState
@@ -172,47 +200,58 @@ export function HomeHighlights() {
               description="Hiện chưa có tin đăng bán phế liệu nào khả dụng."
             />
           ) : (
-            <div className="min-w-0 space-y-5">
-              {/* One hairline grid, not four floating cards. */}
-              <ul className="grid min-w-0 grid-cols-1 gap-px overflow-hidden rounded-md border border-edge bg-rule sm:grid-cols-2">
+            <div className="min-w-0 space-y-6">
+              <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {listingsState.data.slice(0, 4).map((listing) => (
                   <li
                     key={listing.id}
-                    className="flex min-w-0 flex-col justify-between gap-3 bg-paper p-5"
+                    className="flex min-w-0 flex-col justify-between gap-3 rounded-xl border border-edge bg-card p-5 shadow-eco-sm transition duration-quick hover:border-primary/40 hover:shadow-eco hover:-translate-y-0.5"
                   >
                     <div className="min-w-0">
-                      <h3 className="font-display text-lg font-semibold tracking-tight text-ink">
-                        {listing.categoryName}
-                      </h3>
-                      <p className="mt-1 text-sm tabular-nums text-muted">
-                        {listing.estimatedWeightKg}kg ·{" "}
-                        {formatVnd(listing.buyerPricePerKgVnd)}/kg
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <EcoBadge variant="mint" className="text-[11px]">
+                          {listing.categoryName}
+                        </EcoBadge>
+                        <span className="text-xs font-semibold text-primary">
+                          Khu vực sẵn sàng
+                        </span>
+                      </div>
+                      <p className="text-sm font-medium tabular-nums text-muted">
+                        Khối lượng: <strong className="text-ink">{listing.estimatedWeightKg} kg</strong>
+                      </p>
+                      <p className="mt-1 text-xs tabular-nums text-muted">
+                        Đơn giá: {formatVnd(listing.buyerPricePerKgVnd)}/kg
                       </p>
                     </div>
-                    <p className="font-display text-xl font-bold tabular-nums text-ink">
-                      {formatVnd(listing.estimatedTotalVnd)}
-                    </p>
+                    <div className="border-t border-edge/60 pt-3">
+                      <p className="text-xs font-medium text-muted">Tổng ước tính</p>
+                      <p className="font-display text-xl font-bold tabular-nums text-primary">
+                        {formatVnd(listing.estimatedTotalVnd)}
+                      </p>
+                    </div>
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/cho-online"
-                className="inline-flex items-center whitespace-nowrap text-sm font-medium text-accent underline-offset-4 hover:underline"
-              >
-                Xem tất cả trên Chợ online &rarr;
-              </Link>
+              <div className="pt-2">
+                <Link
+                  href="/cho-online"
+                  className="inline-flex items-center gap-2 rounded-lg bg-mint-surface px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white"
+                >
+                  <span>Xem tất cả phế liệu trên Chợ online</span>
+                  <IconArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
             </div>
           )}
         </div>
       </Section>
 
-      {/* Cleanup leads with the photograph — here the image IS the evidence. */}
+      {/* Verified Cleanup Reports Section */}
       <Section
         id="diem-rac-da-don"
         title="Điểm rác đã được xác minh"
         tone="ruled"
-        lede="Người dân gửi ảnh, ban quản lý đối chiếu và xác nhận là có thật. Việc thu gom do đơn vị vệ sinh của địa phương thực hiện, GreenCity chưa điều phối phần đó."
-        className="mt-12 sm:mt-16"
+        lede="Ảnh chụp thực tế từ người dân báo cáo, được ban quản lý đối chiếu và ghi nhận điểm thưởng."
       >
         <div role="status" aria-live="polite" className="min-w-0">
           {cleanupState.status === "loading" ? (
@@ -220,9 +259,8 @@ export function HomeHighlights() {
               aria-hidden="true"
               className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
             >
-              <div className="skeleton h-56 w-full" />
-              <div className="skeleton h-56 w-full" />
-              <div className="skeleton h-56 w-full" />
+              <div className="skeleton h-60 w-full rounded-xl" />
+              <div className="skeleton h-60 w-full rounded-xl" />
             </div>
           ) : cleanupState.status === "error" ||
             cleanupState.data.length === 0 ? (
@@ -233,11 +271,6 @@ export function HomeHighlights() {
             />
           ) : (
             <ul className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">
-              {/* Two columns and two reports: at the counts this feed actually
-                  carries, a third slot sits empty, and a half-filled row reads
-                  as missing content rather than as breathing room. The hero
-                  already shows the newest, so start after it, unless it is the
-                  only one where repeating beats an empty grid. */}
               {(cleanupState.data.length > 1
                 ? cleanupState.data.slice(1, 3)
                 : cleanupState.data
@@ -246,23 +279,34 @@ export function HomeHighlights() {
                   .filter(Boolean)
                   .join(", ");
                 return (
-                  <li key={report.id} className="min-w-0">
-                    <div className="aspect-[4/3] w-full overflow-hidden rounded-md border border-edge bg-paper-3">
+                  <li
+                    key={report.id}
+                    className="group min-w-0 overflow-hidden rounded-xl border border-edge bg-card shadow-eco-sm transition hover:border-primary/40 hover:shadow-eco"
+                  >
+                    <div className="aspect-[16/9] w-full overflow-hidden bg-paper-3 relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`/api${report.photoPath}`}
                         alt=""
                         loading="lazy"
-                        className="h-full w-full object-cover"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
+                      <div className="absolute top-3 left-3">
+                        <EcoBadge variant="primary" icon={<IconLeaf className="h-3 w-3" />}>
+                          Đã xác minh
+                        </EcoBadge>
+                      </div>
                     </div>
-                    <p className="mt-3 text-sm font-medium leading-relaxed text-ink">
-                      {report.description}
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      {place ? `${place} · ` : ""}xác minh{" "}
-                      {new Date(report.verifiedAt).toLocaleDateString("vi-VN")}
-                    </p>
+                    <div className="p-4">
+                      <p className="text-sm font-semibold leading-relaxed text-ink line-clamp-2">
+                        {report.description}
+                      </p>
+                      <p className="mt-2 text-xs font-medium text-muted">
+                        {place ? `Vị trí: ${place} · ` : ""}
+                        Ngày xác minh:{" "}
+                        {new Date(report.verifiedAt).toLocaleDateString("vi-VN")}
+                      </p>
+                    </div>
                   </li>
                 );
               })}

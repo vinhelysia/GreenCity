@@ -49,7 +49,7 @@ export function HeaderLoginLink() {
           </Link>
         ) : null}
         <span
-          className="hidden max-w-[10rem] truncate text-sm text-muted sm:inline"
+          className="hidden max-w-[10rem] truncate text-sm text-muted 2xl:inline"
           title={user.email}
           data-testid="header-user-label"
         >
@@ -88,7 +88,7 @@ export function HeaderLoginLink() {
         aria-current={loginActive ? "page" : undefined}
         data-testid="header-login"
         className={[
-          "inline-flex min-h-11 items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-quick ease-out sm:px-4",
+          "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-md border px-3 py-2 text-sm font-medium transition-colors duration-quick ease-out sm:px-4",
           loginActive
             ? "border-accent bg-paper-2 text-accent"
             : "border-edge bg-paper text-ink hover:border-accent hover:text-accent",

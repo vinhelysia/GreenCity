@@ -389,6 +389,7 @@ export const PAYMENT_ERROR_CODES = [
   "PAYMENT_PROVIDER_UNAVAILABLE",
   "PAYMENT_PROVIDER_REJECTED",
   "PAYMENT_NOT_FOUND",
+  "PAYMENT_CHECKOUT_IN_PROGRESS",
 ] as const;
 export type PaymentErrorCode = (typeof PAYMENT_ERROR_CODES)[number];
 

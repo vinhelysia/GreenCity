@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EcoBadge } from "./eco-badge";
 
 type PageHeaderProps = {
   title: string;
@@ -9,19 +10,17 @@ type PageHeaderProps = {
 /** Consistent page title block — one h1 per page. */
 export function PageHeader({ title, description, eyebrow }: PageHeaderProps) {
   return (
-    <header className="max-w-prose">
+    <header className="max-w-3xl space-y-3">
       {eyebrow ? (
-        <p className="text-sm font-medium tracking-wide text-accent">{eyebrow}</p>
+        <EcoBadge variant="mint" className="text-xs">
+          {eyebrow}
+        </EcoBadge>
       ) : null}
-      <h1
-        className={`font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl ${
-          eyebrow ? "mt-2" : ""
-        }`}
-      >
+      <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
         {title}
       </h1>
       {description ? (
-        <div className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
+        <div className="text-base leading-relaxed text-muted sm:text-lg">
           {description}
         </div>
       ) : null}

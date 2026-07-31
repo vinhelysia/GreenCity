@@ -11,7 +11,10 @@ import {
   resolvePayosCheckoutConfig,
   resolvePayosWebhookChecksumKey,
 } from '../src/payment/payos-config';
-import { createPayosPayment } from '../src/payment/payos-client';
+import {
+  createPayosPayment,
+  recoverPayosPayment,
+} from '../src/payment/payos-client';
 import type { AppEnv } from '../src/config/env';
 
 /**
@@ -611,6 +614,56 @@ describe('createPayosPayment', () => {
     mockFetch(async () => okResponse({ ...delivered, signature }));
     await expectPaymentErrorCode(
       createPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+      'PAYMENT_PROVIDER_UNAVAILABLE',
+    );
+  });
+});
+
+describe('recoverPayosPayment', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  function recoveryBody(overrides: Record<string, unknown> = {}) {
+    const data = {
+      id: LINK_ID,
+      orderCode: CREATE_INPUT.orderCode,
+      amount: CREATE_INPUT.amount,
+      amountPaid: 0,
+      amountRemaining: CREATE_INPUT.amount,
+      status: 'PENDING',
+      createdAt: '2026-07-30T00:00:00.000Z',
+      transactions: [],
+      ...overrides,
+    };
+    return {
+      code: '00',
+      desc: 'success',
+      data,
+      signature: signPayosPayload(
+        canonicalizeData(data),
+        FAKE_CONFIG.checksumKey,
+      ),
+    };
+  }
+
+  it('gets the signed original link by merchant orderCode', async () => {
+    const { calls } = mockFetch(async () => okResponse(recoveryBody()));
+
+    await expect(
+      recoverPayosPayment(FAKE_CONFIG, CREATE_INPUT),
+    ).resolves.toEqual({
+      payUrl: `https://pay.payos.vn/web/${LINK_ID}`,
+      providerPaymentId: LINK_ID,
+    });
+    expect(calls[0]!.url).toBe(
+      `${PAYOS_CREATE_ENDPOINT}/${CREATE_INPUT.orderCode}`,
+    );
+    expect(calls[0]!.init.method).toBe('GET');
+  });
+
+  it('rejects signed data for another amount', async () => {
+    mockFetch(async () => okResponse(recoveryBody({ amount: 1 })));
+    await expectPaymentErrorCode(
+      recoverPayosPayment(FAKE_CONFIG, CREATE_INPUT),
       'PAYMENT_PROVIDER_UNAVAILABLE',
     );
   });

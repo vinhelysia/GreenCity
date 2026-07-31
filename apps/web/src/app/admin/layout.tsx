@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AdminNav } from "@/components/admin-nav";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 /**
  * Wraps every admin screen. The three queues had no links between them and

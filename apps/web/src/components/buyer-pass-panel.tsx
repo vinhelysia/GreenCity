@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { SubscriptionState } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import {
@@ -17,6 +17,7 @@ import {
  * there weeks later pointing at a payment nobody remembers.
  */
 const PENDING_PAYMENT_KEY = "greencity.pendingSubscriptionPaymentId";
+const PENDING_CHECKOUT_KEY = "greencity.pendingSubscriptionCheckoutKey";
 
 const POLL_INTERVAL_MS = 2_000;
 const MAX_POLL_ATTEMPTS = 30;
@@ -55,6 +56,26 @@ function clearPendingPaymentId(): void {
   }
 }
 
+function readOrCreateCheckoutKey(): string {
+  const key = crypto.randomUUID();
+  try {
+    const existing = window.sessionStorage.getItem(PENDING_CHECKOUT_KEY);
+    if (existing) return existing;
+    window.sessionStorage.setItem(PENDING_CHECKOUT_KEY, key);
+  } catch {
+    /* the component ref still keeps this attempt stable until navigation */
+  }
+  return key;
+}
+
+function clearPendingCheckoutKey(): void {
+  try {
+    window.sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
+  } catch {
+    /* nothing to clean up if storage was never writable */
+  }
+}
+
 export function BuyerPassPanel({
   load,
   onSubscriptionChange,
@@ -65,6 +86,7 @@ export function BuyerPassPanel({
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [starting, setStarting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const checkoutKeyRef = useRef<string | null>(null);
   // Starts "checking", not "idle": the checkout CTA must not be paintable
   // before this effect has had a chance to find a pending payment and switch
   // to "polling" — otherwise a click in that window starts a second checkout
@@ -164,12 +186,22 @@ export function BuyerPassPanel({
     if (starting) return;
     setStarting(true);
     setCheckoutError(null);
+    const idempotencyKey =
+      checkoutKeyRef.current ?? readOrCreateCheckoutKey();
+    checkoutKeyRef.current = idempotencyKey;
 
     const result = checkAuthExpiry(
-      await createSubscriptionPayment(),
+      await createSubscriptionPayment(idempotencyKey),
       clearSessionAndRedirect,
     );
     if (!result.ok) {
+      if (
+        result.status === 400 ||
+        result.error.code === "PAYMENT_PROVIDER_REJECTED"
+      ) {
+        clearPendingCheckoutKey();
+        checkoutKeyRef.current = null;
+      }
       setCheckoutError(paymentErrorMessage(result.error));
       setStarting(false);
       return;
@@ -182,6 +214,8 @@ export function BuyerPassPanel({
     } catch {
       /* storage unavailable; the payment itself is unaffected */
     }
+    clearPendingCheckoutKey();
+    checkoutKeyRef.current = null;
     // Same tab: payOS returns the payer to us, and a popup would be blocked or
     // orphaned. Only payUrl is used — nothing from the provider is persisted.
     window.location.assign(result.data.payUrl);
@@ -352,9 +386,6 @@ export function BuyerPassPanel({
   }
 
   function body() {
-    if (authStatus === "loading" || load.kind === "loading") {
-      return <div aria-hidden="true" className="skeleton mt-3 h-12 w-full" />;
-    }
     if (authStatus === "unauthenticated") {
       return (
         <>
@@ -371,20 +402,25 @@ export function BuyerPassPanel({
         </>
       );
     }
+    if (authStatus === "loading" || load.kind === "loading") {
+      return <div aria-hidden="true" className="skeleton mt-3 h-12 w-full" />;
+    }
     return signedInBody();
   }
 
   return (
     <section
       aria-labelledby="buyer-pass-heading"
-      className="min-w-0 rounded-md border border-edge bg-paper-2 p-5 sm:p-6"
+      className="min-w-0 rounded-xl border border-primary/20 bg-card p-5 sm:p-6 shadow-eco-sm"
     >
-      <h2
-        id="buyer-pass-heading"
-        className="font-display text-lg font-semibold tracking-tight text-ink"
-      >
-        Gói người mua
-      </h2>
+      <div className="flex items-center gap-2">
+        <h2
+          id="buyer-pass-heading"
+          className="font-display text-lg font-bold tracking-tight text-ink"
+        >
+          Gói quyền lợi người mua
+        </h2>
+      </div>
       {body()}
     </section>
   );

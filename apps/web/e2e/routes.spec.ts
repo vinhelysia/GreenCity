@@ -34,6 +34,18 @@ test.describe("Public routes", () => {
     assertCleanRuntime(issues, "not-found");
   });
 
+  test("anonymous marketplace shows login actions instead of a loading placeholder", async ({ page }) => {
+    await page.goto("/cho-online", { waitUntil: "networkidle" });
+    await expect(
+      page.getByRole("heading", { name: "Gói quyền lợi người mua" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Đăng nhập để mua gói" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Đăng nhập để đặt giữ" }).first(),
+    ).toBeVisible();
+  });
   test("shows a recoverable error when the response body stream fails", async ({ page }) => {
     await page.addInitScript(() => {
       const realFetch = window.fetch.bind(window);

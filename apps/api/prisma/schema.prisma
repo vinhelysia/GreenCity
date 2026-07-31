@@ -313,6 +313,11 @@ model SubscriptionPayment {
   providerTransactionId String? @unique
   providerResultCode    String?
   providerDescription   String?
+  /// Client-generated UUID. Nullable only so historical rows migrate intact;
+  /// every new checkout created through the API supplies one.
+  idempotencyKey      String? @unique
+  /// Exact checkout URL after the signed payOS create response is validated.
+  providerCheckoutUrl String?
 
   paidAt         DateTime?
   subscriptionId String?       @unique

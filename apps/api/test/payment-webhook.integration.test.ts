@@ -599,6 +599,7 @@ describe('payOS webhook integration', () => {
         .post('/subscription-payments')
         .set('Origin', ORIGIN)
         .set('Cookie', cookie)
+        .set('Idempotency-Key', '00000000-0000-4000-8000-000000000001')
         .send({});
 
       expect(res.status).toBe(503);

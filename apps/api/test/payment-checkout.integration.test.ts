@@ -1,5 +1,6 @@
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
@@ -133,11 +134,16 @@ describe('Subscription checkout integration', () => {
     return { userId: response.body.user.id, cookie: cookieFrom(response) };
   }
 
-  function postCheckout(cookie: string, body: unknown = {}) {
+  function postCheckout(
+    cookie: string,
+    body: unknown = {},
+    idempotencyKey = randomUUID(),
+  ) {
     return request(app.getHttpServer())
       .post('/subscription-payments')
       .set('Origin', ORIGIN)
       .set('Cookie', cookie)
+      .set('Idempotency-Key', idempotencyKey)
       .send(body as object);
   }
 
@@ -243,6 +249,137 @@ describe('Subscription checkout integration', () => {
     stubProvider(providerSuccess());
     const res = await postCheckout(buyer.cookie);
     expect(res.status).toBe(201);
+  });
+
+  it.each([
+    ['missing', undefined],
+    ['invalid', 'not-a-uuid'],
+  ])(
+    'rejects a %s Idempotency-Key before creating a payment',
+    async (_label, key) => {
+      stubProvider(providerSuccess());
+      let checkout = request(app.getHttpServer())
+        .post('/subscription-payments')
+        .set('Origin', ORIGIN)
+        .set('Cookie', buyer.cookie);
+      if (key) checkout = checkout.set('Idempotency-Key', key);
+
+      const res = await checkout.send({});
+
+      expect(res.status).toBe(400);
+      expect(await paymentCount()).toBe(0);
+      expect(sentBodies).toHaveLength(0);
+    },
+  );
+
+  it('replays one checkout for the same Idempotency-Key', async () => {
+    stubProvider(providerSuccess());
+    const key = randomUUID();
+
+    const first = await postCheckout(buyer.cookie, {}, key);
+    const replay = await postCheckout(buyer.cookie, {}, key);
+
+    expect(first.status).toBe(201);
+    expect(replay.status).toBe(201);
+    expect(replay.body).toEqual(first.body);
+    expect(await paymentCount()).toBe(1);
+    expect(sentBodies).toHaveLength(1);
+  });
+
+  it('does not create a second checkout while the first request is in flight', async () => {
+    let releaseProvider!: () => void;
+    let markProviderEntered!: () => void;
+    const providerEntered = new Promise<void>((resolve) => {
+      markProviderEntered = resolve;
+    });
+    const heldProvider = new Promise<void>((resolve) => {
+      releaseProvider = resolve;
+    });
+    globalThis.fetch = (async (_input: string, init: RequestInit = {}) => {
+      if ((init.method ?? 'GET') === 'GET') {
+        return new Response(null, { status: 404 });
+      }
+      const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+      sentBodies.push(body);
+      markProviderEntered();
+      await heldProvider;
+      return providerSuccess()(body);
+    }) as unknown as typeof fetch;
+    const key = randomUUID();
+
+    const firstRequest = postCheckout(buyer.cookie, {}, key).then(
+      (response) => response,
+    );
+    await providerEntered;
+    const concurrent = await postCheckout(buyer.cookie, {}, key);
+
+    expect(concurrent.status).toBe(409);
+    expect(concurrent.body.error.code).toBe('PAYMENT_CHECKOUT_IN_PROGRESS');
+    expect(await paymentCount()).toBe(1);
+    expect(sentBodies).toHaveLength(1);
+
+    releaseProvider();
+    const first = await firstRequest;
+    const replay = await postCheckout(buyer.cookie, {}, key);
+    expect(first.status).toBe(201);
+    expect(replay.body).toEqual(first.body);
+    expect(sentBodies).toHaveLength(1);
+    expect(await paymentCount()).toBe(1);
+  });
+
+  it('recovers the original PayOS link after an ambiguous create timeout', async () => {
+    const providerMethods: string[] = [];
+    let createdOrderCode = 0;
+    globalThis.fetch = (async (input: string, init: RequestInit = {}) => {
+      const method = init.method ?? 'GET';
+      providerMethods.push(method);
+      if (method === 'POST') {
+        const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+        sentBodies.push(body);
+        createdOrderCode = Number(body.orderCode);
+        throw new TypeError('connection closed after sending request');
+      }
+
+      expect(String(input)).toBe(
+        `https://api-merchant.payos.vn/v2/payment-requests/${createdOrderCode}`,
+      );
+      const data = {
+        id: linkFor(createdOrderCode),
+        orderCode: createdOrderCode,
+        amount: 50000,
+        amountPaid: 0,
+        amountRemaining: 50000,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+        transactions: [],
+      };
+      return new Response(
+        JSON.stringify({
+          code: '00',
+          desc: 'success',
+          data,
+          signature: signPayosPayload(canonicalizeData(data), CHECKSUM_KEY),
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }) as unknown as typeof fetch;
+    const key = randomUUID();
+
+    const timedOut = await postCheckout(buyer.cookie, {}, key);
+    const recovered = await postCheckout(buyer.cookie, {}, key);
+    const replay = await postCheckout(buyer.cookie, {}, key);
+
+    expect(timedOut.status).toBe(503);
+    expect(timedOut.body.error.code).toBe('PAYMENT_PROVIDER_UNAVAILABLE');
+    expect(recovered.status).toBe(201);
+    expect(recovered.body).toEqual({
+      paymentId: expect.any(String),
+      payUrl: `https://pay.payos.vn/web/${linkFor(createdOrderCode)}`,
+    });
+    expect(replay.body).toEqual(recovered.body);
+    expect(await paymentCount()).toBe(1);
+    expect(providerMethods).toEqual(['POST', 'GET']);
+    expect(sentBodies).toHaveLength(1);
   });
 
   // ── the client cannot price itself ────────────────────────────────────────
@@ -414,10 +551,20 @@ describe('Subscription checkout integration', () => {
 
   it('maps a provider rejection to PAYMENT_PROVIDER_REJECTED without granting access', async () => {
     stubProvider(providerRejection());
+    const key = randomUUID();
 
-    const res = await postCheckout(buyer.cookie);
+    const res = await postCheckout(buyer.cookie, {}, key);
+    const replay = await postCheckout(buyer.cookie, {}, key);
     expect(res.status).toBe(502);
     expect(res.body.error.code).toBe('PAYMENT_PROVIDER_REJECTED');
+    expect(replay.status).toBe(502);
+    expect(replay.body.error.code).toBe('PAYMENT_PROVIDER_REJECTED');
+    expect(sentBodies).toHaveLength(1);
+    expect(
+      await prisma.subscriptionPayment.findFirstOrThrow({
+        where: { userId: buyer.userId },
+      }),
+    ).toMatchObject({ status: 'FAILED' });
     expect(
       await prisma.subscription.count({ where: { userId: buyer.userId } }),
     ).toBe(0);

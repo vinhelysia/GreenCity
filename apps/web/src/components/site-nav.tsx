@@ -90,11 +90,11 @@ export function SiteNav() {
                 aria-current={active ? "page" : undefined}
                 onClick={close}
                 className={[
-                  "block rounded-md px-3 py-2.5 text-base font-medium transition-colors duration-quick ease-out",
+                  "block rounded-lg px-3 py-2.5 text-base font-medium transition duration-quick ease-out",
                   "min-h-11 lg:min-h-0 lg:py-2 lg:text-sm",
                   active
-                    ? "bg-paper-2 text-ink underline decoration-accent decoration-2 underline-offset-4"
-                    : "text-muted hover:bg-paper-2 hover:text-ink",
+                    ? "bg-mint-surface font-semibold text-primary shadow-eco-sm"
+                    : "text-muted hover:bg-mint-surface/60 hover:text-ink",
                 ].join(" ")}
               >
                 {label}
