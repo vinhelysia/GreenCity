@@ -8,6 +8,7 @@ import {
   useId,
   useState,
 } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   CreateScrapRequestSchema,
   type ScrapCategory,
@@ -30,19 +31,12 @@ import {
   rejectScrapRequestQuote,
   uploadMedia,
 } from "@/lib/api";
-import { formatVnd } from "@/lib/format";
+import { formatCategoryName, formatVnd } from "@/lib/format";
 
 type LoadState<T> =
   | { status: "loading" }
   | { status: "error"; message: string }
   | { status: "ready"; data: T };
-
-const STATUS_LABEL: Record<ScrapRequestStatus, string> = {
-  SUBMITTED: "Đã gửi",
-  QUOTED: "Đã báo giá",
-  ACCEPTED: "Đã chấp nhận",
-  REJECTED: "Đã từ chối",
-};
 
 const STATUS_VARIANT: Record<ScrapRequestStatus, "mint" | "yellow" | "primary" | "coral"> = {
   SUBMITTED: "mint",
@@ -52,61 +46,70 @@ const STATUS_VARIANT: Record<ScrapRequestStatus, "mint" | "yellow" | "primary" |
 };
 
 function StatusBadge({ status }: { status: ScrapRequestStatus }) {
+  const tStatus = useTranslations("status");
+  const labels: Record<ScrapRequestStatus, string> = {
+    SUBMITTED: tStatus("pending") || "Đã gửi",
+    QUOTED: tStatus("quoted") || "Đã báo giá",
+    ACCEPTED: tStatus("accepted") || "Đã chấp nhận",
+    REJECTED: tStatus("rejected") || "Đã từ chối",
+  };
+
   return (
     <EcoBadge variant={STATUS_VARIANT[status]} className="text-xs uppercase tracking-wider">
-      {STATUS_LABEL[status]}
+      {labels[status]}
     </EcoBadge>
   );
 }
 
-/** Public price bands — visible pre-login, the transparency half of the story. */
 function PriceBandTable({ categories }: { categories: ScrapCategory[] }) {
+  const locale = useLocale();
+  const t = useTranslations("sellScrap");
+  const tCommon = useTranslations("common");
+
   if (categories.length === 0) {
     return (
       <EmptyState
         testId="scrap-categories-empty"
-        title="Chưa có bảng giá"
-        description="Chưa có loại phế liệu nào được công bố giá."
+        title={t("priceTableTitle")}
+        description={t("priceTableDesc")}
       />
     );
   }
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-edge bg-card shadow-eco-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
-          <thead>
-            <tr className="border-b border-edge bg-mint-surface/60">
-              <th scope="col" className="px-4 py-3.5 font-bold text-ink">
-                Loại phế liệu
-              </th>
-              <th scope="col" className="px-4 py-3.5 font-bold text-ink">
-                Giá tối thiểu
-              </th>
-              <th scope="col" className="px-4 py-3.5 font-bold text-ink">
-                Giá tối đa
-              </th>
+    <div className="min-w-0 overflow-x-auto rounded-md border border-edge">
+      <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+        <thead>
+          <tr className="border-b border-edge bg-paper-2">
+            <th scope="col" className="px-3 py-2.5 font-medium text-ink">
+              {t("category")}
+            </th>
+            <th scope="col" className="px-3 py-2.5 font-medium text-ink">
+              {t("publishedRange")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {categories.map((category) => (
+            <tr key={category.id} className="border-b border-rule last:border-0">
+              <td className="px-3 py-2.5 text-ink">{formatCategoryName(category.name, locale)}</td>
+              <td className="px-3 py-2.5 text-muted">
+                {tCommon("priceRange", {
+                  min: formatVnd(category.minPricePerKgVnd, locale),
+                  max: formatVnd(category.maxPricePerKgVnd, locale),
+                })}
+              </td>
             </tr>
-          </thead>
-          <tbody className="divide-y divide-edge/60">
-            {categories.map((category) => (
-              <tr key={category.id} className="transition-colors hover:bg-mint-surface/20">
-                <td className="px-4 py-3.5 font-semibold text-ink">{category.name}</td>
-                <td className="px-4 py-3.5 font-medium tabular-nums text-muted">
-                  {formatVnd(category.minPricePerKgVnd)}/kg
-                </td>
-                <td className="px-4 py-3.5 font-medium tabular-nums text-primary">
-                  {formatVnd(category.maxPricePerKgVnd)}/kg
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 export function SellScrapView() {
+  const locale = useLocale();
+  const t = useTranslations("sellScrap");
+  const tCommon = useTranslations("common");
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [categoryState, setCategoryState] = useState<
     LoadState<ScrapCategory[]>
@@ -139,7 +142,7 @@ export function SellScrapView() {
           id="scrap-price-heading"
           className="font-display text-xl font-semibold tracking-tight text-ink"
         >
-          Bảng giá thu mua
+          {t("priceTableTitle")}
         </h2>
         <div className="mt-4" role="status" aria-live="polite">
           {categoryState.status === "loading" ? (
@@ -160,12 +163,12 @@ export function SellScrapView() {
 
       {authStatus === "loading" ? (
         <p role="status" className="text-sm text-muted">
-          Đang kiểm tra đăng nhập…
+          {tCommon("loading")}
         </p>
       ) : authStatus === "unauthenticated" ? (
         <SignInRequired
           testId="sell-scrap-login-required"
-          action="bán phế liệu"
+          actionKey="actionSellScrap"
         />
       ) : (
         <>
@@ -195,6 +198,10 @@ function SubmitScrapRequestForm({
   clearSessionAndRedirect: () => void;
   onSubmitted: () => void;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("sellScrap");
+  const tVal = useTranslations("validation");
+
   const categoryId = useId();
   const weightId = useId();
   const photoId = useId();
@@ -241,8 +248,6 @@ function SubmitScrapRequestForm({
     setServerError(null);
     setFieldErrors({});
 
-    // Capture the form now: after the await below, React has nulled
-    // event.currentTarget, so touching it later throws and skips onSubmitted().
     const form = event.currentTarget;
     const fd = new FormData(form);
     const noteRaw = String(fd.get("note") ?? "").trim();
@@ -258,12 +263,12 @@ function SubmitScrapRequestForm({
       const flat = firstFieldErrors(parsed.error.flatten().fieldErrors);
       const localized: Record<string, string> = {};
       for (const [key, msg] of Object.entries(flat)) {
-        if (key === "categoryId") localized[key] = "Vui lòng chọn loại phế liệu.";
+        if (key === "categoryId") localized[key] = tVal("selectCategory");
         else if (key === "estimatedWeightKg")
-          localized[key] = "Khối lượng phải lớn hơn 0 và tối đa 1000kg.";
+          localized[key] = tVal("weightMin");
         else if (key === "mediaAssetId")
-          localized[key] = "Vui lòng tải lên một ảnh.";
-        else if (key === "note") localized[key] = "Ghi chú tối đa 500 ký tự.";
+          localized[key] = tVal("required");
+        else if (key === "note") localized[key] = "Max 500 characters.";
         else localized[key] = msg;
       }
       setFieldErrors(localized);
@@ -300,7 +305,7 @@ function SubmitScrapRequestForm({
         id="sell-form-heading"
         className="font-display text-xl font-semibold tracking-tight text-ink"
       >
-        Gửi yêu cầu bán phế liệu
+        {t("submitFormTitle")}
       </h2>
       <form
         className="mt-4 flex max-w-md min-w-0 flex-col gap-5"
@@ -310,7 +315,7 @@ function SubmitScrapRequestForm({
       >
         <div>
           <label htmlFor={categoryId} className="block text-sm font-medium text-ink">
-            Loại phế liệu
+            {t("categoryLabel")}
           </label>
           <select
             id={categoryId}
@@ -323,12 +328,12 @@ function SubmitScrapRequestForm({
             defaultValue=""
           >
             <option value="" disabled>
-              Chọn loại phế liệu
+              {t("selectCategory")}
             </option>
             {activeCategories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name} ({formatVnd(category.minPricePerKgVnd)}–
-                {formatVnd(category.maxPricePerKgVnd)}/kg)
+                {formatCategoryName(category.name, locale)} ({formatVnd(category.minPricePerKgVnd, locale)}–
+                {formatVnd(category.maxPricePerKgVnd, locale)}/kg)
               </option>
             ))}
           </select>
@@ -341,7 +346,7 @@ function SubmitScrapRequestForm({
 
         <div>
           <label htmlFor={weightId} className="block text-sm font-medium text-ink">
-            Khối lượng ước tính (kg)
+            {t("weightLabel")}
           </label>
           <input
             id={weightId}
@@ -355,6 +360,7 @@ function SubmitScrapRequestForm({
             disabled={submitState === "submitting"}
             aria-invalid={weightError ? true : undefined}
             aria-describedby={weightError ? `${weightId}-error` : undefined}
+            placeholder={t("weightPlaceholder")}
             className="mt-1.5 min-h-11 w-full rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
           />
           {weightError ? (
@@ -366,7 +372,7 @@ function SubmitScrapRequestForm({
 
         <div>
           <label htmlFor={photoId} className="block text-sm font-medium text-ink">
-            Ảnh phế liệu (một ảnh)
+            {locale === "en" ? "Photo of Material (Required)" : "Ảnh phế liệu (một ảnh)"}
           </label>
           <input
             id={photoId}
@@ -378,7 +384,7 @@ function SubmitScrapRequestForm({
             className="mt-1.5 block w-full min-w-0 text-sm text-ink file:mr-3 file:min-h-11 file:rounded-md file:border file:border-edge file:bg-paper file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink"
           />
           <div role="status" className="mt-2 text-sm text-muted">
-            {photoState.status === "uploading" ? "Đang tải ảnh lên…" : null}
+            {photoState.status === "uploading" ? (locale === "en" ? "Uploading image..." : "Đang tải ảnh lên…") : null}
             {photoState.status === "error" ? (
               <span role="alert" className="text-red-800">
                 {photoState.message}
@@ -388,7 +394,7 @@ function SubmitScrapRequestForm({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={photoState.previewUrl}
-                alt="Ảnh phế liệu đã chọn"
+                alt={t("selectedPhotoAlt")}
                 className="mt-1 h-24 w-24 rounded-md border border-edge object-cover"
               />
             ) : null}
@@ -402,7 +408,7 @@ function SubmitScrapRequestForm({
 
         <div>
           <label htmlFor={noteId} className="block text-sm font-medium text-ink">
-            Ghi chú <span className="font-normal text-muted">(tuỳ chọn)</span>
+            {t("notesLabel")}
           </label>
           <textarea
             id={noteId}
@@ -412,6 +418,7 @@ function SubmitScrapRequestForm({
             disabled={submitState === "submitting"}
             aria-invalid={noteError ? true : undefined}
             aria-describedby={noteError ? `${noteId}-error` : undefined}
+            placeholder={t("notesPlaceholder")}
             className="mt-1.5 w-full min-w-0 rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
           />
           {noteError ? (
@@ -426,7 +433,7 @@ function SubmitScrapRequestForm({
           disabled={submitState === "submitting" || photoState.status === "uploading"}
           className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
         >
-          {submitState === "submitting" ? "Đang gửi…" : "Gửi yêu cầu"}
+          {submitState === "submitting" ? t("submitting") : t("submitButton")}
         </button>
 
         {serverError ? (
@@ -436,7 +443,9 @@ function SubmitScrapRequestForm({
         ) : null}
 
         <p id={statusId} role="status" className="text-sm leading-relaxed text-muted">
-          {submitState === "success" ? "Đã gửi yêu cầu. Xem trong danh sách bên dưới." : null}
+          {submitState === "success"
+            ? (locale === "en" ? "Request submitted successfully. See history below." : "Đã gửi yêu cầu. Xem trong danh sách bên dưới.")
+            : null}
         </p>
       </form>
     </section>
@@ -450,6 +459,8 @@ function MyScrapRequests({
   refreshKey: number;
   clearSessionAndRedirect: () => void;
 }) {
+  const locale = useLocale();
+  const t = useTranslations("sellScrap");
   const [state, setState] = useState<LoadState<ScrapRequestDto[]>>({
     status: "loading",
   });
@@ -493,7 +504,7 @@ function MyScrapRequests({
 
   async function onAccept(id: string, pricePerKgVnd: number) {
     const confirmed = window.confirm(
-      `Xác nhận chấp nhận báo giá ${formatVnd(pricePerKgVnd)}/kg?`,
+      t("confirmAccept", { price: formatVnd(pricePerKgVnd, locale) }),
     );
     if (!confirmed) return;
     setRowAction((s) => ({ ...s, [id]: "accepting" }));
@@ -516,7 +527,7 @@ function MyScrapRequests({
         id="my-requests-heading"
         className="font-display text-xl font-semibold tracking-tight text-ink"
       >
-        Yêu cầu của tôi
+        {t("myRequestsTitle")}
       </h2>
       <div className="mt-4" role="status" aria-live="polite">
         {state.status === "loading" ? (
@@ -531,8 +542,8 @@ function MyScrapRequests({
         ) : state.data.length === 0 ? (
           <EmptyState
             testId="my-scrap-requests-empty"
-            title="Chưa có yêu cầu nào"
-            description="Gửi yêu cầu bán phế liệu ở trên để bắt đầu."
+            title={locale === "en" ? "No requests yet" : "Chưa có yêu cầu nào"}
+            description={t("noRequests")}
           />
         ) : (
           <ul className="flex min-w-0 flex-col gap-4">
@@ -550,7 +561,7 @@ function MyScrapRequests({
                       className="h-16 w-16 shrink-0 rounded-md border border-edge object-cover"
                     />
                     <div className="min-w-0">
-                      <p className="font-medium text-ink">{request.category.name}</p>
+                      <p className="font-medium text-ink">{formatCategoryName(request.category.name, locale)}</p>
                       <p className="text-sm text-muted">
                         {request.estimatedWeightKg}kg
                       </p>
@@ -565,9 +576,9 @@ function MyScrapRequests({
                 {request.activeQuote && request.activeQuote.status === "PENDING" ? (
                   <div className="mt-3 min-w-0 border-t border-rule pt-3">
                     <p className="text-sm text-ink">
-                      Giá báo:{" "}
+                      {locale === "en" ? "Quoted price: " : "Giá báo: "}
                       <span className="font-medium">
-                        {formatVnd(request.activeQuote.pricePerKgVnd)}/kg
+                        {formatVnd(request.activeQuote.pricePerKgVnd, locale)}/kg
                       </span>
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -583,8 +594,8 @@ function MyScrapRequests({
                         className="inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-4 py-2 text-sm font-semibold text-paper transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
                       >
                         {rowAction[request.id] === "accepting"
-                          ? "Đang xử lý…"
-                          : "Chấp nhận"}
+                          ? t("accepting")
+                          : t("acceptQuote")}
                       </button>
                       <button
                         type="button"
@@ -593,8 +604,8 @@ function MyScrapRequests({
                         className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-accent disabled:opacity-60"
                       >
                         {rowAction[request.id] === "rejecting"
-                          ? "Đang xử lý…"
-                          : "Từ chối"}
+                          ? (locale === "en" ? "Rejecting..." : "Đang xử lý…")
+                          : (locale === "en" ? "Reject Quote" : "Từ chối")}
                       </button>
                     </div>
                     {rowError[request.id] ? (
