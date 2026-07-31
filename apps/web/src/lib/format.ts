@@ -20,3 +20,19 @@ export function formatDateTime(value: Date | string | number, locale: string = "
 export function formatNumber(value: number, locale: string = "vi"): string {
   return new Intl.NumberFormat(locale === "en" ? "en-US" : "vi-VN").format(value);
 }
+
+const CATEGORY_TRANSLATIONS_EN: Record<string, string> = {
+  "Chai nhựa PET": "PET Plastic Bottles",
+  "Chai thủy tinh": "Glass Bottles",
+  "Giấy carton": "Cardboard",
+  "Lon nhôm": "Aluminum Cans",
+  "Sắt vụn": "Scrap Iron",
+};
+
+export function formatCategoryName(categoryName: string, locale: string = "vi"): string {
+  if (locale === "en" && CATEGORY_TRANSLATIONS_EN[categoryName]) {
+    return CATEGORY_TRANSLATIONS_EN[categoryName];
+  }
+  return categoryName;
+}
+

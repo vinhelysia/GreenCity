@@ -18,7 +18,7 @@ import {
   marketplaceErrorMessage,
   reserveListing,
 } from "@/lib/api";
-import { formatVnd } from "@/lib/format";
+import { formatCategoryName, formatVnd } from "@/lib/format";
 
 type LoadState =
   | { status: "loading" }
@@ -176,7 +176,7 @@ function ListingCard({
             </EcoBadge>
           </div>
           <h3 className="font-display text-lg font-bold tracking-tight text-ink">
-            {listing.categoryName}
+            {formatCategoryName(listing.categoryName, locale)}
           </h3>
           <p className="mt-1 text-sm tabular-nums text-muted">
             {tMkt("quantity", { weight: listing.estimatedWeightKg })} ·{" "}

@@ -31,7 +31,7 @@ import {
   rejectScrapRequestQuote,
   uploadMedia,
 } from "@/lib/api";
-import { formatVnd } from "@/lib/format";
+import { formatCategoryName, formatVnd } from "@/lib/format";
 
 type LoadState<T> =
   | { status: "loading" }
@@ -91,7 +91,7 @@ function PriceBandTable({ categories }: { categories: ScrapCategory[] }) {
         <tbody>
           {categories.map((category) => (
             <tr key={category.id} className="border-b border-rule last:border-0">
-              <td className="px-3 py-2.5 text-ink">{category.name}</td>
+              <td className="px-3 py-2.5 text-ink">{formatCategoryName(category.name, locale)}</td>
               <td className="px-3 py-2.5 text-muted">
                 {tCommon("priceRange", {
                   min: formatVnd(category.minPricePerKgVnd, locale),
@@ -332,7 +332,7 @@ function SubmitScrapRequestForm({
             </option>
             {activeCategories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name} ({formatVnd(category.minPricePerKgVnd, locale)}–
+                {formatCategoryName(category.name, locale)} ({formatVnd(category.minPricePerKgVnd, locale)}–
                 {formatVnd(category.maxPricePerKgVnd, locale)}/kg)
               </option>
             ))}
@@ -561,7 +561,7 @@ function MyScrapRequests({
                       className="h-16 w-16 shrink-0 rounded-md border border-edge object-cover"
                     />
                     <div className="min-w-0">
-                      <p className="font-medium text-ink">{request.category.name}</p>
+                      <p className="font-medium text-ink">{formatCategoryName(request.category.name, locale)}</p>
                       <p className="text-sm text-muted">
                         {request.estimatedWeightKg}kg
                       </p>

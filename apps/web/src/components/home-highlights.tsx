@@ -16,7 +16,7 @@ import {
   fetchMarketplaceListings,
   fetchPublicCleanupReports,
 } from "@/lib/api";
-import { formatDate, formatVnd } from "@/lib/format";
+import { formatCategoryName, formatDate, formatVnd } from "@/lib/format";
 
 type LoadState<T> =
   | { status: "loading" }
@@ -202,7 +202,7 @@ export function HomeHighlights() {
                   >
                     <div className="min-w-0">
                       <h3 className="font-display text-lg font-semibold tracking-tight text-ink">
-                        {listing.categoryName}
+                        {formatCategoryName(listing.categoryName, locale)}
                       </h3>
                       <p className="mt-1 text-sm tabular-nums text-muted">
                         {listing.estimatedWeightKg}kg ·{" "}

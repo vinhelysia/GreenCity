@@ -13,7 +13,7 @@ import {
   mediaUrl,
   postAdminQuote,
 } from "@/lib/api";
-import { formatVnd } from "@/lib/format";
+import { formatCategoryName, formatVnd } from "@/lib/format";
 
 type LoadState =
   | { status: "loading" }
@@ -185,7 +185,7 @@ function AdminQuoteRow({
           className="h-20 w-20 shrink-0 rounded-md border border-edge object-cover"
         />
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-ink">{category.name}</p>
+          <p className="font-medium text-ink">{formatCategoryName(category.name, locale)}</p>
           <p className="text-sm text-muted">{request.estimatedWeightKg}kg</p>
           <p className="text-sm text-muted">
             {tAdmin("validRange", {

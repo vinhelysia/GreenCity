@@ -12,7 +12,7 @@ import {
   fetchAdminReservedListings,
   marketplaceErrorMessage,
 } from "@/lib/api";
-import { formatVnd } from "@/lib/format";
+import { formatCategoryName, formatVnd } from "@/lib/format";
 
 type LoadState =
   | { status: "loading" }
@@ -158,7 +158,7 @@ function AdminListingRow({
   return (
     <li className="min-w-0 rounded-md border border-edge bg-paper p-4">
       <div className="min-w-0">
-        <p className="font-medium text-ink">{listing.categoryName}</p>
+        <p className="font-medium text-ink">{formatCategoryName(listing.categoryName, locale)}</p>
         <p className="mt-1 text-sm text-muted">
           {tMkt("quantity", { weight: listing.estimatedWeightKg })} ·{" "}
           {tMkt("unitPrice", { price: formatVnd(listing.buyerPricePerKgVnd, locale) })}
