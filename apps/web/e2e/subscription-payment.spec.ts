@@ -161,6 +161,8 @@ const LISTINGS = {
       estimatedWeightKg: 10,
       buyerPricePerKgVnd: 3000,
       estimatedTotalVnd: 30000,
+      priceBandMinVnd: 2800,
+      priceBandMaxVnd: 3200,
       status: "AVAILABLE",
       mediaDownloadPath: "/marketplace/listings/listing-e2e/photo",
       isOwn: false,
