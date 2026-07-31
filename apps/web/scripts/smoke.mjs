@@ -52,6 +52,7 @@ const REQUIRED_COMPONENTS = [
   "components/admin-cleanup-queue.tsx",
   "components/home-highlights.tsx",
   "components/buyer-pass-panel.tsx",
+  "components/chatwoot-widget.tsx",
   "lib/api.ts",
   "lib/format.ts",
 ];

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { APP_NAME } from "@greencity/shared";
+import { ChatwootWidget } from "@/components/chatwoot-widget";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -99,6 +100,9 @@ export default async function LocaleLayout({
               {children}
             </main>
             <SiteFooter />
+            {/* Mounted once here: the layout survives App Router navigation,
+                so the SDK is never injected twice. */}
+            <ChatwootWidget />
           </Providers>
         </NextIntlClientProvider>
       </body>
