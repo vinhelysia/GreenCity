@@ -32,7 +32,10 @@ export function HeaderPointsPill() {
   if (authStatus !== "authenticated" || balance === null) return null;
 
   return (
-    <span className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-warm-100 bg-warm-100 px-3 text-[13px] font-bold text-warm-900">
+    // ponytail: the authenticated header row (nav + language + a long email +
+    // logout) is already tight at common desktop widths, so this decorative
+    // pill only claims space once there's clearly room for it.
+    <span className="hidden h-9 shrink-0 items-center gap-1.5 rounded-full border border-warm-100 bg-warm-100 px-3 text-[13px] font-bold text-warm-900 min-[1400px]:inline-flex">
       <IconPoints className="h-4 w-4 text-warm-600" />
       {tCommon("pointsVal", { count: formatNumber(balance, locale) })}
     </span>
