@@ -2,7 +2,7 @@ import { useTranslations } from "next-intl";
 import { APP_NAME } from "@greencity/shared";
 import { Link } from "@/i18n/routing";
 import { EcoBadge } from "./eco-badge";
-import { IconLeaf, IconShieldCheck } from "./eco-icons";
+import { IconShieldCheck } from "./eco-icons";
 import { NAV_LINKS } from "./nav-links";
 
 /** Modern civic eco footer — identity, tagline, navigation, transparency badge. */
@@ -16,9 +16,8 @@ export function SiteFooter() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-12 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 max-w-md">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white shadow-eco-sm">
-              <IconLeaf className="h-4.5 w-4.5" />
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="" className="h-8 w-8 shrink-0" />
             <span className="font-display text-xl font-bold tracking-tight text-ink">
               {APP_NAME}
             </span>

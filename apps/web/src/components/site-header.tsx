@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { APP_NAME } from "@greencity/shared";
 import { Link } from "@/i18n/routing";
-import { IconLeaf } from "./eco-icons";
 import { HeaderLoginLink } from "./header-login-link";
 import { HeaderPointsPill } from "./header-points-pill";
 import { LanguageSwitcher } from "./language-switcher";
@@ -25,9 +24,8 @@ export function SiteHeader() {
           href="/"
           className="group inline-flex shrink-0 items-center gap-2.5 rounded-lg text-ink transition-transform hover:scale-[1.01]"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-eco-sm transition-colors group-hover:bg-primary-hover">
-            <IconLeaf className="h-5 w-5" />
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="" className="h-9 w-9 shrink-0" />
           <span className="font-display text-xl font-bold tracking-tight text-ink">
             {APP_NAME}
           </span>
