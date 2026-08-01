@@ -275,31 +275,42 @@ export class ScrapRequestService {
       });
     }
 
-    const quote = await this.prisma.$transaction(async (tx) => {
-      await tx.quote.updateMany({
-        where: { scrapRequestId: id, status: 'PENDING' },
-        data: { status: 'SUPERSEDED' },
-      });
+    let quote;
+    try {
+      quote = await this.prisma.$transaction(async (tx) => {
+        await tx.quote.updateMany({
+          where: { scrapRequestId: id, status: 'PENDING' },
+          data: { status: 'SUPERSEDED' },
+        });
 
-      const reqUpdate = await tx.scrapRequest.updateMany({
-        where: { id, status: { in: [...QUOTABLE_STATUSES] } },
-        data: { status: 'QUOTED' },
+        const reqUpdate = await tx.scrapRequest.updateMany({
+          where: { id, status: { in: [...QUOTABLE_STATUSES] } },
+          data: { status: 'QUOTED' },
+        });
+        if (reqUpdate.count === 0) {
+          throw new ConflictException({
+            code: 'SCRAP_REQUEST_NOT_QUOTABLE',
+            message: 'Scrap request cannot be quoted in its current state',
+          });
+        }
+
+        return tx.quote.create({
+          data: {
+            scrapRequestId: id,
+            pricePerKgVnd: body.pricePerKgVnd,
+            status: 'PENDING',
+          },
+        });
       });
-      if (reqUpdate.count === 0) {
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException({
-          code: 'SCRAP_REQUEST_NOT_QUOTABLE',
-          message: 'Scrap request cannot be quoted in its current state',
+          code: 'PENDING_QUOTE_EXISTS',
+          message: 'A pending quote already exists for this scrap request',
         });
       }
-
-      return tx.quote.create({
-        data: {
-          scrapRequestId: id,
-          pricePerKgVnd: body.pricePerKgVnd,
-          status: 'PENDING',
-        },
-      });
-    });
+      throw err;
+    }
 
     await this.audit.record({
       actorId: auth.user.id,

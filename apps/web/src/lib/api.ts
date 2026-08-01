@@ -206,6 +206,7 @@ const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
   LISTING_NOT_AVAILABLE: "Tin này vừa được người khác đặt giữ.",
   CANNOT_RESERVE_OWN_LISTING: "Đây là tin đăng của bạn.",
   QUOTE_OUT_OF_PUBLISHED_RANGE: "Giá phải nằm trong khoảng đã công khai.",
+  PENDING_QUOTE_EXISTS: "Yêu cầu này đã có báo giá đang chờ phản hồi.",
   SCRAP_REQUEST_NOT_QUOTABLE:
     "Yêu cầu này không còn ở trạng thái chờ báo giá.",
   QUOTE_NOT_PENDING: "Báo giá này không còn hiệu lực.",

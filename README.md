@@ -52,7 +52,7 @@ password `GreenCity-Demo-2026`:
 | `seller@greencity.demo` | USER | Submitting scrap at `/ban-phe-lieu` |
 | `buyer@greencity.demo` | USER + demo subscription | Reserving at `/cho-online` |
 
-Local demo only. On any shared or deployed database, set a `DEMO_PASSWORD`
+The default password is accepted only for a loopback `DATABASE_URL`. Set a `DEMO_PASSWORD`
 env var before seeding — the default above is public.
 
 ### Install PostGIS on Windows (once per machine)

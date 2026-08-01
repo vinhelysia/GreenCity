@@ -26,6 +26,7 @@ import { SupabaseObjectStorage } from '../src/storage/supabase-object-storage';
 import type { ObjectStorage } from '../src/storage/storage.types';
 import { loadEnv } from '../src/config/env';
 import { findRuntimeRoot, repoRootEnvPath, resolveFromRepoRoot } from '../src/config/paths';
+import { resolveDemoPassword } from './seed-password';
 
 const CATEGORIES = [
   { name: 'Chai nhựa PET', minPricePerKgVnd: 1000, maxPricePerKgVnd: 1500 },
@@ -154,7 +155,7 @@ async function main() {
   // Local demo default so `pnpm db:seed` runs with zero setup. Override with
   // DEMO_PASSWORD on any shared/deployed database, where a publicly-known
   // password on an ADMIN account would let anyone tamper with the demo mid-pitch.
-  const demoPassword = process.env.DEMO_PASSWORD ?? 'GreenCity-Demo-2026';
+  const demoPassword = resolveDemoPassword(env.DATABASE_URL, process.env.DEMO_PASSWORD);
 
   // Seed the same object store the API will read from. Local for dev; supabase
   // when seeding a deploy so listing images land in persistent shared storage.
@@ -407,8 +408,10 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  });
+}
