@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
+import { useAuth } from "@/components/auth-provider";
+import { fetchChatwootIdentity } from "@/lib/api";
 
 /**
  * Chatwoot support chat bubble.
@@ -36,6 +38,14 @@ declare global {
     chatwootSDK?: {
       run: (config: { websiteToken: string; baseUrl: string }) => void;
     };
+    /** Only exists after the SDK fires `chatwoot:ready`. */
+    $chatwoot?: {
+      setUser: (
+        identifier: string,
+        attributes: { identifier_hash: string },
+      ) => void;
+      reset: () => void;
+    };
   }
 }
 
@@ -46,6 +56,10 @@ export function ChatwootWidget() {
   // `chatwoot:ready` listener before $chatwoot.setLocale, which is worth adding
   // alongside the setUser call in the verified-identity task.
   const locale = useLocale();
+  const { user } = useAuth();
+  const [sdkReady, setSdkReady] = useState(false);
+  // Which account the widget is currently bound to. `null` means anonymous.
+  const boundUserRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!BASE_URL || !WEBSITE_TOKEN) return;
@@ -71,6 +85,57 @@ export function ChatwootWidget() {
     };
     document.body.appendChild(script);
   }, [locale]);
+
+  // The SDK publishes $chatwoot only when it fires `chatwoot:ready`; calling
+  // setUser before that silently does nothing.
+  useEffect(() => {
+    if (window.$chatwoot) {
+      setSdkReady(true);
+      return;
+    }
+    const onReady = () => setSdkReady(true);
+    window.addEventListener("chatwoot:ready", onReady);
+    return () => window.removeEventListener("chatwoot:ready", onReady);
+  }, []);
+
+  /**
+   * Bind the widget to whoever is signed in, and unbind on the way out.
+   *
+   * Keyed on the user id rather than on a login event so an account *switch* is
+   * handled too: without the reset, the next person to use this browser
+   * inherits the previous person's conversation — the exact leak that verified
+   * identity exists to prevent.
+   */
+  useEffect(() => {
+    if (!sdkReady) return;
+
+    const currentId = user?.id ?? null;
+    if (boundUserRef.current === currentId) return;
+
+    // Covers logout and A→B switching. Skipped on the first bind, when there
+    // is nothing to clear.
+    if (boundUserRef.current !== null) window.$chatwoot?.reset();
+    boundUserRef.current = currentId;
+
+    if (!currentId) return;
+
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchChatwootIdentity();
+      // Anonymous (401) and identity-validation-off (503) both land here and
+      // both leave the widget usable, just unverified.
+      if (cancelled || !result.ok) return;
+      // A slow response must not bind a stale identity after another switch.
+      if (boundUserRef.current !== currentId) return;
+      window.$chatwoot?.setUser(result.data.userId, {
+        identifier_hash: result.data.identifierHash,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sdkReady, user?.id]);
 
   return null;
 }

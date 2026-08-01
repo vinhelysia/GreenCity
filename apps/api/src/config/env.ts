@@ -121,6 +121,16 @@ const EnvSchema = z.object({
    */
   PUBLIC_API_URL: blankAsUnset(publicUrl),
   PUBLIC_WEB_URL: blankAsUnset(publicUrl),
+  /**
+   * Chatwoot website-inbox HMAC secret, from the inbox's identity-validation
+   * setting. Optional: absent leaves support chat anonymous, which is a
+   * deployment state and never a startup error.
+   *
+   * Server-side only, with no NEXT_PUBLIC_ twin ever. Publishing it would let
+   * anyone mint proof of being any user to a support agent — the opposite of
+   * what it exists for.
+   */
+  CHATWOOT_HMAC_TOKEN: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

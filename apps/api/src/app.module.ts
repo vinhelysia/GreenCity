@@ -10,6 +10,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionModule } from './auth/session.module';
 import { AuthzModule } from './authz/authz.module';
+import { ChatwootModule } from './chatwoot/chatwoot.module';
 import { HealthModule } from './health/health.module';
 import { LocationModule } from './location/location.module';
 import { MailModule } from './mail/mail.module';
@@ -74,6 +75,7 @@ function rateLimitTracker(req: TrackerRequest): string {
     CleanupModule,
     PointsModule,
     StatsModule,
+    ChatwootModule,
   ],
   providers: [
     {

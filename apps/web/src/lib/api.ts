@@ -31,6 +31,8 @@ import {
   type SubscriptionPaymentStatusResponse,
   ReverseGeocodeResultSchema,
   type ReverseGeocodeResult,
+  ChatwootIdentitySchema,
+  type ChatwootIdentity,
 } from "@greencity/shared";
 
 export type ParsedApiError = ApiError["error"];
@@ -427,6 +429,32 @@ export async function postAdminQuote(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+// ─── Chatwoot ────────────────────────────────────────────────────────────────
+
+/**
+ * Verified identity for the signed-in user. Returns an error result for
+ * anonymous visitors (401) and when identity validation is not switched on
+ * (503) — both are ordinary states, and the widget stays anonymous in each.
+ */
+export async function fetchChatwootIdentity(): Promise<
+  ApiResult<ChatwootIdentity>
+> {
+  const result = await apiFetch<unknown>("/api/chatwoot/identity");
+  if (!result.ok) return result;
+  const parsed = ChatwootIdentitySchema.safeParse(result.data);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      status: result.status,
+      error: {
+        code: "INVALID_RESPONSE",
+        message: "Phản hồi máy chủ không hợp lệ.",
+      },
+    };
+  }
+  return { ok: true, data: parsed.data, status: result.status };
 }
 
 // ─── Geocoding ───────────────────────────────────────────────────────────────

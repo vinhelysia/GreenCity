@@ -576,6 +576,33 @@ export const ReverseGeocodeResultSchema = z.object({
 export type ReverseGeocodeResult = z.infer<typeof ReverseGeocodeResultSchema>;
 
 export const GEOCODE_ERROR_CODES = ["GEOCODING_FAILED"] as const;
+
+// ─── Chatwoot verified identity ──────────────────────────────────────────────
+
+/**
+ * Proof, issued by us, that the person in a support chat is who the widget
+ * claims. Chatwoot trusts `identifierHash` because only a party holding the
+ * inbox HMAC secret could have produced it for this identifier.
+ *
+ * `userId` is the stable internal id, never the email: an email is
+ * user-editable, so keying identity on it would let a changed address inherit
+ * another account's conversation history.
+ *
+ * The secret itself lives only on the API. It has no NEXT_PUBLIC_ twin, and a
+ * browser must never be able to compute this hash for an arbitrary id —
+ * otherwise anyone could impersonate anyone to a support agent.
+ */
+export const ChatwootIdentitySchema = z.object({
+  userId: z.string().min(1),
+  /** HMAC-SHA256(key = inbox HMAC secret, message = userId), hex encoded. */
+  identifierHash: z.string().regex(/^[0-9a-f]{64}$/, "expected hex sha256"),
+});
+export type ChatwootIdentity = z.infer<typeof ChatwootIdentitySchema>;
+
+export const CHATWOOT_ERROR_CODES = [
+  "CHATWOOT_IDENTITY_NOT_CONFIGURED",
+] as const;
+export type ChatwootErrorCode = (typeof CHATWOOT_ERROR_CODES)[number];
 export type GeocodeErrorCode = (typeof GEOCODE_ERROR_CODES)[number];
 
 /**

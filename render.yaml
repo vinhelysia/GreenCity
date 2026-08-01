@@ -80,3 +80,8 @@ services:
         sync: false # the Vercel web origin — set after the web deploy
       # Reverse geocoding for the "Đóng góp" map pin uses OpenStreetMap
       # Nominatim — no key, no billing, so there is nothing to set here.
+      # Chatwoot verified identity. Optional: unset leaves support chat
+      # anonymous, never a startup error. Server-side only — publishing it
+      # would let anyone prove they are any user to a support agent.
+      - key: CHATWOOT_HMAC_TOKEN
+        sync: false # secret — set in the Render dashboard, never commit
