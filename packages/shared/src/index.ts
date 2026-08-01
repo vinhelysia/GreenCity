@@ -557,13 +557,14 @@ export function isWithinHcmc(latitude: number, longitude: number): boolean {
 }
 
 /**
- * Reverse geocoding runs on the API, never in the browser: a Google Geocoding
- * key cannot be restricted by HTTP referrer the way a Maps JS key can, so a
- * public one is billable by anyone who copies it out of the bundle.
+ * Reverse geocoding runs on the API, never in the browser. The provider is
+ * OpenStreetMap Nominatim, whose policy requires an identifying User-Agent and
+ * caps requests at 1/second per client — both of which are only enforceable
+ * server-side, and neither of which survives being called from a browser.
  *
- * Every field is nullable — Google may resolve a point to a city but no ward,
- * and an unresolved component must read as "unknown", not as an empty string
- * that would overwrite something the reporter typed.
+ * Every field is nullable — a point may resolve to a city but no ward, and an
+ * unresolved component must read as "unknown", not as an empty string that
+ * would overwrite something the reporter typed.
  */
 export const ReverseGeocodeResultSchema = z.object({
   ward: z.string().nullable(),
@@ -574,10 +575,7 @@ export const ReverseGeocodeResultSchema = z.object({
 });
 export type ReverseGeocodeResult = z.infer<typeof ReverseGeocodeResultSchema>;
 
-export const GEOCODE_ERROR_CODES = [
-  "GEOCODING_NOT_CONFIGURED",
-  "GEOCODING_FAILED",
-] as const;
+export const GEOCODE_ERROR_CODES = ["GEOCODING_FAILED"] as const;
 export type GeocodeErrorCode = (typeof GEOCODE_ERROR_CODES)[number];
 
 /**
