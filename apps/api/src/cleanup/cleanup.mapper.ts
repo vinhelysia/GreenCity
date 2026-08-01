@@ -16,6 +16,8 @@ export function toCleanupReportDto(
     ward: r.ward,
     district: r.district,
     city: r.city,
+    latitude: r.latitude,
+    longitude: r.longitude,
     media: toMediaPublicDto(r.media),
     status: r.status,
     createdAt: r.createdAt.toISOString(),

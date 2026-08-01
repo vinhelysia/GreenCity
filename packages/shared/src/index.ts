@@ -427,16 +427,39 @@ export const CleanupReportStatusSchema = z.enum([
 ]);
 export type CleanupReportStatus = z.infer<typeof CleanupReportStatusSchema>;
 
-export const CreateCleanupReportSchema = z.object({
-  description: z.string().trim().min(10).max(1000),
-  mediaAssetId: z.string().min(1),
-  addressLine: z.string().trim().max(240).optional(),
-  ward: z.string().trim().max(120).optional(),
-  district: z.string().trim().max(120).optional(),
-  city: z.string().trim().max(120).optional(),
-});
+/**
+ * Coordinates are optional — a reporter may deny location access and type an
+ * address instead — but never half-present: one without the other is a bug in
+ * the client, not a partial location, and the same rule is a CHECK constraint
+ * on the table.
+ */
+export const CreateCleanupReportSchema = z
+  .object({
+    description: z.string().trim().min(10).max(1000),
+    mediaAssetId: z.string().min(1),
+    addressLine: z.string().trim().max(240).optional(),
+    ward: z.string().trim().max(120).optional(),
+    district: z.string().trim().max(120).optional(),
+    city: z.string().trim().max(120).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+  })
+  .refine(
+    (v) =>
+      (v.latitude === undefined) === (v.longitude === undefined),
+    {
+      message: 'latitude and longitude must be provided together',
+      path: ['longitude'],
+    },
+  );
 export type CreateCleanupReport = z.infer<typeof CreateCleanupReportSchema>;
 
+/**
+ * Reporter's own view, also what admins act on. Carries the EXACT coordinates:
+ * a cleanup crew has to find the pile. Never serve this shape to an
+ * unauthenticated audience — PublicCleanupReportSchema is that one, and it
+ * deliberately has no coordinates at all.
+ */
 export const CleanupReportSchema = z.object({
   id: z.string(),
   reporterId: z.string(),
@@ -445,6 +468,8 @@ export const CleanupReportSchema = z.object({
   ward: z.string().nullable(),
   district: z.string().nullable(),
   city: z.string().nullable(),
+  latitude: z.number().nullable(),
+  longitude: z.number().nullable(),
   media: MediaAssetPublicSchema,
   status: CleanupReportStatusSchema,
   createdAt: z.string(),
@@ -503,6 +528,57 @@ export const CLEANUP_ERROR_CODES = [
   "CLEANUP_REPORT_NOT_PENDING",
 ] as const;
 export type CleanupErrorCode = (typeof CLEANUP_ERROR_CODES)[number];
+
+// ─── Service area ────────────────────────────────────────────────────────────
+
+/**
+ * Bounding box around Ho Chi Minh City, wide enough to include Củ Chi in the
+ * north-west and Cần Giờ in the south-east.
+ *
+ * A box, not a real boundary: it over-covers at the corners. That is the right
+ * trade for what it drives — a *warning* that GreenCity may not collect there
+ * yet. It must never become a hard reject, because a genuine dumping site
+ * outside the box is still worth reporting.
+ */
+export const HCMC_BOUNDS = {
+  minLatitude: 10.35,
+  maxLatitude: 11.2,
+  minLongitude: 106.35,
+  maxLongitude: 107.05,
+} as const;
+
+export function isWithinHcmc(latitude: number, longitude: number): boolean {
+  return (
+    latitude >= HCMC_BOUNDS.minLatitude &&
+    latitude <= HCMC_BOUNDS.maxLatitude &&
+    longitude >= HCMC_BOUNDS.minLongitude &&
+    longitude <= HCMC_BOUNDS.maxLongitude
+  );
+}
+
+/**
+ * Reverse geocoding runs on the API, never in the browser: a Google Geocoding
+ * key cannot be restricted by HTTP referrer the way a Maps JS key can, so a
+ * public one is billable by anyone who copies it out of the bundle.
+ *
+ * Every field is nullable — Google may resolve a point to a city but no ward,
+ * and an unresolved component must read as "unknown", not as an empty string
+ * that would overwrite something the reporter typed.
+ */
+export const ReverseGeocodeResultSchema = z.object({
+  ward: z.string().nullable(),
+  district: z.string().nullable(),
+  city: z.string().nullable(),
+  /** Google's one-line formatted address, for the free-text address field. */
+  addressLine: z.string().nullable(),
+});
+export type ReverseGeocodeResult = z.infer<typeof ReverseGeocodeResultSchema>;
+
+export const GEOCODE_ERROR_CODES = [
+  "GEOCODING_NOT_CONFIGURED",
+  "GEOCODING_FAILED",
+] as const;
+export type GeocodeErrorCode = (typeof GEOCODE_ERROR_CODES)[number];
 
 /**
  * Reward points. The ledger is append-only: a balance is always SUM(delta) over

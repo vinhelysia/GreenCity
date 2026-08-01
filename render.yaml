@@ -78,3 +78,10 @@ services:
         sync: false # this service's own public URL, e.g. https://greencity-api.onrender.com
       - key: PUBLIC_WEB_URL
         sync: false # the Vercel web origin — set after the web deploy
+      # Google Geocoding for the "Đóng góp" map pin → ward/district/city.
+      # Optional: unset only disables the autofill, never a startup error.
+      # Lives here and NOT in Vercel on purpose — a Geocoding key takes no
+      # HTTP-referrer restriction, so a browser-exposed one is billable by
+      # anyone. Restrict it to this service's egress IPs in Google Cloud.
+      - key: GOOGLE_GEOCODING_API_KEY
+        sync: false # secret — set in the Render dashboard, never commit

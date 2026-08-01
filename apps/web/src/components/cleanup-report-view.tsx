@@ -13,10 +13,12 @@ import {
   CreateCleanupReportSchema,
   type CleanupReportDto,
   type CleanupReportStatus,
+  type ReverseGeocodeResult,
 } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
+import { LocationPicker, type Coords } from "@/components/location-picker";
 import { SignInRequired } from "@/components/sign-in-required";
 import {
   checkAuthExpiry,
@@ -122,6 +124,22 @@ function SubmitCleanupReportForm({
     | { status: "error"; message: string }
   >({ status: "idle" });
 
+  const [coords, setCoords] = useState<Coords | null>(null);
+  // Controlled so reverse geocoding can fill them, while the reporter stays
+  // free to correct anything it gets wrong.
+  const [addressLine, setAddressLine] = useState("");
+  const [ward, setWard] = useState("");
+  const [district, setDistrict] = useState("");
+  const [city, setCity] = useState("");
+
+  const onAddressResolved = useCallback((result: ReverseGeocodeResult) => {
+    // Only fill blanks: a lookup must never overwrite what someone typed.
+    if (result.addressLine) setAddressLine((v) => v || result.addressLine!);
+    if (result.ward) setWard((v) => v || result.ward!);
+    if (result.district) setDistrict((v) => v || result.district!);
+    if (result.city) setCity((v) => v || result.city!);
+  }, []);
+
   async function onPhotoChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -150,18 +168,18 @@ function SubmitCleanupReportForm({
     const form = event.currentTarget;
     const fd = new FormData(form);
     const description = String(fd.get("description") ?? "").trim();
-    const addressLine = String(fd.get("addressLine") ?? "").trim();
-    const ward = String(fd.get("ward") ?? "").trim();
-    const district = String(fd.get("district") ?? "").trim();
-    const city = String(fd.get("city") ?? "").trim();
 
     const raw = {
       description,
       mediaAssetId: photoState.status === "done" ? photoState.mediaAssetId : "",
-      ...(addressLine ? { addressLine } : {}),
-      ...(ward ? { ward } : {}),
-      ...(district ? { district } : {}),
-      ...(city ? { city } : {}),
+      ...(addressLine.trim() ? { addressLine: addressLine.trim() } : {}),
+      ...(ward.trim() ? { ward: ward.trim() } : {}),
+      ...(district.trim() ? { district: district.trim() } : {}),
+      ...(city.trim() ? { city: city.trim() } : {}),
+      // Both or neither — the schema and a DB CHECK both enforce it.
+      ...(coords
+        ? { latitude: coords.latitude, longitude: coords.longitude }
+        : {}),
     };
 
     const parsed = CreateCleanupReportSchema.safeParse(raw);
@@ -196,6 +214,12 @@ function SubmitCleanupReportForm({
       return { status: "idle" };
     });
     form.reset();
+    // form.reset() only clears uncontrolled inputs; these are React state.
+    setCoords(null);
+    setAddressLine("");
+    setWard("");
+    setDistrict("");
+    setCity("");
     onSubmitted();
   }
 
@@ -289,6 +313,13 @@ function SubmitCleanupReportForm({
           ) : null}
         </div>
 
+        <LocationPicker
+          value={coords}
+          onChange={setCoords}
+          onAddressResolved={onAddressResolved}
+          disabled={submitState === "submitting"}
+        />
+
         <div>
           <label
             htmlFor={addressId}
@@ -301,6 +332,8 @@ function SubmitCleanupReportForm({
             name="addressLine"
             type="text"
             maxLength={240}
+            value={addressLine}
+            onChange={(e) => setAddressLine(e.target.value)}
             disabled={submitState === "submitting"}
             className="mt-1.5 min-h-11 w-full rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
             placeholder={t("locationPlaceholder")}
@@ -320,6 +353,8 @@ function SubmitCleanupReportForm({
               name="ward"
               type="text"
               maxLength={120}
+              value={ward}
+              onChange={(e) => setWard(e.target.value)}
               disabled={submitState === "submitting"}
               className="mt-1.5 min-h-11 w-full rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
             />
@@ -337,6 +372,8 @@ function SubmitCleanupReportForm({
               name="district"
               type="text"
               maxLength={120}
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
               disabled={submitState === "submitting"}
               className="mt-1.5 min-h-11 w-full rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
             />
@@ -354,6 +391,8 @@ function SubmitCleanupReportForm({
               name="city"
               type="text"
               maxLength={120}
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
               disabled={submitState === "submitting"}
               className="mt-1.5 min-h-11 w-full rounded-md border border-edge bg-paper px-3 py-2 text-base text-ink"
             />

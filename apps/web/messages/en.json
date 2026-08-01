@@ -264,7 +264,16 @@
     "noReports": "You have not submitted any dumping site reports yet.",
     "statusPending": "Awaiting Verification",
     "statusVerified": "Verified (+50 points)",
-    "statusRejected": "Rejected"
+    "statusRejected": "Rejected",
+    "useMyLocation": "Use my current location",
+    "locating": "Getting your location…",
+    "lookingUpAddress": "Looking up address…",
+    "mapLabel": "Map for choosing the dumping site location",
+    "mapHint": "Tap the button above if you are standing at the site, or tap the map / drag the pin to place it exactly.",
+    "selectedCoords": "Selected coordinates: {lat}, {lng}",
+    "locationDenied": "Location permission was denied. Tap the map to place the pin manually, or type an address below.",
+    "locationUnavailable": "Could not get a location from your device. Tap the map to place the pin manually.",
+    "outsideServiceArea": "This spot is outside Ho Chi Minh City. You can still submit the report, but GreenCity does not collect there yet."
   },
   "rewards": {
     "title": "My Reward Points",

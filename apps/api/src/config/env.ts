@@ -121,6 +121,15 @@ const EnvSchema = z.object({
    */
   PUBLIC_API_URL: blankAsUnset(publicUrl),
   PUBLIC_WEB_URL: blankAsUnset(publicUrl),
+  /**
+   * Google Geocoding key for turning a dropped pin into ward/district/city.
+   * Optional: absent only disables the autofill, never a startup error.
+   *
+   * Server-side only, and it has no NEXT_PUBLIC_ twin on purpose. A Geocoding
+   * key cannot be restricted by HTTP referrer the way a Maps JS key can, so a
+   * browser-exposed one is billable by anyone who reads the bundle.
+   */
+  GOOGLE_GEOCODING_API_KEY: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof EnvSchema>;

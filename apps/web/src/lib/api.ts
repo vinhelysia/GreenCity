@@ -29,6 +29,8 @@ import {
   type CreateSubscriptionPaymentResponse,
   SubscriptionPaymentStatusResponseSchema,
   type SubscriptionPaymentStatusResponse,
+  ReverseGeocodeResultSchema,
+  type ReverseGeocodeResult,
 } from "@greencity/shared";
 
 export type ParsedApiError = ApiError["error"];
@@ -425,6 +427,38 @@ export async function postAdminQuote(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+// ─── Geocoding ───────────────────────────────────────────────────────────────
+
+/**
+ * Pin → address components, resolved by our API rather than the browser: the
+ * Google key is server-side only, so there is nothing here to steal.
+ */
+export async function reverseGeocode(
+  latitude: number,
+  longitude: number,
+): Promise<ApiResult<ReverseGeocodeResult>> {
+  const query = new URLSearchParams({
+    lat: String(latitude),
+    lng: String(longitude),
+  });
+  const result = await apiFetch<unknown>(
+    `/api/locations/reverse-geocode?${query}`,
+  );
+  if (!result.ok) return result;
+  const parsed = ReverseGeocodeResultSchema.safeParse(result.data);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      status: result.status,
+      error: {
+        code: "INVALID_RESPONSE",
+        message: "Phản hồi máy chủ không hợp lệ.",
+      },
+    };
+  }
+  return { ok: true, data: parsed.data, status: result.status };
 }
 
 // ─── Cleanup reports ─────────────────────────────────────────────────────────

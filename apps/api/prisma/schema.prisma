@@ -343,6 +343,11 @@ model CleanupReport {
   ward         String?
   district     String?
   city         String?
+  /// Exact site coordinates, set together or not at all (DB CHECK enforces
+  /// both-or-neither). Owner and admin only — the public feed shows
+  /// city/district, never these.
+  latitude     Float?
+  longitude    Float?
   mediaAssetId String              @unique
   media        MediaAsset          @relation(fields: [mediaAssetId], references: [id])
   status       CleanupReportStatus @default(SUBMITTED)

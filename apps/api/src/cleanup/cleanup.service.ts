@@ -56,6 +56,8 @@ export class CleanupService {
           ward: body.ward ?? null,
           district: body.district ?? null,
           city: body.city ?? null,
+          latitude: body.latitude ?? null,
+          longitude: body.longitude ?? null,
           mediaAssetId: body.mediaAssetId,
           status: 'SUBMITTED',
         },
