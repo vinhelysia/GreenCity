@@ -19,6 +19,7 @@ import { useAuth } from "@/components/auth-provider";
 import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
 import { LocationPicker, type Coords } from "@/components/location-picker";
+import { ReportCoordinates } from "@/components/report-coordinates";
 import { SignInRequired } from "@/components/sign-in-required";
 import {
   checkAuthExpiry,
@@ -518,6 +519,10 @@ function MyCleanupReports({
                             {locale === "en" ? "Location: " : "Địa điểm: "}{locationText}
                           </p>
                         ) : null}
+                        <ReportCoordinates
+                          latitude={report.latitude}
+                          longitude={report.longitude}
+                        />
                       </div>
                     </div>
                     <StatusBadge status={report.status} />

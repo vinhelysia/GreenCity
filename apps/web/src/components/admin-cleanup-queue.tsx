@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { CleanupReportDto } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
+import { ReportCoordinates } from "@/components/report-coordinates";
 import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
@@ -198,6 +199,10 @@ function AdminCleanupRow({
               {locale === "en" ? "Location: " : "Địa điểm: "}{locationText}
             </p>
           ) : null}
+          <ReportCoordinates
+            latitude={report.latitude}
+            longitude={report.longitude}
+          />
           <p className="mt-1 text-xs text-muted">
             {locale === "en" ? "Submitted: " : "Thời gian: "}{formatDateTime(report.createdAt, locale)}
           </p>

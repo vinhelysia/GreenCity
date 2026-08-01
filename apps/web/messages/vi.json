@@ -273,7 +273,9 @@
     "selectedCoords": "Tọa độ đã chọn: {lat}, {lng}",
     "locationDenied": "Bạn đã từ chối quyền vị trí. Hãy chạm vào bản đồ để chọn thủ công, hoặc nhập địa chỉ bên dưới.",
     "locationUnavailable": "Không lấy được vị trí từ thiết bị. Hãy chạm vào bản đồ để chọn thủ công.",
-    "outsideServiceArea": "Vị trí này nằm ngoài TP.HCM. Bạn vẫn gửi được báo cáo, nhưng GreenCity hiện chưa thu gom ở khu vực đó."
+    "outsideServiceArea": "Vị trí này nằm ngoài TP.HCM. Bạn vẫn gửi được báo cáo, nhưng GreenCity hiện chưa thu gom ở khu vực đó.",
+    "coordsLabel": "Tọa độ",
+    "openInMap": "Xem trên bản đồ"
   },
   "rewards": {
     "title": "Điểm thưởng của tôi",

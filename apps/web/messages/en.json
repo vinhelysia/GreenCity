@@ -273,7 +273,9 @@
     "selectedCoords": "Selected coordinates: {lat}, {lng}",
     "locationDenied": "Location permission was denied. Tap the map to place the pin manually, or type an address below.",
     "locationUnavailable": "Could not get a location from your device. Tap the map to place the pin manually.",
-    "outsideServiceArea": "This spot is outside Ho Chi Minh City. You can still submit the report, but GreenCity does not collect there yet."
+    "outsideServiceArea": "This spot is outside Ho Chi Minh City. You can still submit the report, but GreenCity does not collect there yet.",
+    "coordsLabel": "Coordinates",
+    "openInMap": "View on map"
   },
   "rewards": {
     "title": "My Reward Points",
