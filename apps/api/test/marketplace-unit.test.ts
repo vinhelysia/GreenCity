@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import type { AuthContext } from '../src/authz/auth-context';
+import { Prisma } from '@prisma/client';
 import { ScrapRequestService } from '../src/marketplace/scrap-request.service';
 import { ListingService } from '../src/marketplace/listing.service';
+import { resolveDemoPassword } from '../prisma/seed-password';
 
 /**
  * Prisma-mocked unit lane for the two money/ownership rules that must never
@@ -10,16 +10,10 @@ import { ListingService } from '../src/marketplace/listing.service';
  * seller cannot reserve their own listing. No database involved.
  */
 describe('marketplace unit', () => {
-  it('keeps demo seed credentials and subscriptions safe', () => {
-    const source = readFileSync(
-      resolve(__dirname, '../prisma/seed.ts'),
-      'utf8',
-    );
-    // Password is env-overridable (safe on a deployed DB) with a local-demo
-    // default (zero-setup `pnpm db:seed`). The default is intentional, not a leak.
-    expect(source).toContain('process.env.DEMO_PASSWORD ??');
-    expect(source).toContain('startsAt: { lte: now }');
-    expect(source).toContain('expiresAt: { gt: now }');
+  it('allows the demo password only for a loopback database', () => {
+    expect(resolveDemoPassword('postgresql://localhost/greencity')).toBe('GreenCity-Demo-2026');
+    expect(() => resolveDemoPassword('postgresql://db.example/greencity')).toThrow('DEMO_PASSWORD is required');
+    expect(resolveDemoPassword('postgresql://db.example/greencity', 'secret')).toBe('secret');
   });
 
   it('rejects an admin quote outside the published price band', async () => {
@@ -107,6 +101,26 @@ describe('marketplace unit', () => {
     });
     expect(quote.pricePerKgVnd).toBe(1200);
     expect(quote.status).toBe('PENDING');
+  });
+
+  it('maps a pending quote uniqueness conflict to the marketplace contract', async () => {
+    const prisma = {
+      scrapRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'req-1', status: 'SUBMITTED', category: { minPricePerKgVnd: 1000, maxPricePerKgVnd: 1500 },
+        }),
+      },
+      $transaction: jest.fn().mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('unique', { code: 'P2002', clientVersion: 'test' }),
+      ),
+    };
+    const service = new ScrapRequestService(prisma as never, { record: jest.fn() } as never);
+    const auth = { user: { id: 'admin-1' }, roles: ['ADMIN'], sessionId: 's' } as AuthContext;
+
+    await expect(service.adminQuote(auth, 'req-1', { pricePerKgVnd: 1200 })).rejects.toMatchObject({
+      status: 409,
+      response: { code: 'PENDING_QUOTE_EXISTS' },
+    });
   });
 
   it('rejects a seller reserving their own listing', async () => {

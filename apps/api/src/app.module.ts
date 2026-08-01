@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { isIP } from 'node:net';
@@ -46,11 +45,6 @@ function rateLimitTracker(req: TrackerRequest): string {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      // Env already loaded from monorepo-root .env in main.ts; avoid non-root files.
-      ignoreEnvFile: true,
-    }),
     ThrottlerModule.forRoot([
       {
         // High default so non-login routes are not constrained; login overrides via @Throttle.

@@ -13,8 +13,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "node -e \"console.log('shared: no unit tests yet')\""
+    "lint": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "zod": "^3.24.1"
