@@ -124,7 +124,7 @@ export function SellScrapView() {
       if (!result.ok) {
         setCategoryState({
           status: "error",
-          message: marketplaceErrorMessage(result.error),
+          message: marketplaceErrorMessage(result.error, locale),
         });
         return;
       }
@@ -133,7 +133,7 @@ export function SellScrapView() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   return (
     <div className="min-w-0 space-y-8">
@@ -236,7 +236,7 @@ function SubmitScrapRequestForm({
       URL.revokeObjectURL(previewUrl);
       setPhotoState({
         status: "error",
-        message: marketplaceErrorMessage(result.error),
+        message: marketplaceErrorMessage(result.error, locale),
       });
       return;
     }
@@ -281,7 +281,7 @@ function SubmitScrapRequestForm({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setServerError(marketplaceErrorMessage(result.error));
+      setServerError(marketplaceErrorMessage(result.error, locale));
       setSubmitState("idle");
       return;
     }
@@ -476,16 +476,15 @@ function MyScrapRequests({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setState({ status: "error", message: marketplaceErrorMessage(result.error) });
+      setState({ status: "error", message: marketplaceErrorMessage(result.error, locale) });
       return;
     }
     setState({ status: "ready", data: result.data.requests });
-  }, [clearSessionAndRedirect]);
+  }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
+  }, [refreshKey, load]);
 
   async function onReject(id: string) {
     setRowAction((s) => ({ ...s, [id]: "rejecting" }));
@@ -495,7 +494,7 @@ function MyScrapRequests({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setRowError((s) => ({ ...s, [id]: marketplaceErrorMessage(result.error) }));
+      setRowError((s) => ({ ...s, [id]: marketplaceErrorMessage(result.error, locale) }));
       setRowAction((s) => ({ ...s, [id]: undefined }));
       return;
     }
@@ -514,7 +513,7 @@ function MyScrapRequests({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setRowError((s) => ({ ...s, [id]: marketplaceErrorMessage(result.error) }));
+      setRowError((s) => ({ ...s, [id]: marketplaceErrorMessage(result.error, locale) }));
       setRowAction((s) => ({ ...s, [id]: undefined }));
       return;
     }

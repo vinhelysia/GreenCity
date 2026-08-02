@@ -41,11 +41,11 @@ export function AdminQuoteQueue() {
         setState({ status: "forbidden" });
         return;
       }
-      setState({ status: "error", message: marketplaceErrorMessage(result.error) });
+      setState({ status: "error", message: marketplaceErrorMessage(result.error, locale) });
       return;
     }
     setState({ status: "ready", data: result.data.requests });
-  }, [clearSessionAndRedirect]);
+  }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") return;
@@ -168,7 +168,7 @@ function AdminQuoteRow({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setServerError(marketplaceErrorMessage(result.error));
+      setServerError(marketplaceErrorMessage(result.error, locale));
       setSubmitting(false);
       return;
     }

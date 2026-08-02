@@ -45,12 +45,12 @@ export function AdminCleanupQueue() {
       }
       setState({
         status: "error",
-        message: marketplaceErrorMessage(result.error),
+        message: marketplaceErrorMessage(result.error, locale),
       });
       return;
     }
     setState({ status: "ready", data: result.data.reports });
-  }, [clearSessionAndRedirect]);
+  }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") return;
@@ -161,7 +161,7 @@ function AdminCleanupRow({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setServerError(marketplaceErrorMessage(result.error));
+      setServerError(marketplaceErrorMessage(result.error, locale));
       setSubmitting(null);
       return;
     }
@@ -176,7 +176,7 @@ function AdminCleanupRow({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setServerError(marketplaceErrorMessage(result.error));
+      setServerError(marketplaceErrorMessage(result.error, locale));
       setSubmitting(null);
       return;
     }

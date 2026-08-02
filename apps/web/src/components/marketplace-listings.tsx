@@ -46,11 +46,11 @@ export function MarketplaceListings() {
     setState({ status: "loading" });
     const result = await fetchMarketplaceListings();
     if (!result.ok) {
-      setState({ status: "error", message: marketplaceErrorMessage(result.error) });
+      setState({ status: "error", message: marketplaceErrorMessage(result.error, locale) });
       return;
     }
     setState({ status: "ready", data: result.data.listings });
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     void loadListings();
@@ -149,7 +149,7 @@ function ListingCard({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setRowError(marketplaceErrorMessage(result.error));
+      setRowError(marketplaceErrorMessage(result.error, locale));
       setReserving(false);
       if (result.status === 409) onReserved();
       return;
@@ -164,7 +164,11 @@ function ListingCard({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/marketplace/listings/${listing.id}/photo`}
-            alt={locale === "en" ? `Photo of ${formatCategoryName(listing.categoryName, locale)}` : `Ảnh ${formatCategoryName(listing.categoryName, locale)}`}
+            alt={
+              locale === "en"
+                ? `Photo of ${formatCategoryName(listing.categoryName, locale)}`
+                : `Ảnh ${formatCategoryName(listing.categoryName, locale)}`
+            }
             loading="lazy"
             className="h-full w-full object-cover"
           />
