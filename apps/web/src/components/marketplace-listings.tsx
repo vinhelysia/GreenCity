@@ -164,7 +164,7 @@ function ListingCard({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`/api/marketplace/listings/${listing.id}/photo`}
-            alt=""
+            alt={locale === "en" ? `Photo of ${formatCategoryName(listing.categoryName, locale)}` : `Ảnh ${formatCategoryName(listing.categoryName, locale)}`}
             loading="lazy"
             className="h-full w-full object-cover"
           />

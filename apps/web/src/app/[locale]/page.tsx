@@ -21,7 +21,10 @@ export default async function HomePage({
       <HomeHero />
 
       {/* Core User Journey Cards */}
-      <section aria-label={t("journeyTitle")} className="min-w-0">
+      <section aria-labelledby="journey-heading" className="min-w-0">
+        <h2 id="journey-heading" className="sr-only">
+          {t("journeyTitle")}
+        </h2>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
           <div className="group relative flex flex-col justify-between rounded-2xl border border-edge border-t-[3px] border-t-primary bg-card p-6 shadow-eco-sm transition duration-300 hover:border-primary/40 hover:shadow-eco hover:-translate-y-1">
             <div className="space-y-3">
@@ -39,7 +42,7 @@ export default async function HomePage({
             <div className="mt-6 border-t border-edge/60 pt-4">
               <Link
                 href="/ban-phe-lieu"
-                className="inline-flex items-center gap-2 text-sm font-bold text-warm-600 hover:underline underline-offset-4"
+                className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-warm-600 hover:underline underline-offset-4"
               >
                 <span>{t("sellerLink")}</span>
                 <IconArrowRight className="h-4 w-4" />
@@ -63,7 +66,7 @@ export default async function HomePage({
             <div className="mt-6 border-t border-edge/60 pt-4">
               <Link
                 href="/cho-online"
-                className="inline-flex items-center gap-2 text-sm font-bold text-warm-600 hover:underline underline-offset-4"
+                className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-warm-600 hover:underline underline-offset-4"
               >
                 <span>{t("buyerLink")}</span>
                 <IconArrowRight className="h-4 w-4" />
@@ -87,7 +90,7 @@ export default async function HomePage({
             <div className="mt-6 border-t border-edge/60 pt-4">
               <Link
                 href="/dong-gop"
-                className="inline-flex items-center gap-2 text-sm font-bold text-warm-600 hover:underline underline-offset-4"
+                className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-warm-600 hover:underline underline-offset-4"
               >
                 <span>{t("communityLink")}</span>
                 <IconArrowRight className="h-4 w-4" />

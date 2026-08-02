@@ -107,6 +107,24 @@ for (const section of ["HomeHero", "HomeHighlights", "HomeLoop", "cach-tinh-diem
     failures.push(`homepage missing section: ${section}`);
   }
 }
+const hero = readFileSync(join(srcRoot, "components/home-hero.tsx"), "utf8");
+const marketplaceListings = readFileSync(
+  join(srcRoot, "components/marketplace-listings.tsx"),
+  "utf8",
+);
+
+if (hero.includes("text-3.5xl")) {
+  failures.push("home hero must use a defined mobile text size");
+}
+if (!home.includes('aria-labelledby="journey-heading"') || !home.includes('<h2 id="journey-heading"')) {
+  failures.push("homepage journey must have a section heading");
+}
+if ((home.match(/min-h-11 items-center gap-2 text-sm font-bold text-warm-600/g) ?? []).length !== 3) {
+  failures.push("homepage journey links must have 44px touch targets");
+}
+if (!marketplaceListings.includes('alt={locale === "en"')) {
+  failures.push("marketplace listing photos must have localized alt text");
+}
 
 // Real auth: login form submits via same-origin /api (fetch lives in lib/api.ts).
 const login = readFileSync(join(srcRoot, "components/login-form.tsx"), "utf8");
@@ -182,6 +200,12 @@ if (missingInEn.length) {
 }
 if (missingInVi.length) {
   failures.push(`messages/vi.json missing keys present in en.json: ${missingInVi.join(", ")}`);
+}
+if (
+  viDict.home?.prop3 !== "Báo giá theo khung giá công khai" ||
+  enDict.home?.prop3 !== "Quotes follow published price bands"
+) {
+  failures.push("homepage must not promise an unsupported quote SLA");
 }
 
 const browserVerify = readFileSync(
