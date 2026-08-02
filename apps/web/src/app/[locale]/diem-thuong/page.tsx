@@ -31,10 +31,12 @@ export default function DiemThuongPage() {
     CLEANUP_VERIFIED: locale === "en" ? "Verified dumping site report" : "Báo cáo điểm rác được xác minh",
   };
 
-  const redemptionIdeas = [
-    { title: t("coffeeTitle"), description: t("coffeeDescription") },
-    { title: t("electricityTitle"), description: t("electricityDescription") },
-    { title: t("waterTitle"), description: t("waterDescription") },
+  const demoCoupons = [
+    { merchant: "Starbucks", offer: t("starbucksOffer"), points: 500 },
+    { merchant: "Highlands Coffee", offer: t("highlandsOffer"), points: 500 },
+    { merchant: "Jollibee", offer: t("jollibeeOffer"), points: 750 },
+    { merchant: "KFC", offer: t("kfcOffer"), points: 900 },
+    { merchant: "EVN", offer: t("evnOffer"), points: 1000 },
   ];
 
   useEffect(() => {
@@ -150,21 +152,39 @@ export default function DiemThuongPage() {
                 <p className="mb-4 max-w-3xl text-sm leading-6 text-muted">
                   {t("redeemNotice")}
                 </p>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {redemptionIdeas.map((idea) => (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {demoCoupons.map((coupon) => (
                     <article
-                      key={idea.title}
-                      className="rounded-md border border-edge bg-paper p-5"
+                      key={coupon.merchant}
+                      className="relative overflow-hidden rounded-md border border-dashed border-edge bg-paper p-5"
                     >
-                      <span className="inline-flex rounded-full bg-paper-2 px-2.5 py-1 text-xs font-semibold text-primary">
-                        {t("comingSoon")}
-                      </span>
-                      <h3 className="mt-4 font-display text-lg font-bold text-ink">
-                        {idea.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-6 text-muted">
-                        {idea.description}
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="inline-flex rounded-full bg-paper-2 px-2.5 py-1 text-xs font-semibold text-primary">
+                          {t("demoBadge")}
+                        </span>
+                        <span className="font-display text-sm font-bold text-primary">
+                          {formatNumber(coupon.points, locale)} {tCommon("points")}
+                        </span>
+                      </div>
+                      <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-muted">
+                        {t("illustrativePartner")}
                       </p>
+                      <h3 className="mt-1 font-display text-xl font-bold text-ink">
+                        {coupon.merchant}
+                      </h3>
+                      <p className="mt-2 min-h-12 text-sm leading-6 text-muted">
+                        {coupon.offer}
+                      </p>
+                      <p className="mt-4 border-y border-dashed border-rule py-3 font-mono text-xs text-muted">
+                        {t("demoCode")}
+                      </p>
+                      <button
+                        type="button"
+                        disabled
+                        className="mt-4 w-full cursor-not-allowed rounded-md border border-edge bg-paper-2 px-4 py-2.5 text-sm font-semibold text-muted opacity-70"
+                      >
+                        {t("demoButton")}
+                      </button>
                     </article>
                   ))}
                 </div>
