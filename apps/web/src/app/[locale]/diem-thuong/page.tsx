@@ -37,6 +37,7 @@ export default function DiemThuongPage() {
     { merchant: "Jollibee", offer: t("jollibeeOffer"), points: 750 },
     { merchant: "KFC", offer: t("kfcOffer"), points: 900 },
     { merchant: "EVN", offer: t("evnOffer"), points: 1000 },
+    { merchant: t("waterMerchant"), offer: t("waterOffer"), points: 1000 },
   ];
 
   useEffect(() => {

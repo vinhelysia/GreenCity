@@ -297,6 +297,8 @@
     "jollibeeOffer": "A meal combo voucher worth VND 79,000.",
     "kfcOffer": "A meal combo voucher worth VND 99,000.",
     "evnOffer": "VND 100,000 in electricity bill support.",
+    "waterMerchant": "Municipal water",
+    "waterOffer": "VND 100,000 in water bill support.",
     "ledgerTitle": "Points History",
     "noEntries": "You do not have any reward points yet.",
     "sourceSell": "Scrap sale reward #{id}",
