@@ -31,6 +31,12 @@ export default function DiemThuongPage() {
     CLEANUP_VERIFIED: locale === "en" ? "Verified dumping site report" : "Báo cáo điểm rác được xác minh",
   };
 
+  const redemptionIdeas = [
+    { title: t("coffeeTitle"), description: t("coffeeDescription") },
+    { title: t("electricityTitle"), description: t("electricityDescription") },
+    { title: t("waterTitle"), description: t("waterDescription") },
+  ];
+
   useEffect(() => {
     if (authStatus !== "authenticated") return;
     let cancelled = false;
@@ -118,6 +124,51 @@ export default function DiemThuongPage() {
                   <span className="text-lg font-medium text-muted">{tCommon("points")}</span>
                 </div>
               </section>
+
+              <Section id="cach-nhan-diem" title={t("earnTitle")}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <article className="rounded-md border border-edge bg-paper p-5">
+                    <h3 className="font-display text-lg font-bold text-ink">
+                      {t("earnSellTitle")}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {t("earnSellDescription")}
+                    </p>
+                  </article>
+                  <article className="rounded-md border border-edge bg-paper p-5">
+                    <h3 className="font-display text-lg font-bold text-ink">
+                      {t("earnCleanupTitle")}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {t("earnCleanupDescription")}
+                    </p>
+                  </article>
+                </div>
+              </Section>
+
+              <Section id="doi-diem" title={t("redeemTitle")}>
+                <p className="mb-4 max-w-3xl text-sm leading-6 text-muted">
+                  {t("redeemNotice")}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {redemptionIdeas.map((idea) => (
+                    <article
+                      key={idea.title}
+                      className="rounded-md border border-edge bg-paper p-5"
+                    >
+                      <span className="inline-flex rounded-full bg-paper-2 px-2.5 py-1 text-xs font-semibold text-primary">
+                        {t("comingSoon")}
+                      </span>
+                      <h3 className="mt-4 font-display text-lg font-bold text-ink">
+                        {idea.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-6 text-muted">
+                        {idea.description}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+              </Section>
 
               <Section id="lich-su-diem" title={t("ledgerTitle")}>
                 {pointsState.data.entries.length === 0 ? (
