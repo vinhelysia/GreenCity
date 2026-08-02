@@ -632,3 +632,25 @@ export const PointsBalanceSchema = z.object({
   entries: z.array(PointEntrySchema),
 });
 export type PointsBalance = z.infer<typeof PointsBalanceSchema>;
+
+/**
+ * Illustrative reward catalog only — there is deliberately no redemption
+ * endpoint. slug/merchantName/offer copy exist so a card can be rendered;
+ * nothing here is an inventory, a price paid to a partner, or a claim of
+ * affiliation with the merchants named.
+ */
+export const RewardOfferSchema = z.object({
+  slug: z.string().min(1),
+  merchantName: z.string().min(1),
+  offerVi: z.string().min(1),
+  offerEn: z.string().min(1),
+  pointsCost: z.number().int().positive(),
+  /** Literal, not boolean: the endpoint can only ever serve demo offers. */
+  demoOnly: z.literal(true),
+});
+export type RewardOffer = z.infer<typeof RewardOfferSchema>;
+
+export const RewardOfferListSchema = z.object({
+  offers: z.array(RewardOfferSchema),
+});
+export type RewardOfferList = z.infer<typeof RewardOfferListSchema>;

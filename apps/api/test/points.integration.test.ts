@@ -15,6 +15,15 @@ describe('Points integration', () => {
   let categoryId: string;
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
+  // Test-owned RewardOffer rows for the GET /points/offers describe block
+  // below. Seeded once here (not per-test) so the sortOrder/id tiebreak
+  // assertions compare against a fixed, known set of rows.
+  let offerLow: { id: string; slug: string };
+  let offerHigh: { id: string; slug: string };
+  let offerTieA: { id: string; slug: string };
+  let offerTieB: { id: string; slug: string };
+  let offerInactive: { id: string; slug: string };
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -42,6 +51,61 @@ describe('Points integration', () => {
       },
     });
     categoryId = category.id;
+
+    // Two active offers with distinct sortOrder, an active pair sharing the
+    // SAME sortOrder (proves the id tiebreak), and one inactive offer that
+    // must never appear in the response.
+    offerLow = await prisma.rewardOffer.create({
+      data: {
+        slug: `offer-low-${suffix}`,
+        merchantName: `Test Merchant Low ${suffix}`,
+        offerVi: 'Ưu đãi thử nghiệm thấp',
+        offerEn: 'Low test offer',
+        pointsCost: 100,
+        sortOrder: 1000,
+      },
+    });
+    offerHigh = await prisma.rewardOffer.create({
+      data: {
+        slug: `offer-high-${suffix}`,
+        merchantName: `Test Merchant High ${suffix}`,
+        offerVi: 'Ưu đãi thử nghiệm cao',
+        offerEn: 'High test offer',
+        pointsCost: 200,
+        sortOrder: 2000,
+      },
+    });
+    offerTieA = await prisma.rewardOffer.create({
+      data: {
+        slug: `offer-tie-a-${suffix}`,
+        merchantName: `Test Merchant Tie A ${suffix}`,
+        offerVi: 'Ưu đãi thử nghiệm hoà A',
+        offerEn: 'Tied test offer A',
+        pointsCost: 300,
+        sortOrder: 1500,
+      },
+    });
+    offerTieB = await prisma.rewardOffer.create({
+      data: {
+        slug: `offer-tie-b-${suffix}`,
+        merchantName: `Test Merchant Tie B ${suffix}`,
+        offerVi: 'Ưu đãi thử nghiệm hoà B',
+        offerEn: 'Tied test offer B',
+        pointsCost: 300,
+        sortOrder: 1500,
+      },
+    });
+    offerInactive = await prisma.rewardOffer.create({
+      data: {
+        slug: `offer-inactive-${suffix}`,
+        merchantName: `Test Merchant Inactive ${suffix}`,
+        offerVi: 'Ưu đãi thử nghiệm ẩn',
+        offerEn: 'Inactive test offer',
+        pointsCost: 400,
+        sortOrder: 500,
+        isActive: false,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -79,6 +143,21 @@ describe('Points integration', () => {
         .catch(() => undefined);
       await prisma.scrapCategory
         .deleteMany({ where: { id: categoryId } })
+        .catch(() => undefined);
+      await prisma.rewardOffer
+        .deleteMany({
+          where: {
+            id: {
+              in: [
+                offerLow.id,
+                offerHigh.id,
+                offerTieA.id,
+                offerTieB.id,
+                offerInactive.id,
+              ],
+            },
+          },
+        })
         .catch(() => undefined);
     }
     if (app) {
@@ -294,5 +373,76 @@ describe('Points integration', () => {
   it('returns 401 from GET /points/me without authentication', async () => {
     const response = await request(app.getHttpServer()).get('/points/me');
     expect(response.status).toBe(401);
+  });
+
+  describe('GET /points/offers', () => {
+    // Deliberately not evaluated until called from inside an `it`: the outer
+    // beforeAll (which populates offerLow etc.) has not run yet while Jest is
+    // still collecting this describe block's body.
+    function testOwnedOffers(
+      offers: Array<Record<string, unknown> & { slug: string }>,
+    ) {
+      const slugs = new Set([
+        offerLow.slug,
+        offerHigh.slug,
+        offerTieA.slug,
+        offerTieB.slug,
+        offerInactive.slug,
+      ]);
+      return offers.filter((o) => slugs.has(o.slug));
+    }
+
+    it('orders active offers by sortOrder then id, stably, and excludes inactive rows', async () => {
+      const first = await request(app.getHttpServer())
+        .get('/points/offers')
+        .set('Cookie', adminCookie);
+      expect(first.status).toBe(200);
+
+      const filtered = testOwnedOffers(first.body.offers);
+      // offerInactive has the lowest sortOrder of the five (500) — if it
+      // showed up here at all, it would sort first. Its absence proves the
+      // isActive filter runs, not merely that its sortOrder is unfavourable.
+      const [tieFirst, tieSecond] =
+        offerTieA.id < offerTieB.id
+          ? [offerTieA.slug, offerTieB.slug]
+          : [offerTieB.slug, offerTieA.slug];
+
+      expect(filtered.map((o) => o.slug)).toEqual([
+        offerLow.slug,
+        tieFirst,
+        tieSecond,
+        offerHigh.slug,
+      ]);
+
+      const second = await request(app.getHttpServer())
+        .get('/points/offers')
+        .set('Cookie', adminCookie);
+      expect(testOwnedOffers(second.body.offers).map((o) => o.slug)).toEqual(
+        filtered.map((o) => o.slug),
+      );
+    });
+
+    it('exposes no internal fields and marks every offer demoOnly', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/points/offers')
+        .set('Cookie', adminCookie);
+      expect(response.status).toBe(200);
+
+      const filtered = testOwnedOffers(response.body.offers);
+      expect(filtered.length).toBe(4);
+      for (const offer of filtered) {
+        expect(offer).not.toHaveProperty('id');
+        expect(offer).not.toHaveProperty('isActive');
+        expect(offer).not.toHaveProperty('sortOrder');
+        expect(offer).not.toHaveProperty('createdAt');
+        expect(offer).not.toHaveProperty('updatedAt');
+        expect(offer.demoOnly).toBe(true);
+      }
+    });
+
+    it('returns 401 from GET /points/offers without authentication', async () => {
+      const response = await request(app.getHttpServer()).get('/points/offers');
+      expect(response.status).toBe(401);
+    });
   });
 });
