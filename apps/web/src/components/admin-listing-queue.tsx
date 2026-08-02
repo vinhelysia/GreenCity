@@ -42,12 +42,12 @@ export function AdminListingQueue() {
       }
       setState({
         status: "error",
-        message: marketplaceErrorMessage(result.error),
+        message: marketplaceErrorMessage(result.error, locale),
       });
       return;
     }
     setState({ status: "ready", data: result.data.listings });
-  }, [clearSessionAndRedirect]);
+  }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") return;
@@ -148,7 +148,7 @@ function AdminListingRow({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setServerError(marketplaceErrorMessage(result.error));
+      setServerError(marketplaceErrorMessage(result.error, locale));
       setSubmitting(false);
       return;
     }

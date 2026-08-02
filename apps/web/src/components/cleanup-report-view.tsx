@@ -154,7 +154,7 @@ function SubmitCleanupReportForm({
       URL.revokeObjectURL(previewUrl);
       setPhotoState({
         status: "error",
-        message: marketplaceErrorMessage(result.error),
+        message: marketplaceErrorMessage(result.error, locale),
       });
       return;
     }
@@ -204,7 +204,7 @@ function SubmitCleanupReportForm({
       clearSessionAndRedirect,
     );
     if (!result.ok) {
-      setServerError(marketplaceErrorMessage(result.error));
+      setServerError(marketplaceErrorMessage(result.error, locale));
       setSubmitState("idle");
       return;
     }
@@ -452,12 +452,12 @@ function MyCleanupReports({
     if (!result.ok) {
       setState({
         status: "error",
-        message: marketplaceErrorMessage(result.error),
+        message: marketplaceErrorMessage(result.error, locale),
       });
       return;
     }
     setState({ status: "ready", data: result.data.reports });
-  }, [clearSessionAndRedirect]);
+  }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     void load();

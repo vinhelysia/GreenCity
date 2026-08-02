@@ -196,34 +196,62 @@ function invalidResponse(status: number): ApiResult<never> {
   };
 }
 
-/**
- * Vietnamese copy for MARKETPLACE_ERROR_CODES (@greencity/shared). ONE place —
- * UI code must branch on error.code, never on error.message.
- */
-const MARKETPLACE_ERROR_MESSAGES: Record<string, string> = {
-  SUBSCRIPTION_REQUIRED:
-    "Bạn cần gói người mua để đặt giữ. Mua gói ở phần đầu trang.",
-  LISTING_NOT_AVAILABLE: "Tin này vừa được người khác đặt giữ.",
-  CANNOT_RESERVE_OWN_LISTING: "Đây là tin đăng của bạn.",
-  QUOTE_OUT_OF_PUBLISHED_RANGE: "Giá phải nằm trong khoảng đã công khai.",
-  PENDING_QUOTE_EXISTS: "Yêu cầu này đã có báo giá đang chờ phản hồi.",
-  SCRAP_REQUEST_NOT_QUOTABLE:
-    "Yêu cầu này không còn ở trạng thái chờ báo giá.",
-  QUOTE_NOT_PENDING: "Báo giá này không còn hiệu lực.",
-  MEDIA_NOT_OWNED: "Không tìm thấy dữ liệu.",
-  CATEGORY_NOT_FOUND: "Không tìm thấy dữ liệu.",
-  SCRAP_REQUEST_NOT_FOUND: "Không tìm thấy dữ liệu.",
-  MEDIA_ALREADY_USED: "Ảnh này đã dùng cho một yêu cầu khác. Hãy chọn ảnh khác.",
-  CLEANUP_REPORT_NOT_FOUND: "Không tìm thấy dữ liệu báo cáo.",
-  CLEANUP_REPORT_NOT_PENDING: "Báo cáo không còn ở trạng thái chờ duyệt.",
-};
+/** Localized copy for MARKETPLACE_ERROR_CODES (@greencity/shared). */
+const MARKETPLACE_ERROR_MESSAGES = {
+  vi: {
+    NETWORK_ERROR: "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại.",
+    UNKNOWN_ERROR: "Không thể hoàn tất yêu cầu. Vui lòng thử lại.",
+    INVALID_RESPONSE: "Phản hồi máy chủ không hợp lệ.",
+    SUBSCRIPTION_REQUIRED: "Bạn cần gói người mua để đặt giữ. Mua gói ở phần đầu trang.",
+    LISTING_NOT_AVAILABLE: "Tin này vừa được người khác đặt giữ.",
+    CANNOT_RESERVE_OWN_LISTING: "Đây là tin đăng của bạn.",
+    QUOTE_OUT_OF_PUBLISHED_RANGE: "Giá phải nằm trong khoảng đã công khai.",
+    PENDING_QUOTE_EXISTS: "Yêu cầu này đã có báo giá đang chờ phản hồi.",
+    SCRAP_REQUEST_NOT_QUOTABLE: "Yêu cầu này không còn ở trạng thái chờ báo giá.",
+    QUOTE_NOT_PENDING: "Báo giá này không còn hiệu lực.",
+    MEDIA_NOT_OWNED: "Không tìm thấy dữ liệu.",
+    CATEGORY_NOT_FOUND: "Không tìm thấy dữ liệu.",
+    SCRAP_REQUEST_NOT_FOUND: "Không tìm thấy dữ liệu.",
+    MEDIA_ALREADY_USED: "Ảnh này đã dùng cho một yêu cầu khác. Hãy chọn ảnh khác.",
+    CLEANUP_REPORT_NOT_FOUND: "Không tìm thấy dữ liệu báo cáo.",
+    CLEANUP_REPORT_NOT_PENDING: "Báo cáo không còn ở trạng thái chờ duyệt.",
+  },
+  en: {
+    NETWORK_ERROR: "Unable to connect to the server. Check your network and try again.",
+    UNKNOWN_ERROR: "Unable to complete the request. Please try again.",
+    INVALID_RESPONSE: "The server returned an invalid response.",
+    SUBSCRIPTION_REQUIRED: "A Buyer Pass is required to reserve a listing. Purchase one at the top of the page.",
+    LISTING_NOT_AVAILABLE: "This listing was just reserved by someone else.",
+    CANNOT_RESERVE_OWN_LISTING: "This is your listing.",
+    QUOTE_OUT_OF_PUBLISHED_RANGE: "The price must be within the published range.",
+    PENDING_QUOTE_EXISTS: "This request already has a quote awaiting a response.",
+    SCRAP_REQUEST_NOT_QUOTABLE: "This request is no longer awaiting a quote.",
+    QUOTE_NOT_PENDING: "This quote is no longer valid.",
+    MEDIA_NOT_OWNED: "Data not found.",
+    CATEGORY_NOT_FOUND: "Data not found.",
+    SCRAP_REQUEST_NOT_FOUND: "Data not found.",
+    MEDIA_ALREADY_USED: "This photo is already used by another request. Choose a different photo.",
+    CLEANUP_REPORT_NOT_FOUND: "Report data not found.",
+    CLEANUP_REPORT_NOT_PENDING: "This report is no longer awaiting review.",
+  },
+} as const;
 
 /** Localize a marketplace ApiError. Falls back to the server message. */
-export function marketplaceErrorMessage(error: ParsedApiError): string {
+export function marketplaceErrorMessage(
+  error: ParsedApiError,
+  locale: string,
+): string {
+  const messages =
+    locale === "en"
+      ? MARKETPLACE_ERROR_MESSAGES.en
+      : MARKETPLACE_ERROR_MESSAGES.vi;
+
   return (
-    MARKETPLACE_ERROR_MESSAGES[error.code] ??
+    messages[error.code as keyof typeof messages] ??
     error.message ??
-    "Không thể hoàn tất yêu cầu. Vui lòng thử lại."
+    (locale === "en"
+      ? "Unable to complete the request. Please try again."
+      : "Không thể hoàn tất yêu cầu. Vui lòng thử lại.")
   );
 }
 

@@ -40,7 +40,7 @@ export async function HomeHero() {
 
         <h1
           id="hero-heading"
-          className="font-display text-3.5xl font-extrabold leading-[1.15] tracking-tight text-ink [overflow-wrap:anywhere] sm:text-4xl md:text-5xl"
+          className="font-display text-3xl font-extrabold leading-[1.15] tracking-tight text-ink [overflow-wrap:anywhere] sm:text-4xl md:text-5xl"
         >
           {t("heroTitle1")} <br className="hidden sm:inline" />
           <span className="text-primary underline decoration-yellow decoration-4 underline-offset-6">
