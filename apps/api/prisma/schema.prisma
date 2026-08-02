@@ -383,3 +383,26 @@ model PointEntry {
   @@unique([reason, referenceId])
   @@index([userId, createdAt])
 }
+
+/// Demo-only illustrative reward catalog: merchant names and offers a user
+/// could one day redeem points for. There is no redemption flow, no
+/// inventory, no real partner integration behind any row, and no affiliation
+/// with the merchants named here. `demoOnly` is a column (not only an
+/// API-layer flag) so that invariant is visible in the schema itself, and it
+/// mirrors the `demoOnly: true` literal on RewardOfferSchema in
+/// packages/shared — the wire contract for GET /points/offers.
+model RewardOffer {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  merchantName String
+  offerVi      String
+  offerEn      String
+  pointsCost   Int
+  demoOnly     Boolean  @default(true)
+  isActive     Boolean  @default(true)
+  sortOrder    Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}

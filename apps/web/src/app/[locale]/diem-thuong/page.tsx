@@ -2,14 +2,14 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { PointsBalance } from "@greencity/shared";
+import type { PointsBalance, RewardOfferList } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { CountUp } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Section } from "@/components/section";
 import { SignInRequired } from "@/components/sign-in-required";
-import { fetchMyPoints } from "@/lib/api";
+import { fetchMyPoints, fetchRewardOffers } from "@/lib/api";
 import { formatDate, formatNumber } from "@/lib/format";
 
 type LoadState<T> =
@@ -23,6 +23,9 @@ export default function DiemThuongPage() {
   const tCommon = useTranslations("common");
   const { status: authStatus } = useAuth();
   const [pointsState, setPointsState] = useState<LoadState<PointsBalance>>({
+    status: "loading",
+  });
+  const [offersState, setOffersState] = useState<LoadState<RewardOfferList>>({
     status: "loading",
   });
 
@@ -45,6 +48,28 @@ export default function DiemThuongPage() {
         });
       } else {
         setPointsState({ status: "ready", data: res.data });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus, locale]);
+
+  useEffect(() => {
+    if (authStatus !== "authenticated") return;
+    let cancelled = false;
+
+    void (async () => {
+      const res = await fetchRewardOffers();
+      if (cancelled) return;
+      if (!res.ok) {
+        setOffersState({
+          status: "error",
+          message: locale === "en" ? "Unable to load reward offers. Please refresh the page." : "Không tải được danh sách ưu đãi. Bạn thử tải lại trang nhé.",
+        });
+      } else {
+        setOffersState({ status: "ready", data: res.data });
       }
     })();
 
@@ -118,6 +143,92 @@ export default function DiemThuongPage() {
                   <span className="text-lg font-medium text-muted">{tCommon("points")}</span>
                 </div>
               </section>
+
+              <Section id="cach-nhan-diem" title={t("earnTitle")}>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <article className="rounded-md border border-edge bg-paper p-5">
+                    <h3 className="font-display text-lg font-bold text-ink">
+                      {t("earnSellTitle")}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {t("earnSellDescription")}
+                    </p>
+                  </article>
+                  <article className="rounded-md border border-edge bg-paper p-5">
+                    <h3 className="font-display text-lg font-bold text-ink">
+                      {t("earnCleanupTitle")}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {t("earnCleanupDescription")}
+                    </p>
+                  </article>
+                </div>
+              </Section>
+
+              <Section id="doi-diem" title={t("redeemTitle")}>
+                <p className="mb-4 max-w-3xl text-sm leading-6 text-muted">
+                  {t("redeemNotice")}
+                </p>
+                {offersState.status === "loading" ? (
+                  <div
+                    aria-hidden="true"
+                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    <div className="skeleton h-56 w-full" />
+                    <div className="skeleton h-56 w-full" />
+                    <div className="skeleton h-56 w-full" />
+                  </div>
+                ) : offersState.status === "error" ? (
+                  <EmptyState
+                    testId="offers-error"
+                    title={t("offersErrorTitle")}
+                    description={offersState.message}
+                  />
+                ) : offersState.data.offers.length === 0 ? (
+                  <EmptyState
+                    testId="offers-empty"
+                    title={t("offersEmptyTitle")}
+                    description={t("offersEmptyDescription")}
+                  />
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {offersState.data.offers.map((offer) => (
+                      <article
+                        key={offer.slug}
+                        className="relative overflow-hidden rounded-md border border-dashed border-edge bg-paper p-5"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="inline-flex rounded-full bg-paper-2 px-2.5 py-1 text-xs font-semibold text-primary">
+                            {t("demoBadge")}
+                          </span>
+                          <span className="font-display text-sm font-bold text-primary">
+                            {formatNumber(offer.pointsCost, locale)} {tCommon("points")}
+                          </span>
+                        </div>
+                        <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-muted">
+                          {t("illustrativePartner")}
+                        </p>
+                        <h3 className="mt-1 font-display text-xl font-bold text-ink">
+                          {offer.merchantName}
+                        </h3>
+                        <p className="mt-2 min-h-12 text-sm leading-6 text-muted">
+                          {locale === "en" ? offer.offerEn : offer.offerVi}
+                        </p>
+                        <p className="mt-4 border-y border-dashed border-rule py-3 font-mono text-xs text-muted">
+                          {t("demoCode")}
+                        </p>
+                        <button
+                          type="button"
+                          disabled
+                          className="mt-4 w-full cursor-not-allowed rounded-md border border-edge bg-paper-2 px-4 py-2.5 text-sm font-semibold text-muted opacity-70"
+                        >
+                          {t("demoButton")}
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </Section>
 
               <Section id="lich-su-diem" title={t("ledgerTitle")}>
                 {pointsState.data.entries.length === 0 ? (

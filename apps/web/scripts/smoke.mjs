@@ -202,6 +202,21 @@ for (const path of MARKETPLACE_API_PATHS) {
   }
 }
 
+// Reward offer catalog must be database-backed (fetched), not hard-coded.
+if (!apiLib.includes("/api/points/offers")) {
+  failures.push("lib/api.ts missing same-origin path: /api/points/offers");
+}
+const rewardsPage = readFileSync(
+  join(srcRoot, "app/[locale]/diem-thuong/page.tsx"),
+  "utf8",
+);
+if (rewardsPage.includes("Starbucks") || rewardsPage.includes("Highlands Coffee")) {
+  failures.push("rewards page must not hard-code merchant names — fetch the catalog instead");
+}
+if (!rewardsPage.includes("offers-error") || !rewardsPage.includes("offers-empty")) {
+  failures.push("rewards page missing offers-error/offers-empty test ids");
+}
+
 // Dictionary parity check
 const viDict = JSON.parse(readFileSync(join(webRoot, "messages/vi.json"), "utf8"));
 const enDict = JSON.parse(readFileSync(join(webRoot, "messages/en.json"), "utf8"));

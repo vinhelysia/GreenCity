@@ -25,6 +25,8 @@ import {
   type PublicCleanupReportList,
   PointsBalanceSchema,
   type PointsBalance,
+  RewardOfferListSchema,
+  type RewardOfferList,
   CreateSubscriptionPaymentResponseSchema,
   type CreateSubscriptionPaymentResponse,
   SubscriptionPaymentStatusResponseSchema,
@@ -400,6 +402,15 @@ export async function fetchMyPoints(): Promise<ApiResult<PointsBalance>> {
   const result = await apiFetch<unknown>("/api/points/me");
   if (!result.ok) return result;
   const parsed = PointsBalanceSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+/** GET /api/points/offers — demo-only partner coupon catalog. */
+export async function fetchRewardOffers(): Promise<ApiResult<RewardOfferList>> {
+  const result = await apiFetch<unknown>("/api/points/offers");
+  if (!result.ok) return result;
+  const parsed = RewardOfferListSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
   return { ok: true, data: parsed.data, status: result.status };
 }
