@@ -2,11 +2,12 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { PointsBalance, RewardOfferList } from "@greencity/shared";
+import type { PointsBalance, RewardOffer, RewardOffers } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { CountUp } from "@/components/count-up";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { RewardOfferPreviewDialog } from "@/components/reward-offer-preview-dialog";
 import { Section } from "@/components/section";
 import { SignInRequired } from "@/components/sign-in-required";
 import { fetchMyPoints, fetchRewardOffers } from "@/lib/api";
@@ -25,9 +26,12 @@ export default function DiemThuongPage() {
   const [pointsState, setPointsState] = useState<LoadState<PointsBalance>>({
     status: "loading",
   });
-  const [offersState, setOffersState] = useState<LoadState<RewardOfferList>>({
+  const [offersState, setOffersState] = useState<LoadState<RewardOffers>>({
     status: "loading",
   });
+  // One dialog for the whole catalog, not one per card: only ever one is open,
+  // and a single element is what keeps focus return working.
+  const [preview, setPreview] = useState<RewardOffer | null>(null);
 
   const reasonLabels: Record<string, string> = {
     LISTING_COMPLETED: locale === "en" ? "Completed scrap sale transaction" : "Hoàn tất giao dịch bán phế liệu",
@@ -184,7 +188,7 @@ export default function DiemThuongPage() {
                     title={t("offersErrorTitle")}
                     description={offersState.message}
                   />
-                ) : offersState.data.offers.length === 0 ? (
+                ) : offersState.data.length === 0 ? (
                   <EmptyState
                     testId="offers-empty"
                     title={t("offersEmptyTitle")}
@@ -192,7 +196,7 @@ export default function DiemThuongPage() {
                   />
                 ) : (
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {offersState.data.offers.map((offer) => (
+                    {offersState.data.map((offer) => (
                       <article
                         key={offer.slug}
                         className="relative overflow-hidden rounded-md border border-dashed border-edge bg-paper p-5"
@@ -208,8 +212,10 @@ export default function DiemThuongPage() {
                         <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-muted">
                           {t("illustrativePartner")}
                         </p>
-                        <h3 className="mt-1 font-display text-xl font-bold text-ink">
-                          {offer.merchantName}
+                        <h3 className="mt-1 font-display text-xl font-bold text-ink [overflow-wrap:anywhere]">
+                          {locale === "en"
+                            ? offer.merchantNameEn
+                            : offer.merchantNameVi}
                         </h3>
                         <p className="mt-2 min-h-12 text-sm leading-6 text-muted">
                           {locale === "en" ? offer.offerEn : offer.offerVi}
@@ -219,10 +225,18 @@ export default function DiemThuongPage() {
                         </p>
                         <button
                           type="button"
-                          disabled
-                          className="mt-4 w-full cursor-not-allowed rounded-md border border-edge bg-paper-2 px-4 py-2.5 text-sm font-semibold text-muted opacity-70"
+                          onClick={() => setPreview(offer)}
+                          // Six buttons share one visible label, so the
+                          // accessible name has to carry the merchant.
+                          aria-label={t("previewButtonFor", {
+                            merchant:
+                              locale === "en"
+                                ? offer.merchantNameEn
+                                : offer.merchantNameVi,
+                          })}
+                          className="mt-4 min-h-11 w-full rounded-md border border-edge bg-paper-2 px-4 py-2.5 text-sm font-semibold text-ink hover:bg-paper"
                         >
-                          {t("demoButton")}
+                          {t("previewButton")}
                         </button>
                       </article>
                     ))}
@@ -266,6 +280,14 @@ export default function DiemThuongPage() {
           )}
         </div>
       )}
+
+      {/* Outside the aria-live region above on purpose: a polite live region
+          would read the whole dialog out as a page update, on top of the
+          dialog announcement the browser already makes. */}
+      <RewardOfferPreviewDialog
+        offer={preview}
+        onClose={() => setPreview(null)}
+      />
     </div>
   );
 }

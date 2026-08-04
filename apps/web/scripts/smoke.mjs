@@ -53,6 +53,7 @@ const REQUIRED_COMPONENTS = [
   "components/home-highlights.tsx",
   "components/buyer-pass-panel.tsx",
   "components/chatwoot-widget.tsx",
+  "components/reward-offer-preview-dialog.tsx",
   "lib/api.ts",
   "lib/format.ts",
 ];
