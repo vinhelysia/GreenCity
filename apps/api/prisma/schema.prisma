@@ -391,18 +391,21 @@ model PointEntry {
 /// API-layer flag) so that invariant is visible in the schema itself, and it
 /// mirrors the `demoOnly: true` literal on RewardOfferSchema in
 /// packages/shared — the wire contract for GET /points/offers.
+/// The catalog rows themselves ship in the migration, not only in
+/// prisma/seed.ts: `prisma migrate deploy` is the only thing that runs on a
+/// deploy, so a seed-only catalog would leave production with an empty table.
 model RewardOffer {
-  id           String   @id @default(cuid())
-  slug         String   @unique
-  merchantName String
-  offerVi      String
-  offerEn      String
-  pointsCost   Int
-  demoOnly     Boolean  @default(true)
-  isActive     Boolean  @default(true)
-  sortOrder    Int
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  /// The slug is the identity. A surrogate id would only add a second key to
+  /// keep in sync, and a random cuid cannot be a stable ORDER BY tiebreak.
+  slug           String  @id
+  merchantNameVi String
+  merchantNameEn String
+  offerVi        String
+  offerEn        String
+  pointsCost     Int
+  demoOnly       Boolean @default(true)
+  isActive       Boolean @default(true)
+  sortOrder      Int
 
   @@index([isActive, sortOrder])
 }

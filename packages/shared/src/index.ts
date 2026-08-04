@@ -635,13 +635,17 @@ export type PointsBalance = z.infer<typeof PointsBalanceSchema>;
 
 /**
  * Illustrative reward catalog only — there is deliberately no redemption
- * endpoint. slug/merchantName/offer copy exist so a card can be rendered;
- * nothing here is an inventory, a price paid to a partner, or a claim of
- * affiliation with the merchants named.
+ * endpoint. slug/merchant/offer copy exist so a card can be rendered; nothing
+ * here is an inventory, a price paid to a partner, or a claim of affiliation
+ * with the merchants named.
+ *
+ * No id, isActive, sortOrder or timestamp reaches the browser: what orders the
+ * catalog and what hides a row are the server's business.
  */
 export const RewardOfferSchema = z.object({
   slug: z.string().min(1),
-  merchantName: z.string().min(1),
+  merchantNameVi: z.string().min(1),
+  merchantNameEn: z.string().min(1),
   offerVi: z.string().min(1),
   offerEn: z.string().min(1),
   pointsCost: z.number().int().positive(),
@@ -650,7 +654,6 @@ export const RewardOfferSchema = z.object({
 });
 export type RewardOffer = z.infer<typeof RewardOfferSchema>;
 
-export const RewardOfferListSchema = z.object({
-  offers: z.array(RewardOfferSchema),
-});
-export type RewardOfferList = z.infer<typeof RewardOfferListSchema>;
+/** The response body is the array itself — the catalog needs no envelope. */
+export const RewardOffersSchema = z.array(RewardOfferSchema);
+export type RewardOffers = z.infer<typeof RewardOffersSchema>;

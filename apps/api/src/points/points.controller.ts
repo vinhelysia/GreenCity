@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import type { PointsBalance, RewardOfferList } from '@greencity/shared';
+import type { PointsBalance, RewardOffers } from '@greencity/shared';
 import type { AuthContext } from '../authz/auth-context';
 import { CurrentUser } from '../authz/current-user.decorator';
 import { PointsService } from './points.service';
@@ -17,7 +17,7 @@ export class PointsController {
   // balance, and the global AuthenticatedGuard is the simplest way to keep it
   // that way.
   @Get('offers')
-  offers(): Promise<RewardOfferList> {
+  offers(): Promise<RewardOffers> {
     return this.points.listOffers();
   }
 }

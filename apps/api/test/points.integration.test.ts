@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
+import { RewardOffersSchema, type RewardOffers } from '@greencity/shared';
 import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/http-exception.filter';
 import { requestIdMiddleware } from '../src/common/request-id';
@@ -16,13 +17,23 @@ describe('Points integration', () => {
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
   // Test-owned RewardOffer rows for the GET /points/offers describe block
-  // below. Seeded once here (not per-test) so the sortOrder/id tiebreak
-  // assertions compare against a fixed, known set of rows.
-  let offerLow: { id: string; slug: string };
-  let offerHigh: { id: string; slug: string };
-  let offerTieA: { id: string; slug: string };
-  let offerTieB: { id: string; slug: string };
-  let offerInactive: { id: string; slug: string };
+  // below. Seeded once here (not per-test) so the sortOrder/slug tiebreak
+  // assertions compare against a fixed, known set of rows. Every sortOrder
+  // here is far above the shipped catalog's 10..60, so these sort after it.
+  const offerLow = `offer-low-${suffix}`;
+  const offerHigh = `offer-high-${suffix}`;
+  // Same sortOrder, and "a" < "b" lexicographically — this pair is what proves
+  // the tiebreak is the slug rather than insertion order.
+  const offerTieA = `offer-tie-a-${suffix}`;
+  const offerTieB = `offer-tie-b-${suffix}`;
+  const offerInactive = `offer-inactive-${suffix}`;
+  const testOfferSlugs = [
+    offerLow,
+    offerHigh,
+    offerTieA,
+    offerTieB,
+    offerInactive,
+  ];
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -53,58 +64,58 @@ describe('Points integration', () => {
     categoryId = category.id;
 
     // Two active offers with distinct sortOrder, an active pair sharing the
-    // SAME sortOrder (proves the id tiebreak), and one inactive offer that
-    // must never appear in the response.
-    offerLow = await prisma.rewardOffer.create({
-      data: {
-        slug: `offer-low-${suffix}`,
-        merchantName: `Test Merchant Low ${suffix}`,
-        offerVi: 'Ưu đãi thử nghiệm thấp',
-        offerEn: 'Low test offer',
-        pointsCost: 100,
-        sortOrder: 1000,
-      },
-    });
-    offerHigh = await prisma.rewardOffer.create({
-      data: {
-        slug: `offer-high-${suffix}`,
-        merchantName: `Test Merchant High ${suffix}`,
-        offerVi: 'Ưu đãi thử nghiệm cao',
-        offerEn: 'High test offer',
-        pointsCost: 200,
-        sortOrder: 2000,
-      },
-    });
-    offerTieA = await prisma.rewardOffer.create({
-      data: {
-        slug: `offer-tie-a-${suffix}`,
-        merchantName: `Test Merchant Tie A ${suffix}`,
-        offerVi: 'Ưu đãi thử nghiệm hoà A',
-        offerEn: 'Tied test offer A',
-        pointsCost: 300,
-        sortOrder: 1500,
-      },
-    });
-    offerTieB = await prisma.rewardOffer.create({
-      data: {
-        slug: `offer-tie-b-${suffix}`,
-        merchantName: `Test Merchant Tie B ${suffix}`,
-        offerVi: 'Ưu đãi thử nghiệm hoà B',
-        offerEn: 'Tied test offer B',
-        pointsCost: 300,
-        sortOrder: 1500,
-      },
-    });
-    offerInactive = await prisma.rewardOffer.create({
-      data: {
-        slug: `offer-inactive-${suffix}`,
-        merchantName: `Test Merchant Inactive ${suffix}`,
-        offerVi: 'Ưu đãi thử nghiệm ẩn',
-        offerEn: 'Inactive test offer',
-        pointsCost: 400,
-        sortOrder: 500,
-        isActive: false,
-      },
+    // SAME sortOrder (proves the slug tiebreak), and one inactive offer that
+    // must never appear in the response. Insertion order is deliberately not
+    // the expected output order.
+    await prisma.rewardOffer.createMany({
+      data: [
+        {
+          slug: offerTieB,
+          merchantNameVi: `Thử nghiệm hoà B ${suffix}`,
+          merchantNameEn: `Test Merchant Tie B ${suffix}`,
+          offerVi: 'Ưu đãi thử nghiệm hoà B',
+          offerEn: 'Tied test offer B',
+          pointsCost: 300,
+          sortOrder: 1500,
+        },
+        {
+          slug: offerTieA,
+          merchantNameVi: `Thử nghiệm hoà A ${suffix}`,
+          merchantNameEn: `Test Merchant Tie A ${suffix}`,
+          offerVi: 'Ưu đãi thử nghiệm hoà A',
+          offerEn: 'Tied test offer A',
+          pointsCost: 300,
+          sortOrder: 1500,
+        },
+        {
+          slug: offerHigh,
+          merchantNameVi: `Thử nghiệm cao ${suffix}`,
+          merchantNameEn: `Test Merchant High ${suffix}`,
+          offerVi: 'Ưu đãi thử nghiệm cao',
+          offerEn: 'High test offer',
+          pointsCost: 200,
+          sortOrder: 2000,
+        },
+        {
+          slug: offerLow,
+          merchantNameVi: `Thử nghiệm thấp ${suffix}`,
+          merchantNameEn: `Test Merchant Low ${suffix}`,
+          offerVi: 'Ưu đãi thử nghiệm thấp',
+          offerEn: 'Low test offer',
+          pointsCost: 100,
+          sortOrder: 1000,
+        },
+        {
+          slug: offerInactive,
+          merchantNameVi: `Thử nghiệm ẩn ${suffix}`,
+          merchantNameEn: `Test Merchant Inactive ${suffix}`,
+          offerVi: 'Ưu đãi thử nghiệm ẩn',
+          offerEn: 'Inactive test offer',
+          pointsCost: 400,
+          sortOrder: 500,
+          isActive: false,
+        },
+      ],
     });
   });
 
@@ -145,19 +156,7 @@ describe('Points integration', () => {
         .deleteMany({ where: { id: categoryId } })
         .catch(() => undefined);
       await prisma.rewardOffer
-        .deleteMany({
-          where: {
-            id: {
-              in: [
-                offerLow.id,
-                offerHigh.id,
-                offerTieA.id,
-                offerTieB.id,
-                offerInactive.id,
-              ],
-            },
-          },
-        })
+        .deleteMany({ where: { slug: { in: testOfferSlugs } } })
         .catch(() => undefined);
     }
     if (app) {
@@ -376,73 +375,98 @@ describe('Points integration', () => {
   });
 
   describe('GET /points/offers', () => {
-    // Deliberately not evaluated until called from inside an `it`: the outer
-    // beforeAll (which populates offerLow etc.) has not run yet while Jest is
-    // still collecting this describe block's body.
-    function testOwnedOffers(
-      offers: Array<Record<string, unknown> & { slug: string }>,
-    ) {
-      const slugs = new Set([
-        offerLow.slug,
-        offerHigh.slug,
-        offerTieA.slug,
-        offerTieB.slug,
-        offerInactive.slug,
-      ]);
-      return offers.filter((o) => slugs.has(o.slug));
+    function getOffers() {
+      return request(app.getHttpServer())
+        .get('/points/offers')
+        .set('Cookie', adminCookie);
     }
 
-    it('orders active offers by sortOrder then id, stably, and excludes inactive rows', async () => {
-      const first = await request(app.getHttpServer())
-        .get('/points/offers')
-        .set('Cookie', adminCookie);
-      expect(first.status).toBe(200);
+    function testOwnedSlugs(offers: RewardOffers): string[] {
+      const mine = new Set(testOfferSlugs);
+      return offers.map((o) => o.slug).filter((slug) => mine.has(slug));
+    }
 
-      const filtered = testOwnedOffers(first.body.offers);
-      // offerInactive has the lowest sortOrder of the five (500) — if it
-      // showed up here at all, it would sort first. Its absence proves the
-      // isActive filter runs, not merely that its sortOrder is unfavourable.
-      const [tieFirst, tieSecond] =
-        offerTieA.id < offerTieB.id
-          ? [offerTieA.slug, offerTieB.slug]
-          : [offerTieB.slug, offerTieA.slug];
+    it('returns a body that satisfies RewardOffersSchema', async () => {
+      const response = await getOffers();
+      expect(response.status).toBe(200);
+      // Not safeParse: a failure here should print which field broke.
+      expect(() => RewardOffersSchema.parse(response.body)).not.toThrow();
+      expect(Array.isArray(response.body)).toBe(true);
+    });
 
-      expect(filtered.map((o) => o.slug)).toEqual([
-        offerLow.slug,
-        tieFirst,
-        tieSecond,
-        offerHigh.slug,
+    it('serves the catalog installed by the migration, in its documented order', async () => {
+      // The only check anywhere that `prisma migrate deploy` — not the seed —
+      // is what puts the catalog in a fresh database. If these rows ever move
+      // back into prisma/seed.ts, production silently serves an empty page.
+      const offers = RewardOffersSchema.parse((await getOffers()).body);
+      const shipped = offers
+        .map((o) => o.slug)
+        .filter((slug) => !testOfferSlugs.includes(slug));
+
+      expect(shipped).toEqual([
+        'starbucks-50000',
+        'highlands-50000',
+        'jollibee-79000',
+        'kfc-99000',
+        'evn-100000',
+        'municipal-water-100000',
       ]);
 
-      const second = await request(app.getHttpServer())
-        .get('/points/offers')
-        .set('Cookie', adminCookie);
-      expect(testOwnedOffers(second.body.offers).map((o) => o.slug)).toEqual(
-        filtered.map((o) => o.slug),
-      );
+      const water = offers.find((o) => o.slug === 'municipal-water-100000');
+      expect(water).toMatchObject({
+        merchantNameVi: 'Nước sạch đô thị',
+        merchantNameEn: 'Municipal water',
+        pointsCost: 1000,
+        demoOnly: true,
+      });
+    });
+
+    it('orders active offers by sortOrder then slug, stably, and excludes inactive rows', async () => {
+      const first = RewardOffersSchema.parse((await getOffers()).body);
+
+      // offerInactive has the lowest sortOrder of the five (500) — if it
+      // showed up here at all, it would sort ahead of the other four. Its
+      // absence proves the isActive filter runs, not merely that its
+      // sortOrder is unfavourable. offerTieA/offerTieB share a sortOrder and
+      // were inserted B-before-A, so this order can only come from the slug.
+      expect(testOwnedSlugs(first)).toEqual([
+        offerLow,
+        offerTieA,
+        offerTieB,
+        offerHigh,
+      ]);
+
+      const second = RewardOffersSchema.parse((await getOffers()).body);
+      expect(second.map((o) => o.slug)).toEqual(first.map((o) => o.slug));
     });
 
     it('exposes no internal fields and marks every offer demoOnly', async () => {
-      const response = await request(app.getHttpServer())
-        .get('/points/offers')
-        .set('Cookie', adminCookie);
+      const response = await getOffers();
       expect(response.status).toBe(200);
 
-      const filtered = testOwnedOffers(response.body.offers);
-      expect(filtered.length).toBe(4);
-      for (const offer of filtered) {
-        expect(offer).not.toHaveProperty('id');
-        expect(offer).not.toHaveProperty('isActive');
-        expect(offer).not.toHaveProperty('sortOrder');
-        expect(offer).not.toHaveProperty('createdAt');
-        expect(offer).not.toHaveProperty('updatedAt');
+      const raw = response.body as Array<Record<string, unknown>>;
+      expect(raw.length).toBeGreaterThanOrEqual(4);
+      for (const offer of raw) {
+        expect(Object.keys(offer).sort()).toEqual([
+          'demoOnly',
+          'merchantNameEn',
+          'merchantNameVi',
+          'offerEn',
+          'offerVi',
+          'pointsCost',
+          'slug',
+        ]);
         expect(offer.demoOnly).toBe(true);
       }
     });
 
+    // Same guard as GET /points/me above: no @Public() on either.
     it('returns 401 from GET /points/offers without authentication', async () => {
       const response = await request(app.getHttpServer()).get('/points/offers');
       expect(response.status).toBe(401);
+      expect(
+        (await request(app.getHttpServer()).get('/points/me')).status,
+      ).toBe(401);
     });
   });
 });

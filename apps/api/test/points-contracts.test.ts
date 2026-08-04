@@ -1,4 +1,4 @@
-import { RewardOfferListSchema, RewardOfferSchema } from '@greencity/shared';
+import { RewardOfferSchema, RewardOffersSchema } from '@greencity/shared';
 
 /**
  * RewardOfferSchema is the one place backend and frontend agree that this
@@ -7,8 +7,9 @@ import { RewardOfferListSchema, RewardOfferSchema } from '@greencity/shared';
  */
 describe('reward offer contracts', () => {
   const offer = {
-    slug: 'starbucks-beverage-50k',
-    merchantName: 'Starbucks',
+    slug: 'starbucks-50000',
+    merchantNameVi: 'Starbucks',
+    merchantNameEn: 'Starbucks',
     offerVi: 'Voucher đồ uống trị giá 50.000 ₫.',
     offerEn: 'A beverage voucher worth VND 50,000.',
     pointsCost: 500,
@@ -44,7 +45,36 @@ describe('reward offer contracts', () => {
     ).toThrow();
   });
 
-  it('parses an empty catalog', () => {
-    expect(RewardOfferListSchema.parse({ offers: [] })).toEqual({ offers: [] });
+  it('rejects a fractional pointsCost', () => {
+    expect(() =>
+      RewardOfferSchema.parse({ ...offer, pointsCost: 12.5 }),
+    ).toThrow();
+  });
+
+  // Both merchant names are required, not merely present: a blank one renders
+  // a nameless card in exactly one locale, which is the kind of gap that
+  // survives a Vietnamese-only review.
+  it.each([
+    'slug',
+    'merchantNameVi',
+    'merchantNameEn',
+    'offerVi',
+    'offerEn',
+  ] as const)('rejects an empty %s', (field) => {
+    expect(() => RewardOfferSchema.parse({ ...offer, [field]: '' })).toThrow();
+  });
+
+  it('rejects an offer missing a localized merchant name entirely', () => {
+    const { merchantNameEn: _dropped, ...withoutEn } = offer;
+    expect(() => RewardOfferSchema.parse(withoutEn)).toThrow();
+  });
+
+  it('parses the catalog as a bare array, empty included', () => {
+    expect(RewardOffersSchema.parse([])).toEqual([]);
+    expect(RewardOffersSchema.parse([offer])).toEqual([offer]);
+  });
+
+  it('rejects the old { offers: [...] } envelope', () => {
+    expect(() => RewardOffersSchema.parse({ offers: [offer] })).toThrow();
   });
 });
