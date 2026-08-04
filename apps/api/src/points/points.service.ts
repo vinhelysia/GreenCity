@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { PointsBalance, RewardOfferList } from '@greencity/shared';
+import type { PointsBalance, RewardOffers } from '@greencity/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Tunable reward rates; adjust these values when the points policy changes.
@@ -83,22 +83,26 @@ export class PointsService {
     };
   }
 
-  async listOffers(): Promise<RewardOfferList> {
+  async listOffers(): Promise<RewardOffers> {
     // demoOnly: true in the where-clause (not only the column default) makes
     // "demo-only" a property of this endpoint, not merely of today's data —
     // the query still reads right even if some future row is ever not one.
+    // It is also what lets RewardOfferSchema pin demoOnly to the literal true.
     const offers = await this.prisma.rewardOffer.findMany({
       where: { isActive: true, demoOnly: true },
-      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+      // slug, not a surrogate id: the tiebreak has to give the same order on
+      // every database, and it is the only other column guaranteed unique.
+      orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
       select: {
         slug: true,
-        merchantName: true,
+        merchantNameVi: true,
+        merchantNameEn: true,
         offerVi: true,
         offerEn: true,
         pointsCost: true,
         demoOnly: true,
       },
     });
-    return { offers: offers.map((o) => ({ ...o, demoOnly: true as const })) };
+    return offers.map((o) => ({ ...o, demoOnly: true as const }));
   }
 }

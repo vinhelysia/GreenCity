@@ -117,65 +117,10 @@ const DEMO_CLEANUPS = [
 
 const CLEANUP_CITY = 'TP. Hồ Chí Minh';
 
-/// Demo-only illustrative reward catalog — see the RewardOffer model doc
-/// comment in schema.prisma. sortOrder is spaced by 10 so a row can be
-/// inserted between two others later without renumbering the rest.
-const REWARD_OFFERS = [
-  {
-    slug: 'starbucks-beverage-50k',
-    merchantName: 'Starbucks',
-    offerVi: 'Voucher đồ uống trị giá 50.000 ₫.',
-    offerEn: 'A beverage voucher worth VND 50,000.',
-    pointsCost: 500,
-    sortOrder: 10,
-  },
-  {
-    slug: 'highlands-beverage-50k',
-    merchantName: 'Highlands Coffee',
-    offerVi: 'Voucher đồ uống trị giá 50.000 ₫.',
-    offerEn: 'A beverage voucher worth VND 50,000.',
-    pointsCost: 500,
-    sortOrder: 20,
-  },
-  {
-    slug: 'jollibee-meal-79k',
-    merchantName: 'Jollibee',
-    offerVi: 'Voucher combo món ăn trị giá 79.000 ₫.',
-    offerEn: 'A meal combo voucher worth VND 79,000.',
-    pointsCost: 750,
-    sortOrder: 30,
-  },
-  {
-    slug: 'kfc-meal-99k',
-    merchantName: 'KFC',
-    offerVi: 'Voucher combo món ăn trị giá 99.000 ₫.',
-    offerEn: 'A meal combo voucher worth VND 99,000.',
-    pointsCost: 900,
-    sortOrder: 40,
-  },
-  {
-    slug: 'evn-electricity-100k',
-    merchantName: 'EVN',
-    offerVi: 'Hỗ trợ 100.000 ₫ cho hóa đơn điện.',
-    offerEn: 'VND 100,000 in electricity bill support.',
-    pointsCost: 1000,
-    sortOrder: 50,
-  },
-  {
-    slug: 'municipal-water-100k',
-    // ponytail: merchantName is not localized (unlike offerVi/offerEn) —
-    // every other row's merchantName is a brand proper noun that reads fine
-    // in either locale, but this one is a generic Vietnamese descriptor, not
-    // a real utility's brand name, so English readers see Vietnamese here.
-    // Upgrade path: split into merchantVi/merchantEn if a real water utility
-    // partner ever lands.
-    merchantName: 'Nước sạch đô thị',
-    offerVi: 'Hỗ trợ 100.000 ₫ cho hóa đơn nước.',
-    offerEn: 'VND 100,000 in water bill support.',
-    pointsCost: 1000,
-    sortOrder: 60,
-  },
-] as const;
+// The reward catalog is not seeded here. It ships in migration
+// 20260804000001_reward_offer_localized_catalog, because a deploy runs
+// `prisma migrate deploy` and never the seed — keeping a second copy in this
+// file would only give the two a way to disagree.
 
 /**
  * Real photographs live in a gitignored folder (they are third-party press
@@ -285,23 +230,6 @@ async function main() {
         },
       });
       categories.set(c.name, row);
-    }
-
-    // Update the display fields so a re-run repairs edits; create otherwise.
-    // No lifecycle to reset here (unlike listings/cleanups) — a reward offer
-    // has no in-demo consumed state, so upsert is the whole story.
-    for (const o of REWARD_OFFERS) {
-      await prisma.rewardOffer.upsert({
-        where: { slug: o.slug },
-        create: o,
-        update: {
-          merchantName: o.merchantName,
-          offerVi: o.offerVi,
-          offerEn: o.offerEn,
-          pointsCost: o.pointsCost,
-          sortOrder: o.sortOrder,
-        },
-      });
     }
 
     const now = new Date();
@@ -478,7 +406,7 @@ async function main() {
     const submitted = DEMO_CLEANUPS.filter((c) => c.status === 'SUBMITTED').length;
     // eslint-disable-next-line no-console
     console.log(
-      `Seeded: admin=${admin.email} seller=${seller.email} buyer=${buyer.email}, ${CATEGORIES.length} categories, ${DEMO_LISTINGS.length} listings (all AVAILABLE), ${DEMO_CLEANUPS.length} cleanup reports (${submitted} SUBMITTED), ${REWARD_OFFERS.length} reward offers, seed reward points cleared`,
+      `Seeded: admin=${admin.email} seller=${seller.email} buyer=${buyer.email}, ${CATEGORIES.length} categories, ${DEMO_LISTINGS.length} listings (all AVAILABLE), ${DEMO_CLEANUPS.length} cleanup reports (${submitted} SUBMITTED), seed reward points cleared`,
     );
   } finally {
     await prisma.$disconnect();
