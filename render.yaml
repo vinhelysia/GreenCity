@@ -10,6 +10,17 @@
 #   4. After Vercel gives the web a domain, set CORS_ORIGINS to it (exact origin,
 #      no trailing slash) or every cookie-auth request returns 403 INVALID_ORIGIN.
 #
+# Deploy order: migrate Supabase first, then merge — but that order assumes the
+# migration is additive. A migration that renames or drops a column the running
+# code still reads breaks production from the moment it lands until Render
+# finishes deploying the merge, because this service does not migrate on deploy
+# and Render only redeploys on a push to master. Applying it first is still the
+# safer half of a bad choice: a Prisma migration file is one transaction, so it
+# either fully lands or does nothing, whereas deploying first leaves you needing
+# a revert if the migration then fails. Do the two back to back, and not during
+# a demo. 20260804000001 (merchantName -> merchantNameVi/En, id dropped) is the
+# first migration here for which this mattered.
+#
 # Operational note: if this service already existed before the PAYOS_*/
 # PUBLIC_*_URL keys below were added to this file, do not assume a Blueprint
 # sync/redeploy will prompt for or create them on Render's side — verify in
