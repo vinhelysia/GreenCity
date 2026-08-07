@@ -1,0 +1,116 @@
+{
+  "source": "OpenStreetMap, via the Overpass API",
+  "sourceUrl": "https://www.openstreetmap.org/copyright",
+  "license": "ODbL 1.0",
+  "area": "Ho Chi Minh City bounding box",
+  "bbox": [
+    10.3,
+    106.3,
+    11.25,
+    107.1
+  ],
+  "fetchedAt": "2026-08-07T16:01:19.713Z",
+  "points": [
+    {
+      "id": "node/12728534042",
+      "lat": 10.805103,
+      "lon": 106.736164,
+      "name": null,
+      "operator": "Botol",
+      "recyclingType": "container",
+      "materials": [
+        "cans",
+        "pet_drink_bottles"
+      ]
+    },
+    {
+      "id": "node/12728534043",
+      "lat": 10.805121,
+      "lon": 106.73619,
+      "name": null,
+      "operator": null,
+      "recyclingType": "container",
+      "materials": [
+        "batteries"
+      ]
+    },
+    {
+      "id": "node/13132951318",
+      "lat": 10.743288,
+      "lon": 106.612429,
+      "name": null,
+      "operator": null,
+      "recyclingType": "container",
+      "materials": [
+        "pet_drink_bottles"
+      ]
+    },
+    {
+      "id": "node/13132951323",
+      "lat": 10.742921,
+      "lon": 106.611982,
+      "name": null,
+      "operator": null,
+      "recyclingType": "container",
+      "materials": [
+        "batteries",
+        "cans",
+        "pet_drink_bottles"
+      ]
+    },
+    {
+      "id": "node/3744277204",
+      "lat": 10.725331,
+      "lon": 106.716535,
+      "name": null,
+      "operator": null,
+      "recyclingType": null,
+      "materials": []
+    },
+    {
+      "id": "node/4350479893",
+      "lat": 10.629359,
+      "lon": 106.672563,
+      "name": "VGS Long An",
+      "operator": null,
+      "recyclingType": null,
+      "materials": []
+    },
+    {
+      "id": "node/4367158790",
+      "lat": 10.761868,
+      "lon": 106.774682,
+      "name": null,
+      "operator": null,
+      "recyclingType": null,
+      "materials": []
+    },
+    {
+      "id": "node/4432158090",
+      "lat": 10.629355,
+      "lon": 106.672514,
+      "name": "Vgs",
+      "operator": null,
+      "recyclingType": null,
+      "materials": []
+    },
+    {
+      "id": "node/4478131889",
+      "lat": 10.770783,
+      "lon": 106.651384,
+      "name": null,
+      "operator": null,
+      "recyclingType": null,
+      "materials": []
+    },
+    {
+      "id": "node/4887494921",
+      "lat": 10.793234,
+      "lon": 106.47412,
+      "name": "Cty Hảo Hảo",
+      "operator": null,
+      "recyclingType": null,
+      "materials": []
+    }
+  ]
+}

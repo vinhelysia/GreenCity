@@ -29,8 +29,7 @@
     "confirm": "Confirm",
     "switchToVietnamese": "Switch to Vietnamese",
     "switchToEnglish": "Switch to English",
-    "skipToContent": "Skip to main content",
-    "inDevelopment": "In development"
+    "skipToContent": "Skip to main content"
   },
   "navigation": {
     "home": "Home",
@@ -151,25 +150,38 @@
   "services": {
     "title": "Services",
     "lede": "A system of green solutions connecting scrap sellers, collection units, and environmental protection communities.",
-    "sellTitle": "On-site Scrap Collection",
-    "sellDesc": "Schedule recyclable scrap collection from households or businesses. Transparent rates, fast transactions.",
+    "sellTitle": "Sell recyclables",
+    "sellDesc": "Submit a request with a photo and an estimated weight, get a quote inside the published price band, then accept or decline it on the same page.",
     "marketplaceTitle": "Digital Scrap Marketplace",
-    "marketplaceDesc": "Recycled materials trading platform for professional recyclers with complete verification information.",
-    "cleanupTitle": "Community Dumping Site Map",
-    "cleanupDesc": "Spontaneous waste site reporting platform helping authorities and volunteer teams respond promptly.",
-    "rewardsTitle": "Green Action Rewards",
-    "rewardsDesc": "Every scrap sale or dumping site report transparently earns reward points in your ledger.",
-    "sellDescShort": "Transparent pickup quotes for sellers.",
-    "marketplaceDescShort": "Inspected scrap lots for pass holders.",
-    "cleanupDescShort": "Report dumping sites to earn points.",
-    "rewardsDescShort": "Earn points on verified actions."
+    "marketplaceDesc": "Scrap lots an administrator has priced and published. Only one buyer can reserve each lot.",
+    "cleanupTitle": "Community Dumping Map",
+    "cleanupDesc": "Submit a photo and a map pin for an illegal dumping site. An administrator checks and verifies it before the report counts.",
+    "rewardsTitle": "Green Action Points",
+    "rewardsDesc": "Every completed sale and every verified report adds points to an append-only ledger, each traceable to the action that earned it.",
+    "catalogNote": "This is what GreenCity does today. Nothing on this page is a paid package, and every entry carries the limit it currently has.",
+    "statusLive": "Live",
+    "limitLabel": "Limit:",
+    "goTo": "Go to {name} →",
+    "sellNote": "GreenCity quotes within a published price band and publishes the listing. Pickup timing is arranged between the two parties; the system does not schedule collection.",
+    "marketplaceNote": "Reserving requires an active Buyer Pass. payOS checkout has never been exercised against a real merchant account, so we cannot claim payment works.",
+    "cleanupNote": "Reports are verified by an administrator and earn 50 points. Cleanup is carried out by local sanitation services; GreenCity does not coordinate that.",
+    "rewardsNote": "The points ledger is real and awards automatically. The redemption coupons are contest prototypes: DEMO-ONLY codes are not valid anywhere and deduct no points."
   },
   "recyclingBins": {
     "title": "Recycling Bins",
-    "lede": "Locate public recycling bins and sorted disposal points across the city.",
-    "searchPlaceholder": "Search by street name, district...",
-    "allTypes": "All Waste Types",
-    "noBins": "No matching recycling bin locations found."
+    "lede": "Recycling points in Ho Chi Minh City recorded by the OpenStreetMap community. Coverage is sparse and this is not an official city register.",
+    "coverageTitle": "Coverage",
+    "coverageBody": "OpenStreetMap currently records {total} points inside the Ho Chi Minh City bounding box, {containers} of which are tagged as recycling containers. The rest are marked as recycling without saying what kind. This is community-contributed data and it is thin for a city this size — GreenCity shows exactly what exists and adds no points of its own.",
+    "sourceNote": "Data captured {date}. Source:",
+    "listTitle": "Point list",
+    "typeContainer": "Container",
+    "typeUnspecified": "Type not recorded",
+    "materialsLabel": "Accepts:",
+    "materialsUnknown": "Not recorded in OpenStreetMap.",
+    "operatorLabel": "Operator:",
+    "unnamed": "Unnamed in OpenStreetMap",
+    "viewOnOsm": "View on OpenStreetMap",
+    "viewOnOsmFor": "View {name} on OpenStreetMap"
   },
   "sellScrap": {
     "title": "Sell Scrap",
