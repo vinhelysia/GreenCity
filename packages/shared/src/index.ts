@@ -358,6 +358,33 @@ export const SubscriptionStateSchema = z.object({
 });
 export type SubscriptionState = z.infer<typeof SubscriptionStateSchema>;
 
+/**
+ * An admin handing someone a buyer pass without a payment — the
+ * "admin-created" half of the sentence above. It exists because payOS is the
+ * only other way to become eligible and payOS has never been exercised against
+ * a real merchant account, so without this the pass is unobtainable.
+ *
+ * `note` is required, not optional: a pass granted for free with no recorded
+ * reason is indistinguishable from one granted by mistake.
+ */
+export const GrantSubscriptionRequestSchema = z.object({
+  email: z.string().email(),
+  /** Capped at a year so a typo cannot mint a decade-long pass. */
+  durationDays: z.number().int().positive().max(365).default(30),
+  note: z.string().trim().min(1).max(500),
+});
+export type GrantSubscriptionRequest = z.infer<
+  typeof GrantSubscriptionRequestSchema
+>;
+
+export const GrantSubscriptionResponseSchema = z.object({
+  subscription: SubscriptionSchema,
+  userEmail: z.string(),
+});
+export type GrantSubscriptionResponse = z.infer<
+  typeof GrantSubscriptionResponseSchema
+>;
+
 // ─── Payment contracts ───────────────────────────────────────────────────────
 
 export const SubscriptionPaymentStatusSchema = z.enum([

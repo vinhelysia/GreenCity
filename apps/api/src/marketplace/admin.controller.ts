@@ -2,9 +2,11 @@ import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nest
 import { z } from 'zod';
 import {
   CreateQuoteRequestSchema,
+  GrantSubscriptionRequestSchema,
   ListingStatusSchema,
   ScrapRequestStatusSchema,
   type CreateQuoteRequest,
+  type GrantSubscriptionRequest,
   type ListingStatus,
   type ScrapRequestStatus,
 } from '@greencity/shared';
@@ -17,6 +19,7 @@ import { Roles } from '../authz/roles.decorator';
 import { RolesGuard } from '../authz/roles.guard';
 import { ScrapRequestService } from './scrap-request.service';
 import { ListingService } from './listing.service';
+import { SubscriptionService } from './subscription.service';
 
 const AdminScrapRequestQuerySchema = z.object({
   status: ScrapRequestStatusSchema.optional(),
@@ -34,6 +37,7 @@ export class AdminController {
   constructor(
     private readonly scrapRequests: ScrapRequestService,
     private readonly listings: ListingService,
+    private readonly subscriptions: SubscriptionService,
   ) {}
 
   @Get('scrap-requests')
@@ -70,5 +74,18 @@ export class AdminController {
     @Req() req: Request,
   ) {
     return this.listings.adminComplete(auth, id, getRequestId(req));
+  }
+
+  // Grant only. There is deliberately no revoke and no list-all-passes route:
+  // eligibility is a query over rows, so an expiry does the revoking, and a
+  // route that enumerates who holds a paid feature is not needed to issue one.
+  @Post('subscriptions')
+  async grantSubscription(
+    @CurrentUser() auth: AuthContext,
+    @Body(new ZodValidationPipe(GrantSubscriptionRequestSchema))
+    body: GrantSubscriptionRequest,
+    @Req() req: Request,
+  ) {
+    return this.subscriptions.grantByAdmin(auth, body, getRequestId(req));
   }
 }

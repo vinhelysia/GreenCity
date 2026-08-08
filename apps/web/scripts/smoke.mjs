@@ -42,7 +42,7 @@ const REQUIRED_COMPONENTS = [
   "components/header-login-link.tsx",
   "components/auth-provider.tsx",
   "components/empty-state.tsx",
-  "components/feature-unavailable.tsx",
+  "components/recycling-points-map.tsx",
   "components/page-header.tsx",
   "components/skip-link.tsx",
   "components/sell-scrap-view.tsx",
@@ -53,6 +53,7 @@ const REQUIRED_COMPONENTS = [
   "components/home-highlights.tsx",
   "components/buyer-pass-panel.tsx",
   "components/chatwoot-widget.tsx",
+  "components/admin-grant-pass.tsx",
   "components/reward-offer-preview-dialog.tsx",
   "lib/api.ts",
   "lib/format.ts",
@@ -180,6 +181,8 @@ if (
     "SUBSCRIPTION_REQUIRED",
     "CANNOT_RESERVE_OWN_LISTING",
     "MEDIA_ALREADY_USED",
+    "USER_NOT_FOUND",
+    "SUBSCRIPTION_ALREADY_ACTIVE",
   ].some((code) => (apiLib.match(new RegExp(code, "g")) ?? []).length < 2) ||
   sourceFiles.some((file) => readFileSync(file, "utf8").includes("marketplaceErrorMessage(result.error)"))
 ) {
@@ -194,6 +197,8 @@ const MARKETPLACE_API_PATHS = [
   "/api/subscriptions/me",
   "/api/media/upload",
   "/api/admin/scrap-requests",
+  // The only route to buyer eligibility while payOS checkout is unavailable.
+  "/api/admin/subscriptions",
   "/api/subscription-payments",
   "/api/subscription-payments/${",
 ];
@@ -216,6 +221,33 @@ if (rewardsPage.includes("Starbucks") || rewardsPage.includes("Highlands Coffee"
 }
 if (!rewardsPage.includes("offers-error") || !rewardsPage.includes("offers-empty")) {
   failures.push("rewards page missing offers-error/offers-empty test ids");
+}
+
+// /thung-rac and /dich-vu used to be "đang phát triển" placeholders. They now
+// render real content, so the guard is that they never quietly revert.
+for (const rel of ["app/[locale]/thung-rac/page.tsx", "app/[locale]/dich-vu/page.tsx"]) {
+  if (readFileSync(join(srcRoot, rel), "utf8").includes("FeatureUnavailable")) {
+    failures.push(`${rel}: reverted to a FeatureUnavailable placeholder`);
+  }
+}
+
+// The recycling snapshot is third-party data. Losing provenance turns it into
+// numbers of unknown origin, which is exactly what this project does not ship.
+const recyclingPath = join(srcRoot, "data/recycling-points.json");
+if (!existsSync(recyclingPath)) {
+  failures.push("missing src/data/recycling-points.json (run scripts/refresh-recycling-points.mjs)");
+} else {
+  const snapshot = JSON.parse(readFileSync(recyclingPath, "utf8"));
+  for (const field of ["source", "sourceUrl", "license", "fetchedAt", "points"]) {
+    if (!snapshot[field]) failures.push(`recycling-points.json missing ${field}`);
+  }
+  if (!Array.isArray(snapshot.points) || snapshot.points.length === 0) {
+    failures.push("recycling-points.json has no points");
+  }
+  const binsPage = readFileSync(join(srcRoot, "app/[locale]/thung-rac/page.tsx"), "utf8");
+  if (!binsPage.includes("sourceUrl") || !binsPage.includes("fetchedAt")) {
+    failures.push("thung-rac must render the OpenStreetMap attribution and capture date");
+  }
 }
 
 // Dictionary parity check

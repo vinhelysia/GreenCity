@@ -42,7 +42,9 @@ test-results/
 
 # Local runtime data (storage, mail, tooling downloads)
 .local/
-data/
+# Anchored: unanchored `data/` also matched apps/web/src/data, which silently
+# kept committed source out of the repo and broke the build on deploy.
+/data/
 uploads/
 tmp/
 temp/

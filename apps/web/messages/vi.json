@@ -29,8 +29,7 @@
     "confirm": "Xác nhận",
     "switchToVietnamese": "Chuyển sang Tiếng Việt",
     "switchToEnglish": "Chuyển sang Tiếng Anh",
-    "skipToContent": "Bỏ qua đến nội dung chính",
-    "inDevelopment": "Đang phát triển"
+    "skipToContent": "Bỏ qua đến nội dung chính"
   },
   "navigation": {
     "home": "Trang chủ",
@@ -151,25 +150,38 @@
   "services": {
     "title": "Dịch vụ",
     "lede": "Hệ thống các giải pháp xanh giúp kết nối người bán phế liệu, đơn vị thu gom và cộng đồng bảo vệ môi trường.",
-    "sellTitle": "Thu gom phế liệu tận nơi",
-    "sellDesc": "Đặt lịch thu gom phế liệu tái chế từ hộ gia đình hoặc doanh nghiệp. Báo giá minh bạch, giao dịch nhanh chóng.",
+    "sellTitle": "Bán phế liệu",
+    "sellDesc": "Gửi yêu cầu kèm ảnh và khối lượng ước tính, nhận báo giá nằm trong khung giá công khai, rồi chấp nhận hoặc bỏ qua ngay trên trang.",
     "marketplaceTitle": "Chợ phế liệu số",
-    "marketplaceDesc": "Sàn giao dịch vật liệu tái chế dành cho các đơn vị tái chế chuyên nghiệp với đầy đủ thông tin xác minh.",
+    "marketplaceDesc": "Các lô phế liệu đã được quản trị viên duyệt giá và niêm yết. Mỗi lô chỉ một người đặt giữ thành công.",
     "cleanupTitle": "Bản đồ điểm rác cộng đồng",
-    "cleanupDesc": "Nền tảng báo cáo điểm rác tự phát, giúp cơ quan chức năng và đội tình nguyện xử lý kịp thời.",
+    "cleanupDesc": "Gửi ảnh và ghim vị trí điểm rác tự phát. Quản trị viên đối chiếu và xác minh trước khi báo cáo được ghi nhận.",
     "rewardsTitle": "Tích điểm hành động xanh",
-    "rewardsDesc": "Mỗi hoạt động bán phế liệu hoặc báo cáo điểm rác đều được ghi nhận điểm thưởng minh bạch vào sổ cái.",
-    "sellDescShort": "Báo giá minh bạch cho người bán.",
-    "marketplaceDescShort": "Lô phế liệu đã kiểm định cho người mua.",
-    "cleanupDescShort": "Báo điểm rác nhận điểm thưởng.",
-    "rewardsDescShort": "Tích điểm tự động sau mỗi hành động."
+    "rewardsDesc": "Mỗi giao dịch bán hoàn tất hoặc báo cáo được xác minh đều cộng điểm vào sổ chỉ-ghi-thêm, truy ngược được về việc đã sinh ra nó.",
+    "catalogNote": "Đây là những gì GreenCity làm được hôm nay. Không có gói dịch vụ trả phí nào ở trang này, và mỗi mục đều kèm giới hạn hiện tại của nó.",
+    "statusLive": "Đang hoạt động",
+    "limitLabel": "Giới hạn:",
+    "goTo": "Đến {name} →",
+    "sellNote": "GreenCity báo giá trong khung giá công khai và niêm yết lô hàng. Việc hẹn giờ lấy hàng do hai bên tự thỏa thuận, hệ thống chưa điều phối lịch thu gom.",
+    "marketplaceNote": "Đặt giữ cần Gói người mua còn hiệu lực. Checkout payOS chưa từng chạy thật với tài khoản merchant, nên chưa thể khẳng định thanh toán hoạt động.",
+    "cleanupNote": "Báo cáo được quản trị viên xác minh và cộng 50 điểm. Việc dọn dẹp do đơn vị vệ sinh địa phương thực hiện, GreenCity chưa điều phối phần đó.",
+    "rewardsNote": "Sổ điểm là thật và cộng tự động. Coupon đổi điểm mới chỉ là prototype dự thi: mã DEMO-ONLY không dùng được ở đâu và không trừ điểm."
   },
   "recyclingBins": {
     "title": "Thùng rác",
-    "lede": "Tra cứu các vị trí thùng rác công cộng và điểm thu gom rác phân loại trên địa bàn thành phố.",
-    "searchPlaceholder": "Tìm kiếm theo tên đường, quận/huyện...",
-    "allTypes": "Tất cả loại rác",
-    "noBins": "Không tìm thấy vị trí thùng rác phù hợp."
+    "lede": "Các điểm thu gom tái chế tại TP.HCM do cộng đồng OpenStreetMap ghi nhận. Dữ liệu còn rất thưa và không phải danh sách chính thức của thành phố.",
+    "coverageTitle": "Mức độ phủ",
+    "coverageBody": "OpenStreetMap hiện ghi nhận {total} điểm trong phạm vi TP.HCM, trong đó {containers} điểm được gắn thẻ là thùng chứa tái chế. Số còn lại chỉ được đánh dấu là điểm tái chế mà chưa ghi rõ loại. Đây là dữ liệu do cộng đồng đóng góp, còn rất thưa so với quy mô thành phố — GreenCity hiển thị đúng những gì có, không bổ sung điểm tự dựng.",
+    "sourceNote": "Dữ liệu chụp lúc {date}. Nguồn:",
+    "listTitle": "Danh sách điểm",
+    "typeContainer": "Thùng chứa",
+    "typeUnspecified": "Chưa rõ loại",
+    "materialsLabel": "Vật liệu nhận:",
+    "materialsUnknown": "OpenStreetMap chưa ghi.",
+    "operatorLabel": "Đơn vị vận hành:",
+    "unnamed": "Không có tên trên OpenStreetMap",
+    "viewOnOsm": "Xem trên OpenStreetMap",
+    "viewOnOsmFor": "Xem {name} trên OpenStreetMap"
   },
   "sellScrap": {
     "title": "Bán phế liệu",
@@ -333,7 +345,15 @@
     "confirming": "Đang xác nhận...",
     "completeTx": "Hoàn tất giao dịch",
     "processing": "Đang xử lý...",
-    "noItems": "Hàng chờ hiện đang trống."
+    "noItems": "Hàng chờ hiện đang trống.",
+    "grantPassTitle": "Cấp gói người mua",
+    "grantPassLede": "Cấp quyền đặt giữ cho một tài khoản mà không qua thanh toán. Dùng khi checkout payOS chưa khả dụng. Đây không phải giao dịch: hệ thống không ghi nhận khoản tiền nào, chỉ ghi nhận quyền đặt giữ và lý do cấp.",
+    "grantPassEmail": "Email tài khoản",
+    "grantPassDays": "Số ngày hiệu lực",
+    "grantPassNote": "Lý do cấp",
+    "grantPassNoteHint": "Bắt buộc. Lý do được lưu vào nhật ký kiểm toán cùng tên quản trị viên đã cấp.",
+    "grantPassSubmit": "Cấp gói",
+    "grantPassDone": "Đã cấp gói cho {email}, hiệu lực đến {date}."
   },
   "status": {
     "submitted": "Đã gửi",
