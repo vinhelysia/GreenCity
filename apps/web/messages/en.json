@@ -345,7 +345,15 @@
     "confirming": "Confirming...",
     "completeTx": "Complete Transaction",
     "processing": "Processing...",
-    "noItems": "Queue is currently empty."
+    "noItems": "Queue is currently empty.",
+    "grantPassTitle": "Grant a Buyer Pass",
+    "grantPassLede": "Give an account the right to reserve without going through checkout. Use this while payOS checkout is unavailable. This is not a transaction: no money is recorded, only the eligibility and the reason it was granted.",
+    "grantPassEmail": "Account email",
+    "grantPassDays": "Days valid",
+    "grantPassNote": "Reason",
+    "grantPassNoteHint": "Required. The reason is written to the audit log alongside the admin who granted it.",
+    "grantPassSubmit": "Grant pass",
+    "grantPassDone": "Granted a pass to {email}, valid until {date}."
   },
   "status": {
     "submitted": "Submitted",

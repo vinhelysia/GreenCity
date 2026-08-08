@@ -431,4 +431,144 @@ describe('Marketplace integration', () => {
     });
     expect(persistedRequest?.status).toBe('QUOTED');
   });
+
+  describe('POST /admin/subscriptions', () => {
+    function grant(cookie: string, body: Record<string, unknown>) {
+      return request(app.getHttpServer())
+        .post('/admin/subscriptions')
+        .set('Origin', 'http://localhost:3000')
+        .set('Cookie', cookie)
+        .send(body);
+    }
+
+    it('turns SUBSCRIPTION_REQUIRED into a successful reserve', async () => {
+      // The reason this endpoint exists: payOS has never run against a real
+      // merchant account, so before this the pass could not be obtained and
+      // reserving was unreachable for any account that was not seeded.
+      const { listingId } = await createAvailableListing('granted');
+      const buyerReg = await register('granted-buyer');
+      const buyerCookie = cookieFrom(buyerReg);
+
+      const blocked = await request(app.getHttpServer())
+        .post(`/marketplace/listings/${listingId}/reserve`)
+        .set('Origin', 'http://localhost:3000')
+        .set('Cookie', buyerCookie);
+      expect(blocked.status).toBe(403);
+      expect(blocked.body.error.code).toBe('SUBSCRIPTION_REQUIRED');
+
+      const granted = await grant(adminCookie, {
+        email: email('granted-buyer'),
+        durationDays: 30,
+        note: 'Contest demo reviewer',
+      });
+      expect(granted.status).toBe(201);
+      expect(granted.body.subscription.status).toBe('ACTIVE');
+      expect(granted.body.subscription.note).toBe('Contest demo reviewer');
+      expect(granted.body.userEmail).toBe(email('granted-buyer'));
+
+      const reserved = await request(app.getHttpServer())
+        .post(`/marketplace/listings/${listingId}/reserve`)
+        .set('Origin', 'http://localhost:3000')
+        .set('Cookie', buyerCookie);
+      expect(reserved.status).toBe(201);
+    });
+
+    it('creates no payment row — a grant is eligibility, not money received', async () => {
+      const reg = await register('nopay-buyer');
+      expect(cookieFrom(reg)).toBeTruthy();
+      const res = await grant(adminCookie, {
+        email: email('nopay-buyer'),
+        durationDays: 7,
+        note: 'Eligibility only',
+      });
+      expect(res.status).toBe(201);
+
+      const payments = await prisma.subscriptionPayment.count({
+        where: { subscriptionId: res.body.subscription.id },
+      });
+      expect(payments).toBe(0);
+    });
+
+    it('records the granting admin in the audit log', async () => {
+      const reg = await register('audited-buyer');
+      expect(cookieFrom(reg)).toBeTruthy();
+      const res = await grant(adminCookie, {
+        email: email('audited-buyer'),
+        durationDays: 30,
+        note: 'Audit trail check',
+      });
+      expect(res.status).toBe(201);
+
+      const entry = await prisma.auditLog.findFirst({
+        where: {
+          action: 'subscription.grant',
+          targetId: res.body.subscription.id,
+        },
+      });
+      expect(entry).not.toBeNull();
+      expect(entry?.actorId).toBeTruthy();
+      expect(entry?.targetType).toBe('Subscription');
+    });
+
+    it('refuses a second grant while a pass is still active', async () => {
+      const reg = await register('double-buyer');
+      expect(cookieFrom(reg)).toBeTruthy();
+      expect(
+        (
+          await grant(adminCookie, {
+            email: email('double-buyer'),
+            durationDays: 30,
+            note: 'First',
+          })
+        ).status,
+      ).toBe(201);
+
+      const second = await grant(adminCookie, {
+        email: email('double-buyer'),
+        durationDays: 30,
+        note: 'Second',
+      });
+      expect(second.status).toBe(409);
+      expect(second.body.error.code).toBe('SUBSCRIPTION_ALREADY_ACTIVE');
+    });
+
+    it('returns USER_NOT_FOUND for an email with no account', async () => {
+      const res = await grant(adminCookie, {
+        email: `nobody-${suffix}@example.test`,
+        durationDays: 30,
+        note: 'Nobody',
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.error.code).toBe('USER_NOT_FOUND');
+    });
+
+    it('rejects a grant with no reason and one longer than a year', async () => {
+      const reg = await register('invalid-grant-buyer');
+      expect(cookieFrom(reg)).toBeTruthy();
+      const target = email('invalid-grant-buyer');
+
+      expect(
+        (await grant(adminCookie, { email: target, note: '   ' })).status,
+      ).toBe(400);
+      expect(
+        (
+          await grant(adminCookie, {
+            email: target,
+            durationDays: 400,
+            note: 'Too long',
+          })
+        ).status,
+      ).toBe(400);
+    });
+
+    it('rejects a non-admin caller with 403', async () => {
+      const userReg = await register('grant-nonadmin');
+      const res = await grant(cookieFrom(userReg), {
+        email: email('grant-nonadmin'),
+        durationDays: 30,
+        note: 'Self service',
+      });
+      expect(res.status).toBe(403);
+    });
+  });
 });

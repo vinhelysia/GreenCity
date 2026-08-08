@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { AdminGrantPass } from "@/components/admin-grant-pass";
 import { AdminListingQueue } from "@/components/admin-listing-queue";
 import { PageHeader } from "@/components/page-header";
 
@@ -31,6 +32,7 @@ export default async function AdminGiaoDichPage({
         title={t("transactionsTab")}
         description={<p>{t("transactionQueueTitle")}</p>}
       />
+      <AdminGrantPass />
       <AdminListingQueue />
     </div>
   );

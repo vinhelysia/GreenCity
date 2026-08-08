@@ -345,7 +345,15 @@
     "confirming": "Đang xác nhận...",
     "completeTx": "Hoàn tất giao dịch",
     "processing": "Đang xử lý...",
-    "noItems": "Hàng chờ hiện đang trống."
+    "noItems": "Hàng chờ hiện đang trống.",
+    "grantPassTitle": "Cấp gói người mua",
+    "grantPassLede": "Cấp quyền đặt giữ cho một tài khoản mà không qua thanh toán. Dùng khi checkout payOS chưa khả dụng. Đây không phải giao dịch: hệ thống không ghi nhận khoản tiền nào, chỉ ghi nhận quyền đặt giữ và lý do cấp.",
+    "grantPassEmail": "Email tài khoản",
+    "grantPassDays": "Số ngày hiệu lực",
+    "grantPassNote": "Lý do cấp",
+    "grantPassNoteHint": "Bắt buộc. Lý do được lưu vào nhật ký kiểm toán cùng tên quản trị viên đã cấp.",
+    "grantPassSubmit": "Cấp gói",
+    "grantPassDone": "Đã cấp gói cho {email}, hiệu lực đến {date}."
   },
   "status": {
     "submitted": "Đã gửi",

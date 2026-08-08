@@ -27,6 +27,9 @@ import {
   type PointsBalance,
   RewardOffersSchema,
   type RewardOffers,
+  GrantSubscriptionResponseSchema,
+  type GrantSubscriptionRequest,
+  type GrantSubscriptionResponse,
   CreateSubscriptionPaymentResponseSchema,
   type CreateSubscriptionPaymentResponse,
   SubscriptionPaymentStatusResponseSchema,
@@ -217,6 +220,8 @@ const MARKETPLACE_ERROR_MESSAGES = {
     MEDIA_ALREADY_USED: "Ảnh này đã dùng cho một yêu cầu khác. Hãy chọn ảnh khác.",
     CLEANUP_REPORT_NOT_FOUND: "Không tìm thấy dữ liệu báo cáo.",
     CLEANUP_REPORT_NOT_PENDING: "Báo cáo không còn ở trạng thái chờ duyệt.",
+    USER_NOT_FOUND: "Không có tài khoản nào dùng email này.",
+    SUBSCRIPTION_ALREADY_ACTIVE: "Tài khoản này đang còn gói người mua hiệu lực.",
   },
   en: {
     NETWORK_ERROR: "Unable to connect to the server. Check your network and try again.",
@@ -235,6 +240,8 @@ const MARKETPLACE_ERROR_MESSAGES = {
     MEDIA_ALREADY_USED: "This photo is already used by another request. Choose a different photo.",
     CLEANUP_REPORT_NOT_FOUND: "Report data not found.",
     CLEANUP_REPORT_NOT_PENDING: "This report is no longer awaiting review.",
+    USER_NOT_FOUND: "No account uses that email address.",
+    SUBSCRIPTION_ALREADY_ACTIVE: "That account already holds an active Buyer Pass.",
   },
 } as const;
 
@@ -579,6 +586,20 @@ export async function completeListing(
   return apiFetch<unknown>(`/api/admin/listings/${id}/complete`, {
     method: "POST",
   });
+}
+
+/** POST /api/admin/subscriptions — hand a buyer pass out without a payment. */
+export async function grantSubscription(
+  input: GrantSubscriptionRequest,
+): Promise<ApiResult<GrantSubscriptionResponse>> {
+  const result = await apiFetch<unknown>("/api/admin/subscriptions", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  if (!result.ok) return result;
+  const parsed = GrantSubscriptionResponseSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
 }
 
 export async function verifyCleanupReport(

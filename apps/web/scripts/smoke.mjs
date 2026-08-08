@@ -53,6 +53,7 @@ const REQUIRED_COMPONENTS = [
   "components/home-highlights.tsx",
   "components/buyer-pass-panel.tsx",
   "components/chatwoot-widget.tsx",
+  "components/admin-grant-pass.tsx",
   "components/reward-offer-preview-dialog.tsx",
   "lib/api.ts",
   "lib/format.ts",
@@ -180,6 +181,8 @@ if (
     "SUBSCRIPTION_REQUIRED",
     "CANNOT_RESERVE_OWN_LISTING",
     "MEDIA_ALREADY_USED",
+    "USER_NOT_FOUND",
+    "SUBSCRIPTION_ALREADY_ACTIVE",
   ].some((code) => (apiLib.match(new RegExp(code, "g")) ?? []).length < 2) ||
   sourceFiles.some((file) => readFileSync(file, "utf8").includes("marketplaceErrorMessage(result.error)"))
 ) {
@@ -194,6 +197,8 @@ const MARKETPLACE_API_PATHS = [
   "/api/subscriptions/me",
   "/api/media/upload",
   "/api/admin/scrap-requests",
+  // The only route to buyer eligibility while payOS checkout is unavailable.
+  "/api/admin/subscriptions",
   "/api/subscription-payments",
   "/api/subscription-payments/${",
 ];
