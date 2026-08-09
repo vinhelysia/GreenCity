@@ -164,6 +164,15 @@ jobs:
       - name: Phase 1 integration tests (real database)
         run: pnpm test:integration
 
+      # The @core gate covers flows that need a populated catalogue: a seller
+      # cannot submit without a scrap category, and the anonymous marketplace
+      # has no listing to show a login action on. The integration suite builds
+      # its own fixtures and runs before this, so seeding here changes nothing
+      # for it. Safe because the database is the disposable service container
+      # declared above, on loopback — never an owner machine or Supabase.
+      - name: Seed demo data for the E2E gate
+        run: pnpm --filter api db:seed
+
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
