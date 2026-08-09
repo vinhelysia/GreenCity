@@ -58,7 +58,7 @@ export function HeaderLoginLink() {
     const initial = label.charAt(0).toUpperCase();
     const isAdmin = user.roles.includes("ADMIN");
     return (
-      <div className="relative flex shrink-0 items-center gap-2">
+      <div className="relative flex min-w-0 items-center gap-2">
         {isAdmin ? (
           <Link
             href="/admin/giao-dich"
@@ -78,7 +78,9 @@ export function HeaderLoginLink() {
           href="/tai-khoan"
           aria-current={accountActive ? "page" : undefined}
           className={[
-            "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-edge bg-paper text-sm transition-colors sm:min-h-0 sm:min-w-0 sm:max-w-[10rem] sm:justify-start sm:rounded-none sm:border-0 sm:bg-transparent",
+            // The one shrinkable item in the row: its label truncates so the
+            // logout button beside it is never pushed past the clipped edge.
+            "inline-flex min-h-11 min-w-11 shrink items-center justify-center rounded-full border border-edge bg-paper text-sm transition-colors sm:min-h-0 sm:min-w-0 sm:max-w-[10rem] sm:justify-start sm:rounded-none sm:border-0 sm:bg-transparent",
             accountActive
               ? "font-semibold text-primary"
               : "text-muted hover:text-ink",
