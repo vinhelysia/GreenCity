@@ -107,6 +107,10 @@
       "unitPrice": "Unit Price:",
       "verifiedReports": "Recently Verified Dumping Reports",
       "noReports": "No dumping site reports recently verified.",
+      "statsError": "Unable to load impact statistics.",
+      "listingsError": "Unable to load listings.",
+      "reportsError": "Unable to load verified reports.",
+      "loadErrorDescription": "Please try again later.",
       "viewAllReports": "View all reports"
     }
   },

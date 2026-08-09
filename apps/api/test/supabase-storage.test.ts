@@ -1,4 +1,7 @@
-import { SupabaseObjectStorage } from '../src/storage/supabase-object-storage';
+import {
+  SUPABASE_REQUEST_TIMEOUT_MS,
+  SupabaseObjectStorage,
+} from '../src/storage/supabase-object-storage';
 
 /**
  * The adapter is verified end to end against real Supabase during deploy (needs
@@ -26,6 +29,7 @@ describe('SupabaseObjectStorage', () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    jest.restoreAllMocks();
   });
 
   it('requires all three config values', () => {
@@ -110,6 +114,88 @@ describe('SupabaseObjectStorage', () => {
     globalThis.fetch = (async () =>
       new Response('', { status: 404 })) as typeof fetch;
     await expect(store.deleteObject('media/gone.jpg')).resolves.toBeUndefined();
+  });
+
+  it('passes a bounded abort timeout to an in-flight upload', async () => {
+    const store = new SupabaseObjectStorage(config);
+    const timeoutController = new AbortController();
+    const timeout = jest
+      .spyOn(AbortSignal, 'timeout')
+      .mockReturnValue(timeoutController.signal);
+    let signal: AbortSignal | undefined;
+    globalThis.fetch = ((_: string | URL | Request, init?: RequestInit) => {
+      signal = init?.signal ?? undefined;
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener(
+          'abort',
+          () => reject(new Error('upstream abort detail')),
+          { once: true },
+        );
+      });
+    }) as typeof fetch;
+
+    const pending = store.putObject({
+      key: 'media/x.jpg',
+      body: Buffer.from('IMG'),
+      contentType: 'image/jpeg',
+    });
+
+    expect(signal).toBeDefined();
+    expect(timeout).toHaveBeenCalledWith(SUPABASE_REQUEST_TIMEOUT_MS);
+    timeoutController.abort();
+    await expect(pending).rejects.toThrow('Supabase putObject request failed');
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('keeps the getObject timeout active while a response body is still pending', async () => {
+    const store = new SupabaseObjectStorage(config);
+    const timeoutController = new AbortController();
+    const timeout = jest
+      .spyOn(AbortSignal, 'timeout')
+      .mockReturnValue(timeoutController.signal);
+    let signal: AbortSignal | undefined;
+    let bodyReadStarted!: () => void;
+    const bodyRead = new Promise<void>((resolve) => {
+      bodyReadStarted = resolve;
+    });
+    globalThis.fetch = ((_: string | URL | Request, init?: RequestInit) => {
+      signal = init?.signal ?? undefined;
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: () => {
+          bodyReadStarted();
+          return new Promise<ArrayBuffer>((_resolve, reject) => {
+            signal?.addEventListener(
+              'abort',
+              () => reject(new Error('upstream body abort detail')),
+              { once: true },
+            );
+          });
+        },
+      } as Response);
+    }) as typeof fetch;
+
+    const pending = store.getObject('media/x.jpg');
+
+    await bodyRead;
+    expect(timeout).toHaveBeenCalledWith(SUPABASE_REQUEST_TIMEOUT_MS);
+    timeoutController.abort();
+    await expect(pending).rejects.toThrow('Supabase getObject request failed');
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('does not expose credentials from a rejected external request', async () => {
+    const serviceKey = 'sb_secret_must_not_leak';
+    const store = new SupabaseObjectStorage({ ...config, serviceKey });
+    globalThis.fetch = (async () => {
+      throw new Error(`network failure included ${serviceKey}`);
+    }) as typeof fetch;
+
+    const error = await store.getObject('media/x.jpg').catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe('Supabase getObject request failed');
+    expect((error as Error).message).not.toContain(serviceKey);
   });
 
   it.each(['put', 'get', 'delete'] as const)(

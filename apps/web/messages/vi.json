@@ -107,6 +107,10 @@
       "unitPrice": "Đơn giá:",
       "verifiedReports": "Báo cáo điểm rác vừa được xác minh",
       "noReports": "Chưa có báo cáo rác nào vừa duyệt.",
+      "statsError": "Không thể tải số liệu thống kê.",
+      "listingsError": "Không thể tải danh sách tin đăng.",
+      "reportsError": "Không thể tải báo cáo điểm rác đã xác minh.",
+      "loadErrorDescription": "Vui lòng thử lại sau.",
       "viewAllReports": "Xem toàn bộ bản đồ & danh sách báo cáo"
     }
   },

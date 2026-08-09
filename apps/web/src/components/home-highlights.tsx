@@ -48,7 +48,7 @@ export function HomeHighlights() {
       if (!res.ok) {
         setStatsState({
           status: "error",
-          message: "Không thể tải số liệu thống kê.",
+          message: tHighlights("statsError"),
         });
       } else {
         setStatsState({ status: "ready", data: res.data });
@@ -61,7 +61,7 @@ export function HomeHighlights() {
       if (!res.ok) {
         setListingsState({
           status: "error",
-          message: "Không thể tải danh sách tin đăng.",
+          message: tHighlights("listingsError"),
         });
       } else {
         setListingsState({ status: "ready", data: res.data.listings });
@@ -74,7 +74,7 @@ export function HomeHighlights() {
       if (!res.ok) {
         setCleanupState({
           status: "error",
-          message: "Chưa có báo cáo điểm rác nào được xác minh.",
+          message: tHighlights("reportsError"),
         });
       } else {
         setCleanupState({ status: "ready", data: res.data.reports });
@@ -84,7 +84,7 @@ export function HomeHighlights() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tHighlights]);
 
   return (
     <div className="min-w-0">
@@ -183,8 +183,8 @@ export function HomeHighlights() {
           ) : listingsState.status === "error" ? (
             <EmptyState
               testId="featured-listings-error"
-              title={locale === "en" ? "Unable to load listings" : "Không thể tải tin đăng"}
-              description={listingsState.message}
+              title={listingsState.message}
+              description={tHighlights("loadErrorDescription")}
             />
           ) : listingsState.data.length === 0 ? (
             <EmptyState
@@ -248,8 +248,13 @@ export function HomeHighlights() {
               <div className="skeleton h-56 w-full" />
               <div className="skeleton h-56 w-full" />
             </div>
-          ) : cleanupState.status === "error" ||
-            cleanupState.data.length === 0 ? (
+          ) : cleanupState.status === "error" ? (
+            <EmptyState
+              testId="public-cleanup-reports-error"
+              title={cleanupState.message}
+              description={tHighlights("loadErrorDescription")}
+            />
+          ) : cleanupState.data.length === 0 ? (
             <EmptyState
               testId="public-cleanup-reports-empty"
               title={locale === "en" ? "No verified reports yet" : "Chưa có báo cáo nào được xác minh"}
@@ -257,10 +262,7 @@ export function HomeHighlights() {
             />
           ) : (
             <ul className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">
-              {(cleanupState.data.length > 1
-                ? cleanupState.data.slice(1, 3)
-                : cleanupState.data
-              ).map((report) => {
+              {cleanupState.data.slice(0, 2).map((report) => {
                 const place = [report.district, report.city]
                   .filter(Boolean)
                   .join(", ");

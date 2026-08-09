@@ -13,6 +13,7 @@ const base = require('./jest.config.cjs');
  */
 module.exports = {
   ...base,
+  setupFiles: [...base.setupFiles, '<rootDir>/test/setup-unit-env.ts'],
   testPathIgnorePatterns: [
     ...base.testPathIgnorePatterns,
     // Any *.integration.test.ts belongs to the database-backed lane, not here.
