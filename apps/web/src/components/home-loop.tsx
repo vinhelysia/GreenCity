@@ -24,12 +24,17 @@ export function HomeLoop() {
       {stages.map((stage) => {
         const status =
           stage.n < ACTIVE_STAGE ? "done" : stage.n === ACTIVE_STAGE ? "active" : "future";
+        // A future step used to carry opacity-50, which dropped its already
+        // muted step number to 2.26:1 against the card — an axe serious-impact
+        // colour-contrast failure on the homepage. The state is still legible
+        // without it: a future step has an outlined number rather than a filled
+        // one, and no status pill beside it.
         return (
           <li
             key={stage.n}
             className={`group relative flex min-w-0 flex-col justify-between rounded-2xl border p-6 shadow-eco transition-shadow hover:shadow-eco-hover ${
               status === "active" ? "!border-[rgba(196,69,27,0.3)] bg-warm-050" : "border-edge bg-card"
-            } ${status === "future" ? "opacity-50" : ""}`}
+            }`}
           >
             <div>
               <div className="flex items-center justify-between">
