@@ -1,10 +1,42 @@
+import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { APP_NAME } from "@greencity/shared";
 import { IconArrowRight } from "@/components/eco-icons";
 import { HomeHero } from "@/components/home-hero";
 import { HomeHighlights } from "@/components/home-highlights";
 import { HomeLoop } from "@/components/home-loop";
 import { Section } from "@/components/section";
 import { Link } from "@/i18n/routing";
+import { getHomePageUrl } from "@/lib/site-url";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  const homeUrl = getHomePageUrl(locale);
+  const isEn = locale === "en";
+
+  return {
+    alternates: {
+      canonical: homeUrl,
+      languages: {
+        "vi-VN": getHomePageUrl("vi"),
+        "en-US": getHomePageUrl("en"),
+      },
+    },
+    openGraph: {
+      title: t("title"),
+      description: t("description"),
+      siteName: APP_NAME,
+      locale: isEn ? "en_US" : "vi_VN",
+      type: "website",
+      url: homeUrl,
+    },
+  };
+}
 
 export default async function HomePage({
   params,

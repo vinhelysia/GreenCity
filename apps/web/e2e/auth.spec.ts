@@ -49,7 +49,7 @@ async function registerViaUi(
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("Auth flows", () => {
+test.describe("Auth flows @core", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test.afterAll(() => {
@@ -129,6 +129,86 @@ test.describe("Auth flows", () => {
     await waitForAuthReady(page);
     await expect(page.getByTestId("header-login")).toBeVisible();
     assertCleanRuntime(issues, "logout");
+  });
+
+  test("treats a 401 logout response as already signed out", async ({
+    page,
+  }) => {
+    await registerViaUi(page, email("logout-401"));
+
+    // Simulate a session that was revoked in another tab before this click.
+    // The stale client state must converge on the server's 401 response.
+    await page.context().clearCookies();
+    const logoutResponse = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/auth/logout") &&
+        res.request().method() === "POST",
+    );
+    await page.getByTestId("header-logout").click();
+
+    expect((await logoutResponse).status()).toBe(401);
+    await expect(page.getByTestId("header-login")).toBeVisible();
+    await expect(page.getByTestId("header-logout")).toHaveCount(0);
+  });
+
+  test("keeps the authenticated UI and allows retry when logout fails", async ({
+    page,
+  }) => {
+    await registerViaUi(page, email("logout-failure"));
+
+    let attempts = 0;
+    let releaseFirstResponse: (() => void) | undefined;
+    const firstResponseReady = new Promise<void>((resolve) => {
+      releaseFirstResponse = resolve;
+    });
+    let notifyFirstRequest: (() => void) | undefined;
+    const firstRequestStarted = new Promise<void>((resolve) => {
+      notifyFirstRequest = resolve;
+    });
+
+    await page.route("**/api/auth/logout", async (route) => {
+      attempts += 1;
+      if (attempts === 1) {
+        notifyFirstRequest?.();
+        await firstResponseReady;
+      }
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "sensitive server failure details",
+          },
+        }),
+      });
+    });
+
+    const logoutButton = page.getByTestId("header-logout");
+    await logoutButton.click();
+    await firstRequestStarted;
+    await expect(logoutButton).toBeDisabled();
+    await expect(page.getByTestId("header-login")).toHaveCount(0);
+
+    if (!releaseFirstResponse) {
+      throw new Error("logout response was not held for the pending-state check");
+    }
+    releaseFirstResponse();
+
+    // Scoped by id, not getByRole("alert"): Next renders an empty
+    // #__next-route-announcer__ with role="alert" on every page, so a bare
+    // alert role always resolves to two elements and trips strict mode before
+    // it ever compares text.
+    const error = page.locator("#header-logout-error");
+    await expect(error).toContainText(/Không thể đăng xuất/i);
+    await expect(page.getByText("sensitive server failure details")).toHaveCount(0);
+    await expect(logoutButton).toBeVisible();
+    await expect(logoutButton).toBeEnabled();
+
+    await logoutButton.click();
+    await expect.poll(() => attempts).toBe(2);
+    await expect(logoutButton).toBeEnabled();
+    await expect(page.getByTestId("header-login")).toHaveCount(0);
   });
 
   test("4 wrong password → one generic error, still signed out", async ({

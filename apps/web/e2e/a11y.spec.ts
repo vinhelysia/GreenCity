@@ -8,7 +8,7 @@ import {
   waitForAuthReady,
 } from "./helpers";
 
-test.describe("Accessibility behavior", () => {
+test.describe("Accessibility behavior @core", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
   test("skip link targets #noi-dung and focuses main", async ({ page }) => {

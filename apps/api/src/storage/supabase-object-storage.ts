@@ -4,6 +4,9 @@ import type {
   PutObjectResult,
 } from './storage.types';
 
+/** Bound every external Storage request; callers must never wait indefinitely. */
+export const SUPABASE_REQUEST_TIMEOUT_MS = 10_000;
+
 export interface SupabaseStorageConfig {
   /** Project URL, e.g. https://xxxx.supabase.co */
   url: string;
@@ -60,8 +63,27 @@ export class SupabaseObjectStorage implements ObjectStorage {
     return { Authorization: `Bearer ${this.serviceKey}` };
   }
 
+  private async request(
+    operation: 'put' | 'get' | 'delete',
+    url: string,
+    init?: RequestInit,
+  ): Promise<Response> {
+    try {
+      // Do not clear this timeout when fetch resolves headers. The signal must
+      // remain active while getObject consumes the response body as well.
+      return await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(SUPABASE_REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      // Fetch errors may contain an upstream URL, response text, or credentials.
+      // Keep the adapter error safe for logs and the API exception filter.
+      throw new Error(`Supabase ${operation}Object request failed`);
+    }
+  }
+
   async putObject(input: PutObjectInput): Promise<PutObjectResult> {
-    const res = await fetch(this.objectUrl(input.key), {
+    const res = await this.request('put', this.objectUrl(input.key), {
       method: 'POST',
       headers: {
         ...this.authHeaders(),
@@ -83,17 +105,21 @@ export class SupabaseObjectStorage implements ObjectStorage {
   }
 
   async getObject(key: string): Promise<Buffer> {
-    const res = await fetch(this.objectUrl(key), {
+    const res = await this.request('get', this.objectUrl(key), {
       headers: this.authHeaders(),
     });
     if (!res.ok) {
       throw new Error(`Supabase getObject failed (${res.status})`);
     }
-    return Buffer.from(await res.arrayBuffer());
+    try {
+      return Buffer.from(await res.arrayBuffer());
+    } catch {
+      throw new Error('Supabase getObject request failed');
+    }
   }
 
   async deleteObject(key: string): Promise<void> {
-    const res = await fetch(this.objectUrl(key), {
+    const res = await this.request('delete', this.objectUrl(key), {
       method: 'DELETE',
       headers: this.authHeaders(),
     });

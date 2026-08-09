@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
 import {
   CreateCleanupReportSchema,
+  RecentItemsQuerySchema,
   type CreateCleanupReport,
+  type RecentItemsQuery,
 } from '@greencity/shared';
 import type { Response } from 'express';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -24,8 +26,17 @@ export class CleanupController {
   }
 
   @Get('mine')
-  async mine(@CurrentUser() auth: AuthContext) {
-    return this.cleanupService.mine(auth);
+  /**
+   * `?limit=5` is the bounded account-dashboard snapshot. Omitting it keeps the
+   * legacy full-history behaviour for the existing contribution screen; that
+   * compatibility path is deliberately not presented as pagination.
+   */
+  async mine(
+    @CurrentUser() auth: AuthContext,
+    @Query(new ZodValidationPipe(RecentItemsQuerySchema))
+    query: RecentItemsQuery,
+  ) {
+    return this.cleanupService.mine(auth, query.limit);
   }
 
   @Public()

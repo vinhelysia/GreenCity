@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MarketplaceListing } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import {
@@ -23,14 +23,18 @@ import { formatCategoryName, formatVnd } from "@/lib/format";
 type LoadState =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; data: MarketplaceListing[] };
+  | { status: "ready"; data: MarketplaceListing[]; nextCursor?: string };
 
 export function MarketplaceListings() {
   const locale = useLocale();
   const tMkt = useTranslations("marketplace");
+  const tCommon = useTranslations("common");
   const { status: authStatus, clearSessionAndRedirect } = useAuth();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [load, setLoad] = useState<SubscriptionLoad>({ kind: "loading" });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const loadMorePending = useRef(false);
   const eligible: "unknown" | "error" | "eligible" | "not-eligible" =
     authStatus !== "authenticated"
       ? "unknown"
@@ -44,17 +48,57 @@ export function MarketplaceListings() {
 
   const loadListings = useCallback(async () => {
     setState({ status: "loading" });
+    setLoadMoreError(null);
     const result = await fetchMarketplaceListings();
     if (!result.ok) {
       setState({ status: "error", message: marketplaceErrorMessage(result.error, locale) });
       return;
     }
-    setState({ status: "ready", data: result.data.listings });
+    setState({
+      status: "ready",
+      data: result.data.listings,
+      nextCursor: result.data.nextCursor,
+    });
   }, [locale]);
 
   useEffect(() => {
     void loadListings();
   }, [loadListings]);
+
+  const loadMore = useCallback(async () => {
+    if (
+      loadMorePending.current ||
+      state.status !== "ready" ||
+      !state.nextCursor
+    ) {
+      return;
+    }
+    const cursor = state.nextCursor;
+    loadMorePending.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const result = await fetchMarketplaceListings({ cursor });
+      if (!result.ok) {
+        setLoadMoreError(tCommon("loadMoreError"));
+        return;
+      }
+      setState((previous) => {
+        if (previous.status !== "ready" || previous.nextCursor !== cursor) {
+          return previous;
+        }
+        return {
+          status: "ready",
+          data: [...previous.data, ...result.data.listings],
+          nextCursor: result.data.nextCursor,
+        };
+      });
+    } finally {
+      loadMorePending.current = false;
+      setLoadingMore(false);
+    }
+  }, [state, tCommon]);
 
   const [subscriptionRun, setSubscriptionRun] = useState(0);
   const refreshSubscription = useCallback(() => {
@@ -105,18 +149,45 @@ export function MarketplaceListings() {
             description={tMkt("noListings")}
           />
         ) : (
-          <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {state.data.map((listing) => (
-              <ListingCard
-                key={listing.id}
-                listing={listing}
-                authStatus={authStatus}
-                eligible={eligible}
-                clearSessionAndRedirect={clearSessionAndRedirect}
-                onReserved={loadListings}
-              />
-            ))}
-          </ul>
+          <>
+            <ul className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {state.data.map((listing) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  authStatus={authStatus}
+                  eligible={eligible}
+                  clearSessionAndRedirect={clearSessionAndRedirect}
+                  onReserved={loadListings}
+                />
+              ))}
+            </ul>
+            {state.nextCursor ? (
+              <div
+                aria-busy={loadingMore}
+                className="mt-5 flex flex-col items-start gap-2"
+              >
+                <button
+                  type="button"
+                  data-testid="marketplace-listings-load-more"
+                  disabled={loadingMore}
+                  onClick={() => void loadMore()}
+                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-accent disabled:opacity-60"
+                >
+                  {loadingMore ? tCommon("loadingMore") : tCommon("loadMore")}
+                </button>
+                {loadMoreError ? (
+                  <p
+                    role="alert"
+                    data-testid="marketplace-listings-load-more-error"
+                    className="text-sm text-red-800"
+                  >
+                    {loadMoreError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </div>

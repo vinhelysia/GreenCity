@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MarketplaceListing } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
@@ -18,19 +18,24 @@ type LoadState =
   | { status: "loading" }
   | { status: "forbidden" }
   | { status: "error"; message: string }
-  | { status: "ready"; data: MarketplaceListing[] };
+  | { status: "ready"; data: MarketplaceListing[]; nextCursor?: string };
 
 export function AdminListingQueue() {
   const locale = useLocale();
   const tAdmin = useTranslations("admin");
+  const tCommon = useTranslations("common");
   const tAuth = useTranslations("auth");
   const tErr = useTranslations("errors");
   const { status: authStatus, user, clearSessionAndRedirect } = useAuth();
   const isAdmin = user?.roles.includes("ADMIN") ?? false;
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const loadMorePending = useRef(false);
 
   const load = useCallback(async () => {
     setState({ status: "loading" });
+    setLoadMoreError(null);
     const result = checkAuthExpiry(
       await fetchAdminReservedListings(),
       clearSessionAndRedirect,
@@ -46,13 +51,55 @@ export function AdminListingQueue() {
       });
       return;
     }
-    setState({ status: "ready", data: result.data.listings });
+    setState({
+      status: "ready",
+      data: result.data.listings,
+      nextCursor: result.data.nextCursor,
+    });
   }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") return;
     void load();
   }, [authStatus, load]);
+
+  const loadMore = useCallback(async () => {
+    if (
+      loadMorePending.current ||
+      state.status !== "ready" ||
+      !state.nextCursor
+    ) {
+      return;
+    }
+    const cursor = state.nextCursor;
+    loadMorePending.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const result = checkAuthExpiry(
+        await fetchAdminReservedListings({ cursor }),
+        clearSessionAndRedirect,
+      );
+      if (!result.ok) {
+        setLoadMoreError(tCommon("loadMoreError"));
+        return;
+      }
+      setState((previous) => {
+        if (previous.status !== "ready" || previous.nextCursor !== cursor) {
+          return previous;
+        }
+        return {
+          status: "ready",
+          data: [...previous.data, ...result.data.listings],
+          nextCursor: result.data.nextCursor,
+        };
+      });
+    } finally {
+      loadMorePending.current = false;
+      setLoadingMore(false);
+    }
+  }, [clearSessionAndRedirect, state, tCommon]);
 
   if (authStatus === "loading") {
     return (
@@ -110,16 +157,43 @@ export function AdminListingQueue() {
           description={tAdmin("noItems")}
         />
       ) : (
-        <ul className="flex min-w-0 flex-col gap-4">
-          {state.data.map((listing) => (
-            <AdminListingRow
-              key={listing.id}
-              listing={listing}
-              onActionComplete={load}
-              clearSessionAndRedirect={clearSessionAndRedirect}
-            />
-          ))}
-        </ul>
+        <>
+          <ul className="flex min-w-0 flex-col gap-4">
+            {state.data.map((listing) => (
+              <AdminListingRow
+                key={listing.id}
+                listing={listing}
+                onActionComplete={load}
+                clearSessionAndRedirect={clearSessionAndRedirect}
+              />
+            ))}
+          </ul>
+          {state.nextCursor ? (
+            <div
+              aria-busy={loadingMore}
+              className="mt-5 flex flex-col items-start gap-2"
+            >
+              <button
+                type="button"
+                data-testid="admin-listings-load-more"
+                disabled={loadingMore}
+                onClick={() => void loadMore()}
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-accent disabled:opacity-60"
+              >
+                {loadingMore ? tCommon("loadingMore") : tCommon("loadMore")}
+              </button>
+              {loadMoreError ? (
+                <p
+                  role="alert"
+                  data-testid="admin-listings-load-more-error"
+                  className="text-sm text-red-800"
+                >
+                  {loadMoreError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </>
       )}
     </div>
   );

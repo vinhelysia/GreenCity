@@ -4,15 +4,18 @@ import {
   CreateQuoteRequestSchema,
   GrantSubscriptionRequestSchema,
   ListingStatusSchema,
+  PaginationQuerySchema,
   ScrapRequestStatusSchema,
   type CreateQuoteRequest,
   type GrantSubscriptionRequest,
   type ListingStatus,
+  type PaginationQuery,
   type ScrapRequestStatus,
 } from '@greencity/shared';
 import type { Request } from 'express';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { getRequestId } from '../common/request-id';
+import { parsePaginationQuery } from '../common/pagination';
 import { CurrentUser } from '../authz/current-user.decorator';
 import type { AuthContext } from '../authz/auth-context';
 import { Roles } from '../authz/roles.decorator';
@@ -25,9 +28,10 @@ const AdminScrapRequestQuerySchema = z.object({
   status: ScrapRequestStatusSchema.optional(),
 });
 
-const AdminListingQuerySchema = z.object({
+const AdminListingQuerySchema = PaginationQuerySchema.extend({
   status: ListingStatusSchema.optional(),
 });
+type AdminListingQuery = PaginationQuery & { status?: ListingStatus };
 
 /** First real use of RolesGuard — every route here requires ADMIN. */
 @Controller('admin')
@@ -62,9 +66,9 @@ export class AdminController {
   @Get('listings')
   async listListings(
     @Query(new ZodValidationPipe(AdminListingQuerySchema))
-    query: { status?: ListingStatus },
+    query: AdminListingQuery,
   ) {
-    return this.listings.adminList(query.status);
+    return this.listings.adminList(query.status, parsePaginationQuery(query));
   }
 
   @Post('listings/:id/complete')

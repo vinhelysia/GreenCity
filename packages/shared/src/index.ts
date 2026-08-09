@@ -27,6 +27,42 @@ export const ApiErrorSchema = z.object({
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 
+/** A cursor payload is server-issued and encoded before it reaches a client. */
+export const PaginationCursorSchema = z
+  .object({
+    // The encoder always emits Date#toISOString(). Keeping the accepted shape
+    // canonical avoids accepting a different date representation as a cursor.
+    createdAt: z.string().datetime({ offset: true }).max(40),
+    id: z.string().min(1).max(128),
+  })
+  .strict();
+export type PaginationCursor = z.infer<typeof PaginationCursorSchema>;
+
+/** Opaque, URL-safe encoding of PaginationCursorSchema. */
+export const PaginationCursorTokenSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(/^[A-Za-z0-9_-]+$/);
+
+/** Shared list-query contract for cursor-paginated endpoints. */
+export const PaginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: PaginationCursorTokenSchema.optional(),
+});
+export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
+
+/**
+ * Optional bounded snapshot for an existing owner-only list. It intentionally
+ * has no cursor: callers use it for a small "Recent" panel, while legacy full
+ * history screens can keep their current no-query behaviour until they receive
+ * a real paginated contract.
+ */
+export const RecentItemsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).optional(),
+});
+export type RecentItemsQuery = z.infer<typeof RecentItemsQuerySchema>;
+
 export const APP_NAME = "GreenCity" as const;
 
 /** Cookie name for opaque session token (HttpOnly). */
@@ -253,6 +289,7 @@ export type ScrapRequestDto = z.infer<typeof ScrapRequestSchema>;
 
 export const ScrapRequestListSchema = z.object({
   requests: z.array(ScrapRequestSchema),
+  nextCursor: PaginationCursorTokenSchema.optional(),
 });
 export type ScrapRequestList = z.infer<typeof ScrapRequestListSchema>;
 
@@ -300,6 +337,7 @@ export type MarketplaceListing = z.infer<typeof MarketplaceListingSchema>;
 
 export const MarketplaceListingListSchema = z.object({
   listings: z.array(MarketplaceListingSchema),
+  nextCursor: PaginationCursorTokenSchema.optional(),
 });
 export type MarketplaceListingList = z.infer<typeof MarketplaceListingListSchema>;
 
@@ -396,6 +434,12 @@ export type SubscriptionPaymentStatus = z.infer<
   typeof SubscriptionPaymentStatusSchema
 >;
 
+/** Safe display value only; provider IDs and checkout URLs never leave the API. */
+export const SubscriptionPaymentProviderSchema = z.enum(["MOMO", "PAYOS"]);
+export type SubscriptionPaymentProvider = z.infer<
+  typeof SubscriptionPaymentProviderSchema
+>;
+
 export const CreateSubscriptionPaymentResponseSchema = z.object({
   paymentId: z.string(),
   payUrl: z.string().url(),
@@ -413,6 +457,60 @@ export const SubscriptionPaymentStatusResponseSchema = z.object({
 export type SubscriptionPaymentStatusResponse = z.infer<
   typeof SubscriptionPaymentStatusResponseSchema
 >;
+
+/** Always bounded: this endpoint is an account dashboard snapshot, not a ledger. */
+export const AccountHistoryQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(5),
+});
+export type AccountHistoryQuery = z.infer<typeof AccountHistoryQuerySchema>;
+
+/** A buyer's own reservation, without any seller identity or contact details. */
+export const AccountReservationHistorySchema = z.object({
+  id: z.string(),
+  categoryName: z.string(),
+  estimatedWeightKg: z.number().positive(),
+  buyerPricePerKgVnd: z.number().int().positive(),
+  estimatedTotalVnd: z.number().int().nonnegative(),
+  status: ListingStatusSchema,
+  createdAt: z.string().datetime({ offset: true }),
+});
+export type AccountReservationHistory = z.infer<
+  typeof AccountReservationHistorySchema
+>;
+
+/** Account-owned Buyer Pass periods, including admin grants but no admin note. */
+export const AccountSubscriptionHistorySchema = z.object({
+  id: z.string(),
+  status: SubscriptionStatusSchema,
+  startsAt: z.string().datetime({ offset: true }),
+  expiresAt: z.string().datetime({ offset: true }),
+});
+export type AccountSubscriptionHistory = z.infer<
+  typeof AccountSubscriptionHistorySchema
+>;
+
+/** Safe payment status display; provider identifiers and checkout URLs stay private. */
+export const AccountPaymentHistorySchema = z.object({
+  id: z.string(),
+  provider: SubscriptionPaymentProviderSchema,
+  status: SubscriptionPaymentStatusSchema,
+  amountVnd: z.number().int().positive(),
+  createdAt: z.string().datetime({ offset: true }),
+  paidAt: z.string().datetime({ offset: true }).nullable(),
+});
+export type AccountPaymentHistory = z.infer<typeof AccountPaymentHistorySchema>;
+
+/**
+ * The small account-only read model for data not already served by existing
+ * owner endpoints. Each array is independently bounded by the same request
+ * limit and has a deterministic order server-side.
+ */
+export const AccountHistorySchema = z.object({
+  reservations: z.array(AccountReservationHistorySchema),
+  subscriptions: z.array(AccountSubscriptionHistorySchema),
+  payments: z.array(AccountPaymentHistorySchema),
+});
+export type AccountHistory = z.infer<typeof AccountHistorySchema>;
 
 export const PAYMENT_ERROR_CODES = [
   "PAYMENT_NOT_CONFIGURED",

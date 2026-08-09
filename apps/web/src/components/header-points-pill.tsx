@@ -21,7 +21,9 @@ export function HeaderPointsPill() {
     }
     let cancelled = false;
     void (async () => {
-      const res = await fetchMyPoints();
+      // The header needs only a balance, never a full ledger. Keep this compact
+      // authenticated read bounded just like the account dashboard snapshots.
+      const res = await fetchMyPoints({ limit: 1 });
       if (!cancelled && res.ok) setBalance(res.data.balance);
     })();
     return () => {

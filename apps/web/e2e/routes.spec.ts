@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   ROUTES,
   attachRuntimeGuards,
@@ -6,7 +6,153 @@ import {
   assertOneH1,
 } from "./helpers";
 
-test.describe("Public routes", () => {
+type ApiReply = { status: number; json: unknown };
+
+const HOME_STATS = {
+  availableListings: 0,
+  verifiedCleanupReports: 3,
+  scrapWeightKg: 0,
+  totalPointsAwarded: 0,
+};
+
+const HOME_REPORTS = [
+  {
+    id: "newest-report",
+    description: "Newest verified report",
+    city: "Ho Chi Minh City",
+    district: "District 1",
+    photoPath: "/cleanup-reports/newest-report/photo",
+    verifiedAt: "2026-08-09T12:00:00.000Z",
+  },
+  {
+    id: "second-report",
+    description: "Second newest verified report",
+    city: "Ho Chi Minh City",
+    district: "District 3",
+    photoPath: "/cleanup-reports/second-report/photo",
+    verifiedAt: "2026-08-08T12:00:00.000Z",
+  },
+  {
+    id: "oldest-report",
+    description: "Oldest verified report",
+    city: "Ho Chi Minh City",
+    district: "District 5",
+    photoPath: "/cleanup-reports/oldest-report/photo",
+    verifiedAt: "2026-08-07T12:00:00.000Z",
+  },
+];
+
+async function installHomeApiMock(
+  page: Page,
+  table: Record<string, ApiReply>,
+): Promise<void> {
+  await page.addInitScript((routes: Record<string, ApiReply>) => {
+    const original = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const href =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.href
+            : input.url;
+      const { pathname } = new URL(href, window.location.href);
+      const reply = routes[pathname];
+      if (!reply) return original(input, init);
+      return new Response(JSON.stringify(reply.json), {
+        status: reply.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+  }, table);
+}
+
+function homeApiReplies(overrides: Record<string, ApiReply> = {}) {
+  return {
+    "/api/auth/me": {
+      status: 401,
+      json: { error: { code: "UNAUTHORIZED", message: "unauthenticated" } },
+    },
+    "/api/stats": { status: 200, json: HOME_STATS },
+    "/api/marketplace/listings": { status: 200, json: { listings: [] } },
+    "/api/cleanup-reports/public": {
+      status: 200,
+      json: { reports: HOME_REPORTS },
+    },
+    ...overrides,
+  };
+}
+
+test.describe("Public routes @core", () => {
+  test("homepage metadata is locale-specific and private routes are not indexable @core", async ({
+    page,
+  }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const viCanonical = page.locator('link[rel="canonical"]');
+    await expect(viCanonical).toHaveCount(1);
+    const viUrl = await viCanonical.getAttribute("href");
+    expect(viUrl).toMatch(/^https?:\/\/[^/]+$/);
+
+    await expect(
+      page.locator('link[rel="alternate"][hreflang="vi-VN"]'),
+    ).toHaveAttribute("href", viUrl!);
+    await expect(
+      page.locator('link[rel="alternate"][hreflang="en-US"]'),
+    ).toHaveAttribute("href", `${viUrl}/en`);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      viUrl!,
+    );
+
+    await page.goto("/en", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${viUrl}/en`,
+    );
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      `${viUrl}/en`,
+    );
+
+    // Public content pages must not inherit the homepage canonical or OG URL.
+    await page.goto("/cho-online", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+    await expect(page.locator('meta[property="og:url"]')).toHaveCount(0);
+
+    for (const route of [
+      "/tai-khoan",
+      "/dang-nhap",
+      "/dang-ky",
+      "/admin/bao-gia",
+    ]) {
+      await page.goto(route, { waitUntil: "domcontentloaded" });
+      await expect(page.locator('meta[name="robots"]'), route).toHaveAttribute(
+        "content",
+        /noindex,\s*nofollow/,
+      );
+    }
+  });
+
+  test("homepage shows the two newest verified cleanup reports", async ({
+    page,
+  }) => {
+    await installHomeApiMock(page, homeApiReplies());
+    await page.goto("/", { waitUntil: "networkidle" });
+
+    const reports = page.locator("#diem-rac-da-don ul > li");
+    await expect(reports).toHaveCount(2);
+    await expect(reports.nth(0)).toContainText("Newest verified report");
+    await expect(reports.nth(1)).toContainText(
+      "Second newest verified report",
+    );
+    // Asserted on the section, not on the two <li>: a negated toContainText
+    // against a multi-element locator is a strict-mode violation, and the
+    // point of the check is that the third report is absent from the section.
+    await expect(page.locator("#diem-rac-da-don")).not.toContainText(
+      "Oldest verified report",
+    );
+  });
+
   for (const route of ROUTES) {
     test(`${route.path} renders 200 with one h1 and clean runtime`, async ({
       page,
@@ -72,7 +218,41 @@ test.describe("Public routes", () => {
   });
 });
 
-test.describe("English routes & i18n", () => {
+test.describe("English routes & i18n @core", () => {
+  test("homepage fetch errors are localized on the English route", async ({
+    page,
+  }) => {
+    const failure = {
+      status: 500,
+      json: { error: { code: "UNKNOWN_ERROR", message: "private detail" } },
+    };
+    await installHomeApiMock(
+      page,
+      homeApiReplies({
+        "/api/stats": failure,
+        "/api/marketplace/listings": failure,
+        "/api/cleanup-reports/public": failure,
+      }),
+    );
+    await page.goto("/en", { waitUntil: "networkidle" });
+
+    // Scoped to the impact section rather than the page: Next's empty
+    // #__next-route-announcer__ also carries role="alert", so a bare alert
+    // role resolves to two elements. Scoping also makes this assert the error
+    // surfaces in the right place, not merely somewhere on the page.
+    await expect(page.locator("#tac-dong").getByRole("alert")).toContainText(
+      "Unable to load impact statistics.",
+    );
+    await expect(page.getByTestId("featured-listings-error")).toContainText(
+      "Unable to load listings.",
+    );
+    await expect(
+      page.getByTestId("public-cleanup-reports-error"),
+    ).toContainText("Unable to load verified reports.");
+    await expect(page.locator("main")).not.toContainText("Không thể tải");
+    await expect(page.locator("main")).not.toContainText("private detail");
+  });
+
   const EN_ROUTES = [
     { path: "/en", h1: "Scrap finds a buyer! Report illegal dumping!" },
     { path: "/en/recycling-bins", h1: "Recycling Bins" },

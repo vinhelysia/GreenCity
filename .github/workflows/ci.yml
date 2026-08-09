@@ -85,7 +85,9 @@ jobs:
   integration:
     name: PostgreSQL + PostGIS integration
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Playwright deliberately uses one worker; the expanded core gate is a
+    # sequential deploy blocker, so leave room for cold starts and one retry.
+    timeout-minutes: 45
     needs: unit
     services:
       postgres:
@@ -162,19 +164,28 @@ jobs:
       - name: Phase 1 integration tests (real database)
         run: pnpm test:integration
 
+      # The @core gate covers flows that need a populated catalogue: a seller
+      # cannot submit without a scrap category, and the anonymous marketplace
+      # has no listing to show a login action on. The integration suite builds
+      # its own fixtures and runs before this, so seeding here changes nothing
+      # for it. Safe because the database is the disposable service container
+      # declared above, on loopback — never an owner machine or Supabase.
+      - name: Seed demo data for the E2E gate
+        run: pnpm --filter api db:seed
+
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
-      - name: Critical payment E2E
+      - name: Core + critical payment E2E
         run: |
           pnpm --filter web build
-          pnpm --filter web exec playwright test subscription-payment.spec.ts --grep "@critical"
+          pnpm --filter web exec playwright test --grep "@core|@critical"
 
-      - name: Upload payment E2E report
+      - name: Upload core E2E report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: payment-e2e-report
+          name: core-e2e-report
           path: |
             apps/web/playwright-report
             apps/web/test-results
