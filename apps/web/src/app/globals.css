@@ -5,12 +5,23 @@
  *   the page. Structure changed; palette deliberately unchanged.
  * moves: five numbered stages as the page's spine (the sequence is real) ·
  *        section rhythm alternates ruled / open / full-bleed band ·
- *        cards differentiate by content — photo-led for cleanup evidence,
- *        type-led for listings, unbordered for stages ·
+ *        the three entry routes are ruled rows, not equal cards — selling
+ *        leads at a larger size because it is the entry point ·
  *        tabular-nums on every figure · documentary photography, no stock
  * motion: one ambient hero-image drift; CSS-only and reduced-motion safe
  * fonts: Bricolage Grotesque + Be Vietnam Pro
  * pre-emit critique: P5 H5 E4 S5 R4 V4
+ *
+ * 2026-08-09 audit pass. The homepage had drifted back to the template this
+ * stamp claimed to have fixed: three equal cards, each an icon tile + badge +
+ * body, differentiated only by a coloured top-stripe, closing on a gradient
+ * panel with a radial-gradient orb in the corner. Removed: the card grid (now
+ * ruled rows), the top-stripes, the icon tiles, the per-card badges, the
+ * hover-lift, the orb, both diagonal gradients, the tinted drop-shadows on
+ * flat content, and a shield icon repeated three times beside three different
+ * claims. Radii collapsed to two (lg for controls, 2xl for full panels).
+ * Shadow tokens stay defined in tailwind.config for genuinely floating UI;
+ * the homepage no longer leans on them to fake depth.
  */
 @tailwind base;
 @tailwind components;
@@ -75,10 +86,11 @@ html {
 body {
   overflow-x: clip;
   min-height: 100dvh;
+  /* Flat paper. Two radial-gradient blooms used to sit here — one green at
+     10% 10%, one orange at 90% 80% — on every page of the site. At 3–5 % alpha
+     they were barely visible, which is the tell: cost paid, nothing bought.
+     The paper colour carries the warmth on its own. */
   background-color: var(--color-paper);
-  background-image:
-    radial-gradient(circle at 10% 10%, rgba(23, 107, 77, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(226, 102, 31, 0.05) 0%, transparent 42%);
   color: var(--color-ink);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;

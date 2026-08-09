@@ -32,7 +32,7 @@ export function HomeLoop() {
         return (
           <li
             key={stage.n}
-            className={`group relative flex min-w-0 flex-col justify-between rounded-2xl border p-6 shadow-eco transition-shadow hover:shadow-eco-hover ${
+            className={`group relative flex min-w-0 flex-col justify-between rounded-lg border p-6 ${
               status === "active" ? "!border-[rgba(196,69,27,0.3)] bg-warm-050" : "border-edge bg-card"
             }`}
           >

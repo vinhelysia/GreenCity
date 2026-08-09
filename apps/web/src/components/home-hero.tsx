@@ -2,7 +2,7 @@ import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/routing";
 import { EcoBadge } from "./eco-badge";
-import { IconArrowRight, IconLeaf, IconShieldCheck, IconSparkles } from "./eco-icons";
+import { IconArrowRight, IconLeaf, IconSparkles } from "./eco-icons";
 
 /**
  * Opening hero section — Server Component.
@@ -15,10 +15,13 @@ export async function HomeHero() {
   const locale = await getLocale();
   const t = await getTranslations("home");
 
+  // Flat paper under the photograph. The three-stop diagonal gradient that used
+  // to sit on this section was covered by the image anyway — it cost a tell and
+  // bought nothing visible.
   return (
     <section
       aria-labelledby="hero-heading"
-      className="home-hero relative isolate min-w-0 overflow-hidden rounded-3xl border border-edge bg-gradient-to-br from-warm-050 via-paper to-mint-surface px-6 py-10 shadow-eco sm:px-8 sm:py-14 lg:min-h-[38rem] lg:px-12 lg:py-16"
+      className="home-hero relative isolate min-w-0 overflow-hidden rounded-2xl border border-edge bg-paper px-6 py-10 sm:px-8 sm:py-14 lg:min-h-[38rem] lg:px-12 lg:py-16"
     >
       <Image
         src="/eco-city-hero.png"
@@ -57,41 +60,34 @@ export async function HomeHero() {
         <div className="mt-8 flex min-w-0 flex-wrap items-center gap-3.5">
           <Link
             href="/ban-phe-lieu"
-            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-warm-600 px-6 py-3 text-base font-semibold text-white shadow-warm transition-colors hover:bg-warm-900"
+            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-warm-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-warm-900"
           >
             <span>{t("sellAction")}</span>
             <IconArrowRight className="h-4 w-4" />
           </Link>
           <Link
             href="/dong-gop"
-            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-edge bg-card px-6 py-3 text-base font-semibold text-ink shadow-eco-sm transition-colors hover:border-primary/40 hover:bg-mint-surface/40"
+            className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-edge bg-card px-6 py-3 text-base font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-mint-surface/40"
           >
             <span>{t("reportAction")}</span>
           </Link>
           <Link
             href="/cho-online"
-            className="inline-flex min-h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-semibold text-primary transition-colors hover:text-primary-hover hover:underline"
+            className="inline-flex min-h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-3 text-sm font-semibold text-primary transition-colors hover:text-primary-hover hover:underline"
           >
             <IconSparkles className="h-4 w-4" />
             <span>{t("exploreMarketplace")}</span>
           </Link>
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-4">
-          <span className="inline-flex items-center gap-1.5 text-sm text-muted">
-            <IconShieldCheck className="h-4 w-4 text-primary" />
-            {t("prop1")}
-          </span>
+        {/* One shield icon repeated three times said nothing three times. The
+            rules already separate the claims; the text carries them. */}
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+          <span>{t("prop1")}</span>
           <span className="h-3.5 w-px bg-edge" aria-hidden="true" />
-          <span className="inline-flex items-center gap-1.5 text-sm text-muted">
-            <IconShieldCheck className="h-4 w-4 text-primary" />
-            {t("prop2")}
-          </span>
+          <span>{t("prop2")}</span>
           <span className="h-3.5 w-px bg-edge" aria-hidden="true" />
-          <span className="inline-flex items-center gap-1.5 text-sm text-muted">
-            <IconShieldCheck className="h-4 w-4 text-primary" />
-            {t("prop3")}
-          </span>
+          <span>{t("prop3")}</span>
         </div>
       </div>
     </section>
