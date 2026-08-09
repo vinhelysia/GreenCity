@@ -40,6 +40,7 @@ export function HeaderLoginLink() {
   const cleanPath = pathname?.replace(/^\/en(?=\/|$)/, "") || "/";
   const loginActive = cleanPath === "/dang-nhap";
   const registerActive = cleanPath === "/dang-ky";
+  const accountActive = cleanPath === "/tai-khoan" || cleanPath === "/account";
 
   if (status === "loading") {
     return (
@@ -54,6 +55,7 @@ export function HeaderLoginLink() {
 
   if (status === "authenticated" && user) {
     const label = user.displayName?.trim() || user.email;
+    const initial = label.charAt(0).toUpperCase();
     const isAdmin = user.roles.includes("ADMIN");
     return (
       <div className="relative flex shrink-0 items-center gap-2">
@@ -72,13 +74,26 @@ export function HeaderLoginLink() {
             {tNav("admin")}
           </Link>
         ) : null}
-        <span
-          className="hidden max-w-[10rem] truncate text-sm text-muted sm:inline"
+        <Link
+          href="/tai-khoan"
+          aria-current={accountActive ? "page" : undefined}
+          className={[
+            "inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full border border-edge bg-paper text-sm transition-colors sm:min-h-0 sm:min-w-0 sm:max-w-[10rem] sm:justify-start sm:rounded-none sm:border-0 sm:bg-transparent",
+            accountActive
+              ? "font-semibold text-primary"
+              : "text-muted hover:text-ink",
+          ].join(" ")}
           title={user.email}
-          data-testid="header-user-label"
+          data-testid="header-account"
         >
-          {label}
-        </span>
+          <span aria-hidden="true" className="font-semibold sm:hidden">
+            {initial}
+          </span>
+          <span data-testid="header-user-label" className="hidden truncate sm:inline">
+            {label}
+          </span>
+          <span className="sr-only sm:hidden">{tNav("account")}</span>
+        </Link>
         <button
           type="button"
           data-testid="header-logout"

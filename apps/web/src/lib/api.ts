@@ -34,6 +34,8 @@ import {
   type CreateSubscriptionPaymentResponse,
   SubscriptionPaymentStatusResponseSchema,
   type SubscriptionPaymentStatusResponse,
+  AccountHistorySchema,
+  type AccountHistory,
   ReverseGeocodeResultSchema,
   type ReverseGeocodeResult,
   ChatwootIdentitySchema,
@@ -51,6 +53,11 @@ export type PaginationOptions = {
   cursor?: string;
 };
 
+/** Bounded recent snapshots never accept a cursor. */
+export type RecentItemsOptions = {
+  limit?: number;
+};
+
 function buildPaginationQuery(options?: PaginationOptions): string {
   if (!options) return "";
   const query = new URLSearchParams();
@@ -58,6 +65,11 @@ function buildPaginationQuery(options?: PaginationOptions): string {
   if (options.cursor !== undefined) query.set("cursor", options.cursor);
   const serialized = query.toString();
   return serialized ? `?${serialized}` : "";
+}
+
+function buildRecentItemsQuery(options?: RecentItemsOptions): string {
+  if (options?.limit === undefined) return "";
+  return `?limit=${encodeURIComponent(String(options.limit))}`;
 }
 
 /** Same-origin fetch with credentials. Never pass absolute hosts. */
@@ -421,8 +433,12 @@ export async function fetchSubscriptionPaymentStatus(
 }
 
 /** GET /api/points/me — reward points balance and ledger entries. */
-export async function fetchMyPoints(): Promise<ApiResult<PointsBalance>> {
-  const result = await apiFetch<unknown>("/api/points/me");
+export async function fetchMyPoints(
+  options?: RecentItemsOptions,
+): Promise<ApiResult<PointsBalance>> {
+  const result = await apiFetch<unknown>(
+    `/api/points/me${buildRecentItemsQuery(options)}`,
+  );
   if (!result.ok) return result;
   const parsed = PointsBalanceSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
@@ -565,12 +581,29 @@ export async function postCleanupReport(
   });
 }
 
-export async function fetchMyCleanupReports(): Promise<
+export async function fetchMyCleanupReports(
+  options?: RecentItemsOptions,
+): Promise<
   ApiResult<CleanupReportList>
 > {
-  const result = await apiFetch<unknown>("/api/cleanup-reports/mine");
+  const result = await apiFetch<unknown>(
+    `/api/cleanup-reports/mine${buildRecentItemsQuery(options)}`,
+  );
   if (!result.ok) return result;
   const parsed = CleanupReportListSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+/** GET /api/account/history â€” authenticated, bounded account-only snapshots. */
+export async function fetchAccountHistory(
+  options?: RecentItemsOptions,
+): Promise<ApiResult<AccountHistory>> {
+  const result = await apiFetch<unknown>(
+    `/api/account/history${buildRecentItemsQuery(options)}`,
+  );
+  if (!result.ok) return result;
+  const parsed = AccountHistorySchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
   return { ok: true, data: parsed.data, status: result.status };
 }

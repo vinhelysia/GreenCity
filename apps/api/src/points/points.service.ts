@@ -56,7 +56,7 @@ export class PointsService {
     });
   }
 
-  async getBalance(userId: string): Promise<PointsBalance> {
+  async getBalance(userId: string, limit?: number): Promise<PointsBalance> {
     const [balance, entries] = await Promise.all([
       this.prisma.pointEntry.aggregate({
         where: { userId },
@@ -64,7 +64,8 @@ export class PointsService {
       }),
       this.prisma.pointEntry.findMany({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        ...(limit !== undefined ? { take: limit } : {}),
         select: {
           id: true,
           delta: true,

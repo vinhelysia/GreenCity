@@ -79,11 +79,12 @@ export class CleanupService {
     return toCleanupReportDto(created);
   }
 
-  async mine(auth: AuthContext): Promise<CleanupReportList> {
+  async mine(auth: AuthContext, limit?: number): Promise<CleanupReportList> {
     const rows = await this.prisma.cleanupReport.findMany({
       where: { reporterId: auth.user.id },
       include: { media: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      ...(limit !== undefined ? { take: limit } : {}),
     });
     return { reports: rows.map(toCleanupReportDto) };
   }

@@ -15,6 +15,7 @@ const REQUIRED_ROUTES = [
   "app/[locale]/thung-rac/page.tsx",
   "app/[locale]/dich-vu/page.tsx",
   "app/[locale]/dong-gop/page.tsx",
+  "app/[locale]/tai-khoan/page.tsx",
   "app/[locale]/cho-online/page.tsx",
   "app/[locale]/dang-nhap/page.tsx",
   "app/[locale]/dang-ky/page.tsx",
@@ -54,6 +55,7 @@ const REQUIRED_COMPONENTS = [
   "components/buyer-pass-panel.tsx",
   "components/chatwoot-widget.tsx",
   "components/admin-grant-pass.tsx",
+  "components/account-dashboard.tsx",
   "components/reward-offer-preview-dialog.tsx",
   "lib/api.ts",
   "lib/format.ts",
@@ -212,6 +214,7 @@ const MARKETPLACE_API_PATHS = [
   "/api/marketplace/listings/${",
   "/api/scrap-requests",
   "/api/subscriptions/me",
+  "/api/account/history",
   "/api/media/upload",
   "/api/admin/scrap-requests",
   // The only route to buyer eligibility while payOS checkout is unavailable.
