@@ -35,7 +35,7 @@ type AuthContextValue = {
       phone?: string;
     },
   ) => Promise<{ ok: true } | { ok: false; error: ParsedApiError; status: number }>;
-  logout: () => Promise<void>;
+  logout: () => Promise<{ ok: true } | { ok: false }>;
   /** Clear client auth and send user to login (session expired / 401). */
   clearSessionAndRedirect: () => void;
 };
@@ -114,14 +114,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (): Promise<{ ok: true } | { ok: false }> => {
     const result = await postLogout();
-    setUser(null);
-    setStatus("unauthenticated");
-    if (!result.ok && result.status === 401) {
-      // Already signed out server-side; stay consistent client-side.
-      return;
+    if (result.ok || result.status === 401) {
+      // A 401 means the server has no live session, so the client can safely
+      // converge on signed-out state. Other failures cannot prove revocation.
+      setUser(null);
+      setStatus("unauthenticated");
+      return { ok: true };
     }
+
+    return { ok: false };
   }, []);
 
   const value = useMemo(

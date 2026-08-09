@@ -85,7 +85,9 @@ jobs:
   integration:
     name: PostgreSQL + PostGIS integration
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Playwright deliberately uses one worker; the expanded core gate is a
+    # sequential deploy blocker, so leave room for cold starts and one retry.
+    timeout-minutes: 45
     needs: unit
     services:
       postgres:
@@ -165,16 +167,16 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter web exec playwright install --with-deps chromium
 
-      - name: Critical payment E2E
+      - name: Core + critical payment E2E
         run: |
           pnpm --filter web build
-          pnpm --filter web exec playwright test subscription-payment.spec.ts --grep "@critical"
+          pnpm --filter web exec playwright test --grep "@core|@critical"
 
-      - name: Upload payment E2E report
+      - name: Upload core E2E report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: payment-e2e-report
+          name: core-e2e-report
           path: |
             apps/web/playwright-report
             apps/web/test-results

@@ -114,7 +114,7 @@ function recordWrites(page: Page): string[] {
   return writes;
 }
 
-test.describe("Reward catalog", () => {
+test.describe("Reward catalog @core", () => {
   test("renders Vietnamese catalog fields from the API response", async ({
     page,
   }) => {

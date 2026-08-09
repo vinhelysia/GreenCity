@@ -134,6 +134,8 @@
     "loginSuccess": "Sign in successful!",
     "registerSuccess": "Account registered successfully!",
     "signOut": "Sign Out",
+    "signingOut": "Signing out...",
+    "logoutFailed": "Unable to sign out right now. Please try again.",
     "adminBadge": "Administrator",
     "signInRequiredTitle": "Sign In Required",
     "signInRequiredDesc": "You need to sign in to perform this action.",

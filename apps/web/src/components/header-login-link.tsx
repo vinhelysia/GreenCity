@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { Link, usePathname } from "@/i18n/routing";
 
@@ -14,6 +15,27 @@ export function HeaderLoginLink() {
   const tNav = useTranslations("navigation");
   const tAuth = useTranslations("auth");
   const tFooter = useTranslations("footer");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [logoutFailed, setLogoutFailed] = useState(false);
+  const logoutInFlight = useRef(false);
+
+  const handleLogout = useCallback(async () => {
+    if (logoutInFlight.current) return;
+
+    logoutInFlight.current = true;
+    setIsLoggingOut(true);
+    setLogoutFailed(false);
+    try {
+      const result = await logout();
+      setLogoutFailed(!result.ok);
+    } catch {
+      // Do not expose unexpected client or server details in the header.
+      setLogoutFailed(true);
+    } finally {
+      logoutInFlight.current = false;
+      setIsLoggingOut(false);
+    }
+  }, [logout]);
 
   const cleanPath = pathname?.replace(/^\/en(?=\/|$)/, "") || "/";
   const loginActive = cleanPath === "/dang-nhap";
@@ -34,7 +56,7 @@ export function HeaderLoginLink() {
     const label = user.displayName?.trim() || user.email;
     const isAdmin = user.roles.includes("ADMIN");
     return (
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="relative flex shrink-0 items-center gap-2">
         {isAdmin ? (
           <Link
             href="/admin/giao-dich"
@@ -60,13 +82,25 @@ export function HeaderLoginLink() {
         <button
           type="button"
           data-testid="header-logout"
-          className="inline-flex min-h-11 shrink-0 whitespace-nowrap items-center justify-center rounded-md border border-edge bg-paper px-3 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-primary hover:text-primary sm:px-4"
+          disabled={isLoggingOut}
+          aria-busy={isLoggingOut}
+          aria-describedby={logoutFailed ? "header-logout-error" : undefined}
+          className="inline-flex min-h-11 shrink-0 whitespace-nowrap items-center justify-center rounded-md border border-edge bg-paper px-3 py-2 text-sm font-medium text-ink transition-colors duration-quick ease-out hover:border-primary hover:text-primary disabled:cursor-wait disabled:opacity-70 sm:px-4"
           onClick={() => {
-            void logout();
+            void handleLogout();
           }}
         >
-          {tAuth("signOut")}
+          {isLoggingOut ? tAuth("signingOut") : tAuth("signOut")}
         </button>
+        {logoutFailed ? (
+          <p
+            id="header-logout-error"
+            role="alert"
+            className="absolute right-0 top-full z-10 mt-2 w-64 rounded-md border border-edge bg-paper p-3 text-sm leading-relaxed text-red-800 shadow-eco-sm"
+          >
+            {tAuth("logoutFailed")}
+          </p>
+        ) : null}
       </div>
     );
   }

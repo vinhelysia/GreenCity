@@ -6,7 +6,7 @@ import {
   assertOneH1,
 } from "./helpers";
 
-test.describe("Public routes", () => {
+test.describe("Public routes @core", () => {
   for (const route of ROUTES) {
     test(`${route.path} renders 200 with one h1 and clean runtime`, async ({
       page,
@@ -72,7 +72,7 @@ test.describe("Public routes", () => {
   });
 });
 
-test.describe("English routes & i18n", () => {
+test.describe("English routes & i18n @core", () => {
   const EN_ROUTES = [
     { path: "/en", h1: "Scrap finds a buyer! Report illegal dumping!" },
     { path: "/en/recycling-bins", h1: "Recycling Bins" },

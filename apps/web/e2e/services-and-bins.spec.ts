@@ -21,7 +21,7 @@ const CONTAINERS = snapshot.points.filter(
   (p) => p.recyclingType === "container",
 ).length;
 
-test.describe("Service catalog", () => {
+test.describe("Service catalog @core", () => {
   test("lists every service with its limit and a working link", async ({
     page,
   }) => {
@@ -66,7 +66,7 @@ test.describe("Service catalog", () => {
   });
 });
 
-test.describe("Recycling points", () => {
+test.describe("Recycling points @core", () => {
   test("shows every snapshot point with its provenance", async ({ page }) => {
     const issues = attachRuntimeGuards(page);
     await page.goto("/thung-rac", { waitUntil: "networkidle" });

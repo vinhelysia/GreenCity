@@ -134,6 +134,8 @@
     "loginSuccess": "Đăng nhập thành công!",
     "registerSuccess": "Đăng ký thành công!",
     "signOut": "Đăng xuất",
+    "signingOut": "Đang đăng xuất...",
+    "logoutFailed": "Không thể đăng xuất lúc này. Vui lòng thử lại.",
     "adminBadge": "Quản trị viên",
     "signInRequiredTitle": "Yêu cầu đăng nhập",
     "signInRequiredDesc": "Bạn cần đăng nhập để thực hiện thao tác này.",

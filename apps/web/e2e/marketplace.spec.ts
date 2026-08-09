@@ -52,7 +52,7 @@ async function logout(page: Page) {
   await expect(page.getByTestId("header-login")).toBeVisible({ timeout: 15_000 });
 }
 
-test("seller submits, admin quotes, seller accepts, buyer reserves", async ({ page }) => {
+test("seller submits, admin quotes, seller accepts, buyer reserves @core", async ({ page }) => {
   const issues = attachRuntimeGuards(page, { allowConflict: true });
 
   // 1. Fresh seller registers.
