@@ -145,7 +145,12 @@ test.describe("Public routes @core", () => {
     await expect(reports.nth(1)).toContainText(
       "Second newest verified report",
     );
-    await expect(reports).not.toContainText("Oldest verified report");
+    // Asserted on the section, not on the two <li>: a negated toContainText
+    // against a multi-element locator is a strict-mode violation, and the
+    // point of the check is that the third report is absent from the section.
+    await expect(page.locator("#diem-rac-da-don")).not.toContainText(
+      "Oldest verified report",
+    );
   });
 
   for (const route of ROUTES) {
@@ -231,7 +236,11 @@ test.describe("English routes & i18n @core", () => {
     );
     await page.goto("/en", { waitUntil: "networkidle" });
 
-    await expect(page.getByRole("alert")).toContainText(
+    // Scoped to the impact section rather than the page: Next's empty
+    // #__next-route-announcer__ also carries role="alert", so a bare alert
+    // role resolves to two elements. Scoping also makes this assert the error
+    // surfaces in the right place, not merely somewhere on the page.
+    await expect(page.locator("#tac-dong").getByRole("alert")).toContainText(
       "Unable to load impact statistics.",
     );
     await expect(page.getByTestId("featured-listings-error")).toContainText(

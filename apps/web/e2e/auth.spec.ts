@@ -195,7 +195,11 @@ test.describe("Auth flows @core", () => {
     }
     releaseFirstResponse();
 
-    const error = page.getByRole("alert");
+    // Scoped by id, not getByRole("alert"): Next renders an empty
+    // #__next-route-announcer__ with role="alert" on every page, so a bare
+    // alert role always resolves to two elements and trips strict mode before
+    // it ever compares text.
+    const error = page.locator("#header-logout-error");
     await expect(error).toContainText(/Không thể đăng xuất/i);
     await expect(page.getByText("sensitive server failure details")).toHaveCount(0);
     await expect(logoutButton).toBeVisible();
