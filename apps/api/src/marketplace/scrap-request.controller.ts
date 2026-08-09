@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import {
   CreateScrapRequestSchema,
+  PaginationQuerySchema,
   type CreateScrapRequest,
+  type PaginationQuery,
 } from '@greencity/shared';
 import type { Request } from 'express';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
@@ -9,6 +11,7 @@ import { getRequestId } from '../common/request-id';
 import { CurrentUser } from '../authz/current-user.decorator';
 import type { AuthContext } from '../authz/auth-context';
 import { ScrapRequestService } from './scrap-request.service';
+import { parsePaginationQuery } from '../common/pagination';
 
 @Controller('scrap-requests')
 export class ScrapRequestController {
@@ -25,8 +28,12 @@ export class ScrapRequestController {
   }
 
   @Get('mine')
-  async mine(@CurrentUser() auth: AuthContext) {
-    return this.scrapRequests.mine(auth);
+  async mine(
+    @CurrentUser() auth: AuthContext,
+    @Query(new ZodValidationPipe(PaginationQuerySchema))
+    query: PaginationQuery,
+  ) {
+    return this.scrapRequests.mine(auth, parsePaginationQuery(query));
   }
 
   @Post(':id/accept')

@@ -1,4 +1,8 @@
-import { Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import {
+  PaginationQuerySchema,
+  type PaginationQuery,
+} from '@greencity/shared';
 import type { Request, Response } from 'express';
 import { loadEnv } from '../config/env';
 import { getRequestId } from '../common/request-id';
@@ -7,6 +11,8 @@ import { CurrentUser } from '../authz/current-user.decorator';
 import type { AuthContext } from '../authz/auth-context';
 import { SessionService } from '../auth/session.service';
 import { ListingService } from './listing.service';
+import { ZodValidationPipe } from '../common/zod-validation.pipe';
+import { parsePaginationQuery } from '../common/pagination';
 
 @Controller('marketplace/listings')
 export class ListingController {
@@ -17,9 +23,14 @@ export class ListingController {
 
   @Public()
   @Get()
-  async list(@Req() req: Request) {
+  async list(
+    @Query(new ZodValidationPipe(PaginationQuerySchema))
+    query: PaginationQuery,
+    @Req() req: Request,
+  ) {
+    const pagination = parsePaginationQuery(query);
     const viewerId = await this.resolveOptionalViewerId(req);
-    return this.listings.list(viewerId);
+    return this.listings.list(viewerId, pagination);
   }
 
   /** Photo visibility follows the listing, not the underlying asset's ownership. */

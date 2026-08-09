@@ -12,6 +12,11 @@ import type { AuthContext } from '../authz/auth-context';
 import { PointsService } from '../points/points.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  encodePaginationCursor,
+  paginationKeysetWhere,
+  type PaginationParams,
+} from '../common/pagination';
+import {
   OBJECT_STORAGE,
   type ObjectStorage,
 } from '../storage/storage.types';
@@ -29,29 +34,71 @@ export class ListingService {
   ) {}
 
   /** Buyer-facing browse. viewerId is resolved from an optional session cookie. */
-  async list(viewerId: string | null): Promise<MarketplaceListingList> {
+  async list(
+    viewerId: string | null,
+    pagination: PaginationParams = { limit: 20 },
+  ): Promise<MarketplaceListingList> {
     // ponytail: only AVAILABLE items are "on the market" today; add a status
     // filter param if a buyer-facing history view is ever requested.
     const rows = await this.prisma.marketplaceListing.findMany({
-      where: { status: 'AVAILABLE' },
-      orderBy: { createdAt: 'desc' },
+      where: pagination.cursor
+        ? {
+            AND: [
+              { status: 'AVAILABLE' },
+              paginationKeysetWhere(pagination.cursor),
+            ],
+          }
+        : { status: 'AVAILABLE' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: pagination.limit + 1,
       include: { scrapRequest: { include: { category: true } } },
     });
-    return { listings: rows.map((row) => toListingDto(row, viewerId)) };
+    const page = rows.slice(0, pagination.limit);
+    const next = rows.length > pagination.limit ? page.at(-1) : undefined;
+    return {
+      listings: page.map((row) => toListingDto(row, viewerId)),
+      ...(next
+        ? {
+            nextCursor: encodePaginationCursor({
+              createdAt: next.createdAt,
+              id: next.id,
+            }),
+          }
+        : {}),
+    };
   }
 
   /**
    * Admin queue. Unlike the buyer-facing browse this can list any status —
    * completing a sale needs the RESERVED ones, which never appear on the market.
    */
-  async adminList(status?: ListingStatus): Promise<MarketplaceListingList> {
+  async adminList(
+    status?: ListingStatus,
+    pagination: PaginationParams = { limit: 20 },
+  ): Promise<MarketplaceListingList> {
+    const baseWhere = status ? { status } : {};
     const rows = await this.prisma.marketplaceListing.findMany({
-      where: status ? { status } : {},
-      orderBy: { createdAt: 'desc' },
+      where: pagination.cursor
+        ? { AND: [baseWhere, paginationKeysetWhere(pagination.cursor)] }
+        : baseWhere,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: pagination.limit + 1,
       include: { scrapRequest: { include: { category: true } } },
     });
     // No viewer: an admin is acting on the listing, not shopping for it.
-    return { listings: rows.map((row) => toListingDto(row, null)) };
+    const page = rows.slice(0, pagination.limit);
+    const next = rows.length > pagination.limit ? page.at(-1) : undefined;
+    return {
+      listings: page.map((row) => toListingDto(row, null)),
+      ...(next
+        ? {
+            nextCursor: encodePaginationCursor({
+              createdAt: next.createdAt,
+              id: next.id,
+            }),
+          }
+        : {}),
+    };
   }
 
   async getPhoto(id: string): Promise<{ contentType: string; body: Buffer }> {

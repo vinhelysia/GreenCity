@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useRef,
   useState,
 } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -36,7 +37,7 @@ import { formatCategoryName, formatVnd } from "@/lib/format";
 type LoadState<T> =
   | { status: "loading" }
   | { status: "error"; message: string }
-  | { status: "ready"; data: T };
+  | { status: "ready"; data: T; nextCursor?: string };
 
 const STATUS_VARIANT: Record<ScrapRequestStatus, "mint" | "yellow" | "primary" | "coral"> = {
   SUBMITTED: "mint",
@@ -461,9 +462,13 @@ function MyScrapRequests({
 }) {
   const locale = useLocale();
   const t = useTranslations("sellScrap");
+  const tCommon = useTranslations("common");
   const [state, setState] = useState<LoadState<ScrapRequestDto[]>>({
     status: "loading",
   });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const loadMorePending = useRef(false);
   const [rowAction, setRowAction] = useState<
     Record<string, "accepting" | "rejecting" | undefined>
   >({});
@@ -471,6 +476,7 @@ function MyScrapRequests({
 
   const load = useCallback(async () => {
     setState({ status: "loading" });
+    setLoadMoreError(null);
     const result = checkAuthExpiry(
       await fetchMyScrapRequests(),
       clearSessionAndRedirect,
@@ -479,12 +485,54 @@ function MyScrapRequests({
       setState({ status: "error", message: marketplaceErrorMessage(result.error, locale) });
       return;
     }
-    setState({ status: "ready", data: result.data.requests });
+    setState({
+      status: "ready",
+      data: result.data.requests,
+      nextCursor: result.data.nextCursor,
+    });
   }, [clearSessionAndRedirect, locale]);
 
   useEffect(() => {
     void load();
   }, [refreshKey, load]);
+
+  const loadMore = useCallback(async () => {
+    if (
+      loadMorePending.current ||
+      state.status !== "ready" ||
+      !state.nextCursor
+    ) {
+      return;
+    }
+    const cursor = state.nextCursor;
+    loadMorePending.current = true;
+    setLoadingMore(true);
+    setLoadMoreError(null);
+
+    try {
+      const result = checkAuthExpiry(
+        await fetchMyScrapRequests({ cursor }),
+        clearSessionAndRedirect,
+      );
+      if (!result.ok) {
+        setLoadMoreError(tCommon("loadMoreError"));
+        return;
+      }
+      setState((previous) => {
+        if (previous.status !== "ready" || previous.nextCursor !== cursor) {
+          return previous;
+        }
+        return {
+          status: "ready",
+          data: [...previous.data, ...result.data.requests],
+          nextCursor: result.data.nextCursor,
+        };
+      });
+    } finally {
+      loadMorePending.current = false;
+      setLoadingMore(false);
+    }
+  }, [clearSessionAndRedirect, state, tCommon]);
 
   async function onReject(id: string) {
     setRowAction((s) => ({ ...s, [id]: "rejecting" }));
@@ -545,7 +593,8 @@ function MyScrapRequests({
             description={t("noRequests")}
           />
         ) : (
-          <ul className="flex min-w-0 flex-col gap-4">
+          <>
+            <ul className="flex min-w-0 flex-col gap-4">
             {state.data.map((request) => (
               <li
                 key={request.id}
@@ -616,7 +665,33 @@ function MyScrapRequests({
                 ) : null}
               </li>
             ))}
-          </ul>
+            </ul>
+            {state.nextCursor ? (
+              <div
+                aria-busy={loadingMore}
+                className="mt-5 flex flex-col items-start gap-2"
+              >
+                <button
+                  type="button"
+                  data-testid="my-scrap-requests-load-more"
+                  disabled={loadingMore}
+                  onClick={() => void loadMore()}
+                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-edge bg-paper px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-accent disabled:opacity-60"
+                >
+                  {loadingMore ? tCommon("loadingMore") : tCommon("loadMore")}
+                </button>
+                {loadMoreError ? (
+                  <p
+                    role="alert"
+                    data-testid="my-scrap-requests-load-more-error"
+                    className="text-sm text-red-800"
+                  >
+                    {loadMoreError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         )}
       </div>
     </section>

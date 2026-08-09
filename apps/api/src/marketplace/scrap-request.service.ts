@@ -16,6 +16,11 @@ import type {
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext } from '../authz/auth-context';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  encodePaginationCursor,
+  paginationKeysetWhere,
+  type PaginationParams,
+} from '../common/pagination';
 import { toQuoteDto, toScrapRequestDto } from './marketplace.mapper';
 
 const QUOTABLE_STATUSES = ['SUBMITTED', 'QUOTED'] as const;
@@ -82,9 +87,19 @@ export class ScrapRequestService {
     return toScrapRequestDto({ ...created, quotes: [] });
   }
 
-  async mine(auth: AuthContext): Promise<ScrapRequestList> {
+  async mine(
+    auth: AuthContext,
+    pagination: PaginationParams = { limit: 20 },
+  ): Promise<ScrapRequestList> {
     const rows = await this.prisma.scrapRequest.findMany({
-      where: { sellerId: auth.user.id },
+      where: pagination.cursor
+        ? {
+            AND: [
+              { sellerId: auth.user.id },
+              paginationKeysetWhere(pagination.cursor),
+            ],
+          }
+        : { sellerId: auth.user.id },
       include: {
         category: true,
         media: true,
@@ -94,9 +109,22 @@ export class ScrapRequestService {
           take: 1,
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: pagination.limit + 1,
     });
-    return { requests: rows.map(toScrapRequestDto) };
+    const page = rows.slice(0, pagination.limit);
+    const next = rows.length > pagination.limit ? page.at(-1) : undefined;
+    return {
+      requests: page.map(toScrapRequestDto),
+      ...(next
+        ? {
+            nextCursor: encodePaginationCursor({
+              createdAt: next.createdAt,
+              id: next.id,
+            }),
+          }
+        : {}),
+    };
   }
 
   private async findOwned(auth: AuthContext, id: string) {

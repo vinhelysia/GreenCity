@@ -27,6 +27,31 @@ export const ApiErrorSchema = z.object({
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 
+/** A cursor payload is server-issued and encoded before it reaches a client. */
+export const PaginationCursorSchema = z
+  .object({
+    // The encoder always emits Date#toISOString(). Keeping the accepted shape
+    // canonical avoids accepting a different date representation as a cursor.
+    createdAt: z.string().datetime({ offset: true }).max(40),
+    id: z.string().min(1).max(128),
+  })
+  .strict();
+export type PaginationCursor = z.infer<typeof PaginationCursorSchema>;
+
+/** Opaque, URL-safe encoding of PaginationCursorSchema. */
+export const PaginationCursorTokenSchema = z
+  .string()
+  .min(1)
+  .max(512)
+  .regex(/^[A-Za-z0-9_-]+$/);
+
+/** Shared list-query contract for cursor-paginated endpoints. */
+export const PaginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: PaginationCursorTokenSchema.optional(),
+});
+export type PaginationQuery = z.infer<typeof PaginationQuerySchema>;
+
 export const APP_NAME = "GreenCity" as const;
 
 /** Cookie name for opaque session token (HttpOnly). */
@@ -253,6 +278,7 @@ export type ScrapRequestDto = z.infer<typeof ScrapRequestSchema>;
 
 export const ScrapRequestListSchema = z.object({
   requests: z.array(ScrapRequestSchema),
+  nextCursor: PaginationCursorTokenSchema.optional(),
 });
 export type ScrapRequestList = z.infer<typeof ScrapRequestListSchema>;
 
@@ -300,6 +326,7 @@ export type MarketplaceListing = z.infer<typeof MarketplaceListingSchema>;
 
 export const MarketplaceListingListSchema = z.object({
   listings: z.array(MarketplaceListingSchema),
+  nextCursor: PaginationCursorTokenSchema.optional(),
 });
 export type MarketplaceListingList = z.infer<typeof MarketplaceListingListSchema>;
 

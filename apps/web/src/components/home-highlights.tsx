@@ -56,7 +56,7 @@ export function HomeHighlights() {
     })();
 
     void (async () => {
-      const res = await fetchMarketplaceListings();
+      const res = await fetchMarketplaceListings({ limit: 4 });
       if (cancelled) return;
       if (!res.ok) {
         setListingsState({

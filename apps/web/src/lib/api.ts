@@ -46,6 +46,20 @@ export type ApiResult<T> =
   | { ok: true; data: T; status: number }
   | { ok: false; error: ParsedApiError; status: number };
 
+export type PaginationOptions = {
+  limit?: number;
+  cursor?: string;
+};
+
+function buildPaginationQuery(options?: PaginationOptions): string {
+  if (!options) return "";
+  const query = new URLSearchParams();
+  if (options.limit !== undefined) query.set("limit", String(options.limit));
+  if (options.cursor !== undefined) query.set("cursor", options.cursor);
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
 /** Same-origin fetch with credentials. Never pass absolute hosts. */
 export async function apiFetch<T>(
   path: `/${string}`,
@@ -327,10 +341,12 @@ export async function postScrapRequest(
 }
 
 /** GET /api/scrap-requests/mine — seller's own requests + active quotes. */
-export async function fetchMyScrapRequests(): Promise<
+export async function fetchMyScrapRequests(options?: PaginationOptions): Promise<
   ApiResult<ScrapRequestList>
 > {
-  const result = await apiFetch<unknown>("/api/scrap-requests/mine");
+  const result = await apiFetch<unknown>(
+    `/api/scrap-requests/mine${buildPaginationQuery(options)}`,
+  );
   if (!result.ok) return result;
   const parsed = ScrapRequestListSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
@@ -423,10 +439,12 @@ export async function fetchRewardOffers(): Promise<ApiResult<RewardOffers>> {
 }
 
 /** GET /api/marketplace/listings — public. */
-export async function fetchMarketplaceListings(): Promise<
+export async function fetchMarketplaceListings(options?: PaginationOptions): Promise<
   ApiResult<MarketplaceListingList>
 > {
-  const result = await apiFetch<unknown>("/api/marketplace/listings");
+  const result = await apiFetch<unknown>(
+    `/api/marketplace/listings${buildPaginationQuery(options)}`,
+  );
   if (!result.ok) return result;
   const parsed = MarketplaceListingListSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
@@ -570,10 +588,13 @@ export async function fetchAdminCleanupReports(): Promise<
 }
 
 /** Reserved listings only: those are the ones an admin can still complete. */
-export async function fetchAdminReservedListings(): Promise<
+export async function fetchAdminReservedListings(options?: PaginationOptions): Promise<
   ApiResult<MarketplaceListingList>
 > {
-  const result = await apiFetch<unknown>("/api/admin/listings?status=RESERVED");
+  const query = new URLSearchParams({ status: "RESERVED" });
+  if (options?.limit !== undefined) query.set("limit", String(options.limit));
+  if (options?.cursor !== undefined) query.set("cursor", options.cursor);
+  const result = await apiFetch<unknown>(`/api/admin/listings?${query}`);
   if (!result.ok) return result;
   const parsed = MarketplaceListingListSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
