@@ -139,7 +139,7 @@ export function HomeHighlights() {
               ].map((tile) => (
                 <div
                   key={tile.label}
-                  className={`min-w-0 rounded-2xl border bg-card p-5 shadow-eco ${tile.warm ? "border-warm-100" : "border-edge"}`}
+                  className={`min-w-0 rounded-lg border bg-card p-5 ${tile.warm ? "border-warm-100" : "border-edge"}`}
                 >
                   <dd>
                     <CountUp
