@@ -83,6 +83,56 @@ function homeApiReplies(overrides: Record<string, ApiReply> = {}) {
 }
 
 test.describe("Public routes @core", () => {
+  test("homepage metadata is locale-specific and private routes are not indexable @core", async ({
+    page,
+  }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const viCanonical = page.locator('link[rel="canonical"]');
+    await expect(viCanonical).toHaveCount(1);
+    const viUrl = await viCanonical.getAttribute("href");
+    expect(viUrl).toMatch(/^https?:\/\/[^/]+$/);
+
+    await expect(
+      page.locator('link[rel="alternate"][hreflang="vi-VN"]'),
+    ).toHaveAttribute("href", viUrl!);
+    await expect(
+      page.locator('link[rel="alternate"][hreflang="en-US"]'),
+    ).toHaveAttribute("href", `${viUrl}/en`);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      viUrl!,
+    );
+
+    await page.goto("/en", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      "href",
+      `${viUrl}/en`,
+    );
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
+      "content",
+      `${viUrl}/en`,
+    );
+
+    // Public content pages must not inherit the homepage canonical or OG URL.
+    await page.goto("/cho-online", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+    await expect(page.locator('meta[property="og:url"]')).toHaveCount(0);
+
+    for (const route of [
+      "/tai-khoan",
+      "/dang-nhap",
+      "/dang-ky",
+      "/admin/bao-gia",
+    ]) {
+      await page.goto(route, { waitUntil: "domcontentloaded" });
+      await expect(page.locator('meta[name="robots"]'), route).toHaveAttribute(
+        "content",
+        /noindex,\s*nofollow/,
+      );
+    }
+  });
+
   test("homepage shows the two newest verified cleanup reports", async ({
     page,
   }) => {

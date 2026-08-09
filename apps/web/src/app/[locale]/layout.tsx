@@ -10,6 +10,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { SkipLink } from "@/components/skip-link";
 import { routing } from "@/i18n/routing";
+import { getSiteUrl } from "@/lib/site-url";
 import "../globals.css";
 
 const display = Bricolage_Grotesque({
@@ -36,32 +37,15 @@ export async function generateMetadata({
   }
   const t = await getTranslations({ locale, namespace: "metadata" });
 
-  const title = t("title");
   const description = t("description");
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://greencity.app";
-  const isEn = locale === "en";
-
   return {
+    metadataBase: new URL(getSiteUrl()),
     title: {
       default: APP_NAME,
       template: `%s · ${APP_NAME}`,
     },
     description,
-    alternates: {
-      canonical: isEn ? `${baseUrl}/en` : baseUrl,
-      languages: {
-        "vi-VN": baseUrl,
-        "en-US": `${baseUrl}/en`,
-      },
-    },
-    openGraph: {
-      title,
-      description,
-      siteName: APP_NAME,
-      locale: isEn ? "en_US" : "vi_VN",
-      type: "website",
-    },
   };
 }
 

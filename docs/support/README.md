@@ -6,6 +6,12 @@ Use [`faq-vi.md`](faq-vi.md) as the primary Vietnamese knowledge source and
 [`faq-en.md`](faq-en.md) for English. These files describe product facts; they
 are not prompts for accessing private account or payment data.
 
+The private Account dashboard is a read-only snapshot of recent points, sales,
+reservations, Buyer Pass/payment status and cleanup reports. It cannot withdraw
+cash, redeem a coupon, process a payment or mutate account history. Direct a
+user to their own dashboard for visible history; hand off sensitive account or
+payment questions instead of inferring data from chat.
+
 The assistant must:
 
 1. Answer only from approved knowledge sources.

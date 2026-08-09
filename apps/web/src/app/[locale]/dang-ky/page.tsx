@@ -16,6 +16,10 @@ export async function generateMetadata({
   return {
     title: t("registerTitle"),
     description: t("registerDesc"),
+    robots: {
+      index: false,
+      follow: false,
+    },
   };
 }
 

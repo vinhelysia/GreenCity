@@ -38,12 +38,12 @@ pnpm db:generate  # no live DB required
 pnpm db:migrate
 pnpm db:verify    # SELECT 1 + PostGIS_Version()
 
-pnpm --filter api db:seed   # demo accounts, categories, sample listings
+corepack pnpm --filter api db:seed   # local demo accounts, categories, sample listings
 ```
 
 ### Demo accounts (local only)
 
-`pnpm --filter api db:seed` is idempotent and creates three accounts, all with
+`corepack pnpm --filter api db:seed` is idempotent and creates three accounts, all with
 password `GreenCity-Demo-2026`:
 
 | Email | Role | For |
@@ -54,6 +54,11 @@ password `GreenCity-Demo-2026`:
 
 The default password is accepted only for a loopback `DATABASE_URL`. Set a `DEMO_PASSWORD`
 env var before seeding — the default above is public.
+
+Do not run `db:seed` against a shared or production database. Use a dedicated,
+disposable demo project and the preflight in
+[`docs/demo-runbook.md`](docs/demo-runbook.md) when a hosted rehearsal needs
+resettable data.
 
 ### Install PostGIS on Windows (once per machine)
 
@@ -116,6 +121,23 @@ API_PORT=3001
 STORAGE_DRIVER=local
 MAIL_DRIVER=console
 ```
+
+### Web deployment metadata
+
+Set `NEXT_PUBLIC_APP_URL` in the Vercel web project to its canonical HTTPS
+origin (no path or trailing slash), then redeploy. It is build-time public
+metadata configuration, not an API endpoint and never a secret. If it is
+missing or invalid, the web app falls back to `https://green-city-web.vercel.app`;
+that fallback does not replace setting a custom production domain explicitly.
+
+### Build tooling residual
+
+`next lint` currently passes but prints Next's deprecation notice for Next 16.
+The web app still uses legacy `.eslintrc.json`; migrating safely needs a reviewed
+ESLint CLI/flat-config change, so no contest-time codemod or dependency churn was
+applied. `next/font/google` also fetches Google Fonts during a cold production
+build; deployment infrastructure needs network egress or a warm cache until a
+separately reviewed local-font asset change is made.
 
 ## CI
 
