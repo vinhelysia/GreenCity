@@ -6,12 +6,24 @@ import type { RecyclingPoint } from "@/data/recycling-points";
 import "leaflet/dist/leaflet.css";
 
 /**
- * The map is decorative. Every point it draws is also rendered as text by the
- * list beside it, which is what screen reader and keyboard users read — a
- * Leaflet canvas cannot be made to carry this information on its own, so the
- * list is the content and this is the illustration.
+ * An illustration of the list beside it: every point drawn here is also
+ * rendered as text, and that list is what screen reader users read, because a
+ * Leaflet canvas cannot carry this information on its own.
+ *
+ * Not aria-hidden, though it was at first. Leaflet renders real focusable
+ * controls inside the container — the zoom links and the attribution link — and
+ * hiding their container from assistive tech while leaving them in the tab
+ * order is the aria-hidden-focus violation axe flags. `inert` would fix the
+ * tree at the cost of blocking mouse interaction too, which would leave a map
+ * nobody can pan. So the container stays in the tree and gets a name.
  */
-export function RecyclingPointsMap({ points }: { points: RecyclingPoint[] }) {
+export function RecyclingPointsMap({
+  points,
+  label,
+}: {
+  points: RecyclingPoint[];
+  label: string;
+}) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletNS.Map | null>(null);
 
@@ -72,7 +84,8 @@ export function RecyclingPointsMap({ points }: { points: RecyclingPoint[] }) {
   return (
     <div
       ref={containerRef}
-      aria-hidden="true"
+      role="group"
+      aria-label={label}
       data-testid="recycling-map"
       className="h-80 w-full overflow-hidden rounded-md border border-edge bg-paper-2 sm:h-96"
     />

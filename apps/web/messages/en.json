@@ -181,7 +181,8 @@
     "operatorLabel": "Operator:",
     "unnamed": "Unnamed in OpenStreetMap",
     "viewOnOsm": "View on OpenStreetMap",
-    "viewOnOsmFor": "View {name} on OpenStreetMap"
+    "viewOnOsmFor": "View {name} on OpenStreetMap",
+    "mapLabel": "Map of recycling points. The full list is directly below."
   },
   "sellScrap": {
     "title": "Sell Scrap",

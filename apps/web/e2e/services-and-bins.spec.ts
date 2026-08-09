@@ -91,13 +91,17 @@ test.describe("Recycling points", () => {
     assertCleanRuntime(issues, "thung-rac");
   });
 
-  test("draws one map marker per point and keeps the map out of the a11y tree", async ({
+  test("draws one map marker per point and names the map for assistive tech", async ({
     page,
   }) => {
     await page.goto("/thung-rac", { waitUntil: "networkidle" });
 
+    // Named rather than aria-hidden: Leaflet puts real focusable controls in
+    // the container, and hiding them from assistive tech while leaving them
+    // tabbable is the aria-hidden-focus violation the axe suite catches.
     const map = page.getByTestId("recycling-map");
-    await expect(map).toHaveAttribute("aria-hidden", "true");
+    await expect(map).not.toHaveAttribute("aria-hidden", "true");
+    await expect(map).toHaveAccessibleName(/Bản đồ các điểm thu gom tái chế/);
     // Leaflet renders asynchronously after hydration.
     await expect(page.locator(".leaflet-marker-icon")).toHaveCount(TOTAL);
 

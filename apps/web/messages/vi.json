@@ -181,7 +181,8 @@
     "operatorLabel": "Đơn vị vận hành:",
     "unnamed": "Không có tên trên OpenStreetMap",
     "viewOnOsm": "Xem trên OpenStreetMap",
-    "viewOnOsmFor": "Xem {name} trên OpenStreetMap"
+    "viewOnOsmFor": "Xem {name} trên OpenStreetMap",
+    "mapLabel": "Bản đồ các điểm thu gom tái chế. Danh sách đầy đủ nằm ngay bên dưới."
   },
   "sellScrap": {
     "title": "Bán phế liệu",
