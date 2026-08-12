@@ -67,9 +67,9 @@ phải câu chữ của người nói.
 | 5 | **B** | 2:10 | Bằng chứng khả thi | 2–3 ảnh chụp sản phẩm, đóng khung, ghi "built prototype" |
 | 6 | **C** | 2:50 | Market & Customers | Ai trả tiền vs ai cung cấp hàng. Bối cảnh cạnh tranh |
 | 7 | **C** | 3:35 | **Business Model** | Bảng unit economics. Slide quan trọng nhất bài |
-| 8 | **D** | 4:30 | Implementation Plan | Timeline 4 pha, ghi rõ pha 1 đã xong |
-| 9 | **D** | 5:20 | Impact & Growth | 3 chỉ số mục tiêu + hướng mở rộng |
-| 10 | **D** | 5:45 | Ask | Một câu đề nghị. Tên 4 người |
+| 8 | **D** | 4:30 | Implementation Plan | 4 cột. Mỗi cột: mốc thời gian + **câu hỏi pha đó trả lời**. Pha 1 đóng dấu "answered" |
+| 9 | **D** | 5:20 | Impact & Growth | 3 chỉ số, số cỡ lớn. Tô đậm chỉ số gia hạn |
+| 10 | **D** | 5:45 | Ask | Đúng 3 cụm: **1 district · 10 dealers · 90 days**. Tên 4 người ở dưới |
 
 Slide 5 là chỗ duy nhất prototype xuất hiện. Chiếu ảnh, nói một câu, đi tiếp —
 **không** thao tác, **không** mở trình duyệt.
@@ -220,41 +220,95 @@ Ngoặc vuông là chỉ dẫn, không đọc.
 
 ### Người D — Implementation, Impact & Ask · 4:30–6:00
 
-*[Slide 8 — timeline 4 pha]*
+*[Slide 8 — timeline 4 pha. Trên slide chỉ có 4 cột, mỗi cột 1 mốc + 1 câu hỏi.]*
 
-> "How we get there, in four phases.
+> "Every phase of our plan answers one question. When the answer is yes, we move
+> to the next one.
 >
-> **Phase one is done.** The product loop exists and runs.
+> **Phase one asked: can this be built?** That one is answered. The loop runs
+> today.
 >
-> **Phase two, the next three months.** One district of Ho Chi Minh City. Around
-> ten dealers. We turn on payment, and we add the two pieces the loop still needs
-> — confirmed weight at pickup, and paying the household.
+> **Phase two — the next three months — asks: will one deal go all the way
+> through?** One district. Ten dealers. A household sells, a dealer buys, and the
+> household gets paid. Right now our system stops before the money moves. Phase
+> two is where we finish that.
 >
-> **Phase three, to month nine.** Density before geography. We would rather own
-> one district completely than be thin across five.
+> **Phase three — month three to month nine — asks: does it repeat?** One deal is
+> a story. We need a dealer who fills a whole morning's route from our platform,
+> in one district, every week. That is why we stay in one district. A hundred
+> households in one neighbourhood is a business. A hundred households spread
+> across the city is just a map.
 >
-> **Phase four.** A second district, then a second city — and the data layer:
-> telling a city government where its dumping sites actually are, because by then
-> we are the only ones who know."
+> **Phase four — month nine to eighteen — asks: does it copy?** A second
+> district, then a second city. And by then we hold something nobody else has:
+> a record of where this city's waste actually comes from, and where it gets
+> dumped. That record is worth something to a city government."
 
-*[Slide 9 — 3 chỉ số]*
+*[Slide 9 — 3 chỉ số, số to]*
 
-> "We will measure three things, and only three. Kilograms recovered through the
-> platform. Reports verified and resolved. And dealers who renew their pass —
-> because renewal is the honest test of whether we are useful.
+> "We will measure three things.
 >
-> These are targets. We have not hit them. We have not started."
-
-*[Slide 10 — lời đề nghị]*
-
-> "The scrap trade in this city already works. It has just never been given a
-> system of record.
+> **Kilograms** that complete a deal on the platform — that is the supply side.
 >
-> We have built the loop. We know the two pieces still missing, and we know the
-> district we want to prove them in. What we are asking for is the chance to run
-> that pilot.
+> **Verified reports** from residents — that is the community side.
+>
+> And the one that matters most: **how many dealers pay for a second month.**
+> Anyone can win a customer once. Renewal is the only honest test of whether we
+> are actually useful to them.
+>
+> These three are targets. We have not hit them, because we have not started."
+
+*[Slide 10 — lời đề nghị. Chậm lại. Nhìn thẳng giám khảo.]*
+
+> "So — the loop is built. We know the one piece that is missing, which is the
+> payment. And we know exactly where we want to prove it.
+>
+> **We are asking for one district, ten dealers, and ninety days.**
+>
+> The cart will still come down the street tomorrow morning. We only want the
+> price written down.
 >
 > Thank you."
+
+#### Người D đang lập luận cái gì — đọc kỹ mục này trước khi học thoại
+
+Phần D **không phải** danh sách việc sẽ làm. Nó là câu trả lời cho một câu hỏi
+duy nhất trong đầu giám khảo: *"Ý tưởng thì hay, nhưng chúng có làm nổi không?"*
+Đó chính là Feasibility 25%.
+
+**Vì sao chia pha theo câu hỏi, không theo đầu việc.** Một danh sách việc thì ai
+viết cũng được, và không chứng minh điều gì. Còn một kế hoạch mà **mỗi pha gỡ một
+rủi ro** thì cho thấy team biết rủi ro của mình nằm ở đâu. Bốn rủi ro, đúng thứ tự:
+
+| Pha | Rủi ro cần gỡ | Gỡ xong thì chứng minh được |
+|---|---|---|
+| 1 (xong) | Có xây được không? | Vòng lặp chạy thật rồi |
+| 2 (0–3 tháng) | Có ai thật sự giao dịch không? | Một lô đi trọn vẹn, có tiền chuyển tay |
+| 3 (3–9 tháng) | Có lặp lại được không? | Một vựa lấp đầy được chuyến xe buổi sáng |
+| 4 (9–18 tháng) | Có nhân bản được không? | Quận thứ hai, rồi thành phố thứ hai |
+
+**Vì sao phải ở lì một quận.** Đây là ý khó nhất phần D, và là ý đáng giá nhất.
+Vựa ve chai không mua từng lô — họ chạy **một chuyến xe**. Chuyến đó chỉ có lãi
+khi các điểm dừng nằm gần nhau. Một trăm hộ trong một phường thì lấp đầy được
+chuyến xe; một trăm hộ rải khắp thành phố thì không vựa nào chạy nổi. Nên mật độ
+không phải là sở thích, nó là **điều kiện để mô hình có lãi**. Câu chốt để nói:
+*"A hundred households in one neighbourhood is a business. A hundred households
+spread across the city is just a map."*
+
+**Vì sao chỉ số quan trọng nhất là tỷ lệ gia hạn.** Số kg và số báo cáo thì có thể
+đẩy lên bằng khuyến mãi. Còn việc một vựa **móc tiền trả tháng thứ hai** thì không
+giả được — đó là lúc họ đã tự tính ra rằng dùng GreenCity rẻ hơn tự đi tìm hàng.
+Nếu giám khảo hỏi "chỉ số nào quan trọng nhất", trả lời gọn: *renewal*.
+
+**Vì sao lời đề nghị là "một quận, mười vựa, chín mươi ngày".** Đề nghị càng cụ
+thể càng đáng tin. "Cho chúng em cơ hội" thì không ai đánh giá được; ba con số thì
+giám khảo hình dung ra ngay và thấy team biết mình cần gì. Nói tách bạch từng cụm,
+có nhịp: *one district · ten dealers · ninety days.*
+
+**Câu cuối là câu vòng lại đầu bài.** A mở bài bằng hình ảnh người đẩy xe ve chai;
+D đóng bài bằng đúng người đó. Cả bài khép thành một vòng, và nó nói rõ mình
+**không thay thế** ai — chỉ ghi lại cái giá. Đừng vội, đừng cười, nói xong dừng
+một nhịp rồi mới cảm ơn.
 
 ---
 
@@ -276,15 +330,21 @@ random, they drive around hoping · competition = informal network, not replacin
 it · **two lines: access + spread** · 50k pass, wedge not business · 40 lots →
 200k → 100 dealers → 20 triệu · **no trucks** · assumptions, not results
 
-**D** → four phases · phase one done · one district, ten dealers, weight + payout
-· density before geography · second city + data layer · three metrics, renewal is
-the honest one · targets not results · **give us the pilot**
+**D** → every phase answers one question · can it be built — answered · will one
+deal go through — 3 months, one district, ten dealers, **money moves** · does it
+repeat — one dealer, one morning route, every week · *neighbourhood = business,
+city = map* · does it copy — second district, second city, the record · three
+metrics: kilograms, reports, **renewal** · targets, we have not started ·
+**one district, ten dealers, ninety days** · the cart still comes, we want the
+price written down
 
-**Bốn câu không được sai một chữ** (đây là 4 câu duy nhất học thuộc lòng):
+**Năm câu không được sai một chữ** (đây là 5 câu duy nhất học thuộc lòng):
 1. "Material moves. Money moves. Information does not move at all."
 2. "Not even our own operator can quote outside the published band."
 3. "We own no trucks."
-4. "These are targets. We have not hit them."
+4. "A hundred households in one neighbourhood is a business. A hundred households
+   spread across the city is just a map."
+5. "We are asking for one district, ten dealers, and ninety days."
 
 ---
 
