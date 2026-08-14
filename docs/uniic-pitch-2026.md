@@ -5,8 +5,8 @@
 lệ UNIIC **cấm demo** và chấm **kế hoạch kinh doanh**. Giữ lại chúng chỉ để tham
 khảo phần nội dung sản phẩm.
 
-**Cấu hình đã chốt:** 6 phút · 4 người nói · Q&A 3 phút · chủ đề pool **chưa được
-gán** (mục 3 có sẵn 3 đoạn mở đầu thay thế).
+**Cấu hình đã chốt:** 6 phút · 4 người nói · Q&A 3 phút · **Pool 2 — Harnessing
+New Technologies** (xem mục 3: luận điểm công nghệ và đoạn mở đầu).
 
 ---
 
@@ -64,7 +64,7 @@ phải câu chữ của người nói.
 | 2 | **A** | 0:25 | Problem | 3 con số vấn đề, cỡ chữ lớn |
 | 3 | **A** | 1:00 | Opportunity | Sơ đồ dòng phế liệu hiện tại, chỉ rõ chỗ đứt |
 | 4 | **B** | 1:20 | Solution | Sơ đồ vòng lặp 5 khối |
-| 5 | **B** | 2:10 | Bằng chứng khả thi | 2–3 ảnh chụp sản phẩm, đóng khung, ghi "built prototype" |
+| 5 | **B** | 2:10 | **Công nghệ — neo chủ đề Pool 2** | 3 khối quy tắc được cưỡng chế + dải ảnh chụp sản phẩm nhỏ ở dưới |
 | 6 | **C** | 2:50 | Market & Customers | Ai trả tiền vs ai cung cấp hàng. Bối cảnh cạnh tranh |
 | 7 | **C** | 3:35 | **Business Model** | Bảng unit economics. Slide quan trọng nhất bài |
 | 8 | **D** | 4:30 | Implementation Plan | 4 cột. Mỗi cột: mốc thời gian + **câu hỏi pha đó trả lời**. Pha 1 đóng dấu "answered" |
@@ -76,27 +76,63 @@ Slide 5 là chỗ duy nhất prototype xuất hiện. Chiếu ảnh, nói một 
 
 ---
 
-## 3. Ba đoạn mở đầu theo chủ đề — chọn 1 khi biết pool
+## 3. Pool 2 — Harnessing New Technologies
 
-Chèn vào đầu slide 2. Phần còn lại của bài giữ nguyên.
+Thể lệ mô tả chủ đề này: *"The core idea of your business should rely on the
+innovative use of emerging technologies... Technology should play a central role
+in delivering value, improving efficiency, or **transforming existing
+practices**."*
 
-**Nếu là Resource Scarcity** *(hợp GreenCity nhất)*
-> "Recycling is not a waste problem. It is a resource problem. The material in
-> that bag — paper, aluminium, PET — is worth money, and it is already in the
-> city. It does not need to be mined or imported. It only needs to be recovered.
-> What we are short of is not material. It is the coordination to move it."
+### Vấn đề của mình — và cách giải quyết trung thực
 
-**Nếu là Improving Communities**
-> "In any neighbourhood in this city, two things happen every week. Someone
-> throws away material that is worth money. And someone walks past a pile of
-> waste that nobody has reported. Both are small problems. Both are invisible.
-> Together they are what makes a street feel neglected."
+GreenCity **cố tình không dùng** AI nhận diện ảnh, không blockchain, không ví
+điện tử riêng. Đó là quyết định kỹ thuật đúng, nhưng với pool này nó thành ra
+một câu hỏi phải trả lời được: *"công nghệ mới của các em nằm ở đâu?"*
 
-**Nếu là Harnessing New Technologies**
-> "The scrap trade in Vietnam runs on cash, phone calls, and memory. There is no
-> price record, no transaction history, no data at all. We are not bringing a new
-> machine to this industry. We are bringing it the thing every other industry
-> already has — a system of record."
+**Đừng bịa thêm AI vào bài.** Gắn một mô-đun AI không có thật vào pitch là cách
+mất điểm nhanh nhất — giám khảo hỏi hai câu là lộ. Thay vào đó, đọc kỹ vế cuối
+của chủ đề: **transforming existing practices**. Đó chính là chỗ mình mạnh nhất.
+
+### Luận điểm công nghệ của GreenCity — 3 câu
+
+1. Nghề phế liệu ở Việt Nam vận hành bằng **tiền mặt, điện thoại và trí nhớ**.
+   Mọi giao dịch là một thoả thuận miệng, không kiểm chứng được. Không có dữ liệu
+   giá, không có lịch sử giao dịch, không có gì cả.
+2. Vai trò của công nghệ ở đây **không phải thay sức người** — mà là biến những
+   giao dịch không kiểm chứng được thành **kiểm chứng được**.
+3. GreenCity mã hoá ba quy tắc mà hôm nay người ta phải tin nhau mới có: **giá,
+   quyền sở hữu lô hàng, và phần thưởng** — cả ba do hệ thống cưỡng chế, không
+   do con người tự giác.
+
+Và câu chốt đắt nhất cho pool này — **đúng sự thật với code đang chạy**:
+
+> "People reach for blockchain to get exactly these three properties. We got them
+> with a database a city can actually run."
+
+### Đoạn mở đầu cho slide 2 — dùng bản này
+
+> "The scrap trade in Vietnam runs on cash, phone calls, and memory. Every
+> transaction is a private verbal agreement. There is no price record, no
+> ownership record, no data at all.
+>
+> We are not bringing a new machine to this industry. We are bringing it the one
+> thing every other industry already has — a system of record. And once the
+> record exists, everything else becomes possible."
+
+### Bốn thứ được tính là "công nghệ" trong bài này
+
+Tất cả đều đã có trong code, không phải kế hoạch:
+
+| Thành phần | Nói thế nào trên sân khấu |
+|---|---|
+| **Cưỡng chế giá bằng ràng buộc CSDL** | Khung giá công khai; quản trị viên **không thể** báo giá ngoài khung, vì ràng buộc nằm dưới tầng dữ liệu chứ không ở giao diện |
+| **Phân xử tranh chấp bằng ràng buộc duy nhất** | Hai người bấm cùng lúc thì đúng một người thắng — do hệ thống quyết, không do ai gọi trước |
+| **Sổ chỉ-ghi-thêm** | Không có ô số dư để sửa; mỗi sự kiện chỉ trả thưởng được một lần |
+| **Tầng dữ liệu không gian có tách quyền riêng tư** | Toạ độ chính xác cho vận hành, toạ độ thô cho công chúng — dựng được bản đồ điểm nóng mà không lộ địa chỉ của ai |
+
+**Thứ được phép nói là tương lai** (và phải gọi đúng là tương lai): khi đã có mật
+độ dữ liệu, tối ưu lộ trình thu gom cho vựa là bài toán học máy thật sự — nhưng
+nó chỉ có nghĩa **sau khi** có dữ liệu, và mình chưa có.
 
 ---
 
@@ -117,6 +153,9 @@ Ngoặc vuông là chỉ dẫn, không đọc.
 
 > "She sets the price, because she is the only one who knows it. The household
 > has no way to check. Nobody writes anything down.
+>
+> This whole trade runs on cash, phone calls, and memory. Every deal in it is a
+> private verbal agreement.
 >
 > And a few streets away, someone walks past a pile of dumped waste. They know
 > who to call — but calling changes nothing they can see, so eventually they stop
@@ -160,13 +199,39 @@ Ngoặc vuông là chỉ dẫn, không đọc.
 > site with a photo and a location, we verify it, and they earn points too. Same
 > ledger, same rules.
 
-*[Slide 5 — ảnh chụp sản phẩm. Một câu duy nhất, không sa đà.]*
+*[Slide 5 — slide công nghệ. Đây là slide neo chủ đề Pool 2. Nói chậm hơn slide 4.]*
 
-> "We should be clear about what this is. We have already built the core of this
-> loop as a working system — the submissions, the price control, the marketplace,
-> the ledger. We know we are not judged on it, and we are not going to demo it
-> today. We mention it for one reason only: when we tell you this is feasible, we
-> are not guessing."
+> "Now — where is the technology in this?
+>
+> It is not a machine that sorts waste. Today, every one of those five steps
+> depends on somebody being trusted. Trusted to quote a fair price. Trusted to
+> honour who claimed a lot first. Trusted to remember what they owe you.
+>
+> We took those three and moved them into the system.
+>
+> **Price.** The band is public, and it is enforced underneath the application —
+> not even our own operator can quote outside it. It is not a policy. It is a
+> rule the database will not break.
+>
+> **Ownership.** Two dealers claiming the same lot at the same second: the system
+> decides, in one place, and exactly one of them wins. Not whoever called first.
+>
+> **Reward.** The points ledger has no balance field to edit. A balance is the
+> sum of the events, and each event can pay out once.
+>
+> People reach for blockchain to get exactly these three properties. We got them
+> with a database a city can actually run.
+>
+> And underneath all of it there is a location layer that keeps two versions of
+> every place — the exact one for operations, and a coarse one for the public. So
+> we can show a city where its dumping happens without publishing anyone's
+> address.
+
+*[Vẫn slide 5 — chỉ vào dải ảnh chụp màn hình phía dưới. Một câu, không sa đà.]*
+
+> "All of that is built and running. We know it is not what we are judged on, and
+> we are not going to demo it today. We show it for one reason: when we say this
+> is feasible, we are not guessing."
 
 *[Chuyển sang C.]*
 
@@ -323,7 +388,12 @@ that's the opportunity
 
 **B** → one loop, five steps · band published first · one photo · **quote must sit
 inside the band** · one lot one buyer · both sides have a record · neighbourhood
-half, same ledger · built it, not demoing it, not guessing
+half, same ledger
+**B (slide công nghệ)** → where is the technology · today every step needs someone
+trusted · **price** — enforced underneath, not a policy · **ownership** — system
+decides, not who called first · **reward** — no balance field, sum of events ·
+*blockchain line* · location layer, exact + coarse · built and running, not
+demoing it, not guessing
 
 **C** → not the household, they're supply · dealer is the customer · supply is
 random, they drive around hoping · competition = informal network, not replacing
@@ -338,13 +408,15 @@ metrics: kilograms, reports, **renewal** · targets, we have not started ·
 **one district, ten dealers, ninety days** · the cart still comes, we want the
 price written down
 
-**Năm câu không được sai một chữ** (đây là 5 câu duy nhất học thuộc lòng):
+**Sáu câu không được sai một chữ** (đây là 6 câu duy nhất học thuộc lòng):
 1. "Material moves. Money moves. Information does not move at all."
 2. "Not even our own operator can quote outside the published band."
 3. "We own no trucks."
 4. "A hundred households in one neighbourhood is a business. A hundred households
    spread across the city is just a map."
 5. "We are asking for one district, ten dealers, and ninety days."
+6. "People reach for blockchain to get exactly these three properties. We got
+   them with a database a city can actually run." *(câu neo chủ đề Pool 2)*
 
 ---
 
@@ -353,6 +425,30 @@ price written down
 **Ai trả lời câu nào:** C nhận mọi câu về tiền, D nhận mọi câu về vận hành và mở
 rộng, B nhận sản phẩm, A nhận vấn đề và người dùng. Nhưng cả 4 phải thuộc con số
 ở slide 7 — nếu chỉ một người biết, Q&A sẽ lộ ngay.
+
+**"Công nghệ mới của các em nằm ở đâu? Không thấy AI hay blockchain."**
+*(gần như chắc chắn bị hỏi ở pool này — B trả lời, và trả lời tự tin)*
+> Our technology is not a machine that sorts waste. Today, three things in this
+> trade depend on trusting a person: the price you are quoted, who gets a lot
+> when two buyers want the same one, and whether your reward is remembered. We
+> moved all three into the system. The price band is enforced below the
+> application, so even our own operator cannot quote outside it. A contested lot
+> is decided in one place, and exactly one buyer wins. The ledger has no balance
+> to edit — a balance is the sum of the events. People reach for blockchain to
+> get exactly those three properties. We got them with a database a city can
+> actually run. That is what transforming an existing practice looks like here.
+
+**"Sao không dùng AI nhận diện phế liệu?"**
+> Because it would not change the outcome yet. A photo tells you what the
+> material looks like, but the price depends on weight, and weight still has to
+> be measured. The real machine-learning problem in this business is routing —
+> telling a dealer the most efficient collection round for the morning. That
+> needs density data we do not have yet, so we are not claiming it today.
+
+**"Vậy rào cản công nghệ của các em là gì? Ai cũng làm được app mà."**
+> The app is not the barrier — the record is. Whoever holds the price history and
+> the supply map for a district is the only one who can quote reliably there.
+> That asset takes time to accumulate, and it is why we go district by district.
 
 **"Doanh thu hiện tại là bao nhiêu?"**
 > Zero. We have not launched. The model on slide seven is what we intend to test

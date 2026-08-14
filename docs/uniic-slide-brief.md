@@ -3,6 +3,10 @@
 **Dành cho người dựng slide.** Không cần đọc các file kia trước. Mỗi slide dưới
 đây có: mục đích, bố cục, **chữ copy nguyên xi**, hình cần chuẩn bị, và lỗi hay mắc.
 
+**Pool 2 — Harnessing New Technologies.** Chủ đề này quyết định hai chỗ trong
+deck: dòng chủ đề ở slide 1, và **slide 5 đổi hẳn vai trò** từ "khoe prototype"
+thành "công nghệ của chúng em là gì". Đọc kỹ hai chỗ đó.
+
 Kịch bản nói nằm ở `uniic-pitch-2026.md`. Slide và lời nói là **hai thứ khác
 nhau** — nguyên tắc quan trọng nhất của cả tài liệu này nằm ngay dưới đây.
 
@@ -104,8 +108,8 @@ chiếu thường bị cắt mép.
 | 1 | A | 0:00 | 25s | Dựng khung cảnh |
 | 2 | A | 0:25 | 35s | Vấn đề bằng con số |
 | 3 | A | 1:00 | 20s | Chỉ ra chỗ đứt gãy |
-| 4 | B | 1:20 | 50s | Giải pháp trong một hình |
-| 5 | B | 2:10 | 40s | Bằng chứng khả thi |
+| 4 | B | 1:20 | 40s | Giải pháp trong một hình |
+| 5 | B | 2:10 | 50s | **Công nghệ — neo chủ đề Pool 2** |
 | 6 | C | 2:50 | 45s | Ai trả tiền |
 | 7 | C | 3:35 | 55s | **Mô hình doanh thu — slide nặng nhất** |
 | 8 | D | 4:30 | 50s | Kế hoạch triển khai |
@@ -144,10 +148,16 @@ ngấm ảnh, rồi mới nói.
 ```
 GreenCity
 The price, written down.
+
+A system of record for a trade that never had one.
 ```
 
-Góc dưới phải, 16pt: tên team + pool + tên chủ đề được gán *(dòng này ăn thẳng
-vào Relevance 10% — giám khảo thấy ngay mình bám đúng chủ đề)*.
+Dòng thứ ba là **dòng bám chủ đề Pool 2** — để cỡ 24pt, màu nhạt hơn tagline.
+Nó nói ngay từ giây đầu rằng đây là bài về công nghệ, không phải bài về rác.
+
+Góc dưới phải, 16pt: `Team [tên] · Pool 2 — Harnessing New Technologies`. Ghi đủ
+tên chủ đề, đừng viết tắt *(dòng này ăn thẳng vào Relevance 10% — giám khảo thấy
+ngay mình bám đúng chủ đề)*.
 
 **Hình cần có:** một ảnh ngang, độ phân giải tối thiểu 1920px. Ưu tiên tự chụp
 xe ve chai hoặc vựa phế liệu. Phủ lớp đen 45% lên toàn ảnh để chữ trắng nổi.
@@ -208,6 +218,10 @@ số bịa, và bị hỏi ở Q&A là mất luôn điểm Professionalism.
 
 **Mục đích:** slide chốt phần vấn đề. Cho thấy vật chất chạy được, tiền chạy
 được, **chỉ thông tin là đứt**. Chính chỗ đứt đó là chỗ GreenCity chen vào.
+
+> Với Pool 2, đây là slide luận đề. Vấn đề của ngành này **là một vấn đề thông
+> tin** — nên giải pháp là một giải pháp công nghệ. Slide 3 dựng sẵn cái khung
+> đó, để tới slide 5 B chỉ việc lấp vào.
 
 **Bố cục:** một dòng chảy ngang 4 khối, ba lớp mũi tên chồng lên.
 
@@ -303,65 +317,102 @@ thuộc bước trước. *(Đừng đánh số ở các slide khác chỉ cho �
 
 ---
 
-## SLIDE 5 — Bằng chứng khả thi
+## SLIDE 5 — Công nghệ (slide neo chủ đề Pool 2)
 
-**Người B · 2:10 · 40 giây**
+**Người B · 2:10 · 50 giây**
 
-**Mục đích:** chứng minh team **làm được**, không phải chỉ nghĩ ra. Đây là slide
-duy nhất prototype xuất hiện.
+**Mục đích:** trả lời câu hỏi mà pool **Harnessing New Technologies** bắt buộc
+phải trả lời — *công nghệ của các em nằm ở đâu?* Đây là slide gánh **Relevance
+10%**, và nó cũng gánh luôn phần bằng chứng khả thi ở dải ảnh phía dưới.
+
+**Ý cốt lõi phải hiện lên thành hình:** hôm nay nghề phế liệu vận hành bằng
+**niềm tin vào một con người** — tin người ta báo giá đúng, tin người ta công
+nhận ai giữ hàng trước, tin người ta nhớ nợ mình. GreenCity **chuyển cả ba việc
+đó vào hệ thống**. Slide phải cho thấy đúng ba cặp: *trước — do người · sau — do
+hệ thống*.
 
 > ⚠️ **Thể lệ cấm demo trên sân khấu** và ghi rõ prototype **không được tính
-> điểm**. Slide này chỉ được **chiếu ảnh tĩnh**. Không mở trình duyệt, không bấm
-> gì, không nhúng video.
+> điểm**. Dải ảnh phía dưới chỉ được là **ảnh tĩnh**. Không mở trình duyệt, không
+> bấm gì, không nhúng video.
 
-**Bố cục:** 3 ảnh chụp màn hình xếp ngang, có nhãn trung thực ở trên.
+**Bố cục:** ba khối quy tắc chiếm phần trên, dải ảnh chụp nhỏ nằm dưới cùng.
 
 ```
 ====================================================
-  We already built the core loop              <- 40pt
-  Working prototype - not part of judging     <- 20pt
+  Three rules, moved out of people                <- 40pt
 
-   +----------+   +----------+   +----------+
-   | [shot 1] |   | [shot 2] |   | [shot 3] |
-   | Market-  |   | Admin    |   | Points   |
-   | place    |   | quoting  |   | ledger   |
-   +----------+   +----------+   +----------+
+  +--------------+--------------+--------------+
+  |    PRICE     |  OWNERSHIP   |    REWARD    |   <- 28pt dam
+  +--------------+--------------+--------------+
+  | trusted      | whoever      | whoever      |   <- 20pt, xam
+  | operator     | called first | remembers    |      "truoc"
+  +--------------+--------------+--------------+
+  | enforced     | one place    | no balance   |   <- 22pt, xanh
+  | under the    | decides,     | to edit;     |      "sau"
+  | application  | one winner   | sum of       |
+  |              |              | events       |
+  +--------------+--------------+--------------+
 
-  Built:   submissions - price control -      <- 22pt
-           marketplace - verification - ledger
-  Missing: payment - payout                   <- 22pt, mau cam
+  Blockchain gets you these three.                <- 26pt
+  So does a database a city can run.              <- 26pt dam
+
+  + location layer: exact for operations,         <- 20pt
+    coarse for the public
+
+  --------------------------------------------
+  [shot 1]   [shot 2]   [shot 3]                  <- dai anh nho
+  Built and running - not part of judging         <- 16pt, xam
 ====================================================
 ```
 
 **Chữ trên slide — copy nguyên xi:**
 
 ```
-We already built the core loop
-Working prototype · not part of judging
+Three rules, moved out of people
 
-Marketplace        Admin quoting        Points ledger
+                PRICE              OWNERSHIP           REWARD
+before   trusted operator     whoever called first   whoever remembers
+after    enforced under       one place decides,     no balance to edit;
+         the application      one winner             sum of events
 
-Built: submissions · price control · marketplace · verification · ledger
-Missing: payment · payout
+Blockchain gets you these three.
+So does a database a city can run.
+
+Location layer: exact for operations, coarse for the public.
+
+Built and running · not part of judging
 ```
 
-**Ba ảnh cần chụp** (chạy `pnpm dev:web` rồi chụp màn hình):
+**Cách phân biệt hai hàng bằng màu:** hàng *before* để **xám nhạt `#4F6059`**,
+hàng *after* để **xanh `#176B4D` in đậm**. Chỉ nhìn màu là hiểu ngay đâu là cái
+cũ, đâu là cái GreenCity thay đổi — đúng nghĩa *transforming existing practices*
+mà thể lệ yêu cầu.
+
+**Ba ảnh chụp ở dải dưới** (chạy `pnpm dev:web` rồi chụp màn hình):
 
 1. `/cho-online` — trang chợ có ít nhất 2 lô
-2. `/admin/bao-gia` — hàng chờ báo giá, thấy được khung giá
+2. `/admin/bao-gia` — hàng chờ báo giá, **thấy được khung giá** (ảnh này minh hoạ
+   đúng quy tắc PRICE, nên đặt ở giữa)
 3. `/diem-thuong` — sổ điểm có vài dòng
 
-Chụp ở cửa sổ rộng 1440px, **che email và số điện thoại** trong ảnh. Bo góc nhẹ
-và đổ bóng mờ để trông như ảnh chụp thiết bị.
+Chụp ở cửa sổ rộng 1440px, **che email và số điện thoại**. Dải ảnh này để **nhỏ
+thôi** — nó là chú thích cho ba khối phía trên, không phải nhân vật chính. Chiếm
+tối đa 1/4 chiều cao slide.
 
-**Dòng "Missing" là dòng ăn điểm**, đừng bỏ. Một team dám ghi cái mình còn thiếu
-ngay trên slide khoe hàng thì đáng tin hơn hẳn — và nó dựng sẵn cầu nối sang
-slide 8, nơi D nói sẽ làm nốt phần đó.
+**Vì sao không làm một slide riêng cho prototype:** thể lệ nói thẳng prototype
+không được tính điểm. Cho nó một slide riêng là tiêu 40 giây vào thứ không có
+điểm. Gộp xuống làm bằng chứng cho lập luận công nghệ thì vừa hợp lệ, vừa ăn
+điểm Feasibility.
 
 **Lỗi hay mắc:**
-- Bỏ dòng "not part of judging" → trông như đang cố lách luật cấm demo.
-- Chèn nút "Live demo" hoặc link bấm được.
-- Để lộ email/số điện thoại thật trong ảnh.
+- **Vẽ thêm mô-đun AI cho hợp chủ đề.** Đây là lỗi chí mạng. Giám khảo hỏi hai
+  câu là lộ, và mất luôn Professionalism. Chủ đề nói *transforming existing
+  practices* — mình bám đúng vế đó.
+- Bỏ hàng *before*. Không có hàng "trước" thì không thấy được cái gì đã thay đổi.
+- Viết thuật ngữ kỹ thuật lên slide (constraint, transaction, idempotency). Nói
+  bằng tiếng người: *"enforced under the application"*, *"one place decides"*.
+- Để dải ảnh to lấn ba khối quy tắc.
+- Bỏ dòng "not part of judging" → trông như đang lách luật cấm demo.
 
 ---
 
