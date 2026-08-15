@@ -192,7 +192,8 @@
     "unnamed": "Unnamed in OpenStreetMap",
     "viewOnOsm": "View on OpenStreetMap",
     "viewOnOsmFor": "View {name} on OpenStreetMap",
-    "mapLabel": "Map of recycling points. The full list is directly below."
+    "mapLabel": "Map of recycling points. The full list is directly below.",
+    "mapTilesUnavailable": "The map background could not be loaded from OpenStreetMap. Every collection point is still listed below."
   },
   "sellScrap": {
     "title": "Sell Scrap",

@@ -167,9 +167,16 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
-/// Published price band per material. Server-enforces every admin quote inside
-/// [minPricePerKgVnd, maxPricePerKgVnd] — see the CHECK constraint in the
-/// marketplace migration for the same invariant at the database boundary.
+/// Published price band per material. Every admin quote is held inside
+/// [minPricePerKgVnd, maxPricePerKgVnd] by the application layer, which is the
+/// only thing enforcing it: a quote's price and its category's band live in
+/// different tables, and a CHECK constraint cannot span the two. The
+/// `ScrapCategory_price_band_check` constraint in the marketplace migration
+/// guarantees a *well-formed band* (positive, min <= max), not that a Quote
+/// falls inside one — writing an out-of-band Quote straight through SQL still
+/// succeeds. Enforcing it at the database boundary would take a trigger, or a
+/// copy of the band on Quote; unlike the reservation and reward invariants,
+/// this one has no constraint standing behind the service.
 model ScrapCategory {
   id               String   @id @default(cuid())
   name             String   @unique
