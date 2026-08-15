@@ -118,4 +118,60 @@ test.describe("Recycling points @core", () => {
     await expect(page.locator(".leaflet-marker-icon")).toHaveCount(TOTAL);
     await assertNoHorizontalOverflow(page);
   });
+
+  /**
+   * The tile host is the one thing on this page we do not serve. When it is
+   * unreachable the map used to degrade into a blank grey square, which reads
+   * as "there is nothing here" rather than "the backdrop did not load" — and
+   * Leaflet kept re-requesting tiles on every interaction. Aborting the tile
+   * requests reproduces that deterministically, on any network.
+   */
+  test("says the map backdrop failed instead of showing an empty square", async ({
+    page,
+  }) => {
+    // A RegExp, not a glob: the tile host is a.tile.openstreetmap.org, and
+    // "**/tile.openstreetmap.org/**" needs a slash where that URL has a dot,
+    // so the glob silently matches nothing and the test passes on a network
+    // that happens to block the tiles anyway.
+    await page.route(/tile\.openstreetmap\.org/, (route) => route.abort());
+    await page.goto("/thung-rac", { waitUntil: "networkidle" });
+
+    await expect(
+      page.getByTestId("recycling-map-tiles-unavailable"),
+    ).toHaveText(/OpenStreetMap/);
+
+    // Everything served from the snapshot survives the failure: the map keeps
+    // its markers, and the list keeps every point.
+    await expect(page.locator(".leaflet-marker-icon")).toHaveCount(TOTAL);
+    await expect(
+      page.getByRole("link", { name: /trên OpenStreetMap$/ }),
+    ).toHaveCount(TOTAL);
+    await assertNoHorizontalOverflow(page);
+  });
+
+  test("leaves the notice off when the tiles load", async ({ page }) => {
+    // A single dropped tile is normal on a flaky connection and must not
+    // replace a map that is otherwise fine.
+    let served = 0;
+    await page.route(/tile\.openstreetmap\.org/, (route) => {
+      served += 1;
+      return served === 1
+        ? route.abort()
+        : route.fulfill({
+            status: 200,
+            contentType: "image/png",
+            // 1x1 transparent PNG.
+            body: Buffer.from(
+              "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+              "base64",
+            ),
+          });
+    });
+    await page.goto("/thung-rac", { waitUntil: "networkidle" });
+
+    await expect(page.locator(".leaflet-marker-icon")).toHaveCount(TOTAL);
+    await expect(
+      page.getByTestId("recycling-map-tiles-unavailable"),
+    ).toHaveCount(0);
+  });
 });

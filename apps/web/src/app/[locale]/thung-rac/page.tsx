@@ -89,7 +89,11 @@ export default async function ThungRacPage({
         </p>
       </section>
 
-      <RecyclingPointsMap points={RECYCLING_POINTS} label={t("mapLabel")} />
+      <RecyclingPointsMap
+        points={RECYCLING_POINTS}
+        label={t("mapLabel")}
+        tilesUnavailableLabel={t("mapTilesUnavailable")}
+      />
 
       <Section id="danh-sach-diem" title={t("listTitle")} tone="ruled">
         <ul

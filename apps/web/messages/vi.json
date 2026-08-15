@@ -192,7 +192,8 @@
     "unnamed": "Không có tên trên OpenStreetMap",
     "viewOnOsm": "Xem trên OpenStreetMap",
     "viewOnOsmFor": "Xem {name} trên OpenStreetMap",
-    "mapLabel": "Bản đồ các điểm thu gom tái chế. Danh sách đầy đủ nằm ngay bên dưới."
+    "mapLabel": "Bản đồ các điểm thu gom tái chế. Danh sách đầy đủ nằm ngay bên dưới.",
+    "mapTilesUnavailable": "Không tải được nền bản đồ từ OpenStreetMap. Các điểm thu gom vẫn hiển thị đầy đủ trong danh sách bên dưới."
   },
   "sellScrap": {
     "title": "Bán phế liệu",
