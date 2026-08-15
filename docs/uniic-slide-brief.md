@@ -347,9 +347,9 @@ hệ thống*.
   | trusted      | whoever      | whoever      |   <- 20pt, xam
   | operator     | called first | remembers    |      "truoc"
   +--------------+--------------+--------------+
-  | enforced     | one place    | no balance   |   <- 22pt, xanh
-  | under the    | decides,     | to edit;     |      "sau"
-  | application  | one winner   | sum of       |
+  | server       | database     | no balance   |   <- 22pt, xanh
+  | rejects it   | lets one     | to edit;     |      "sau"
+  |              | through      | sum of       |
   |              |              | events       |
   +--------------+--------------+--------------+
 
@@ -410,7 +410,10 @@ không được tính điểm. Cho nó một slide riêng là tiêu 40 giây và
   practices* — mình bám đúng vế đó.
 - Bỏ hàng *before*. Không có hàng "trước" thì không thấy được cái gì đã thay đổi.
 - Viết thuật ngữ kỹ thuật lên slide (constraint, transaction, idempotency). Nói
-  bằng tiếng người: *"enforced under the application"*, *"one place decides"*.
+  bằng tiếng người: *"the server rejects it"*, *"the database lets one through"*.
+- **Nói quá về chỗ nào cưỡng chế.** Khung giá do **máy chủ** chặn; còn đặt giữ và
+  điểm thưởng mới là do **database** chặn. Đừng gộp cả ba thành "database" —
+  giám khảo kỹ thuật hỏi vặn là hụt.
 - Để dải ảnh to lấn ba khối quy tắc.
 - Bỏ dòng "not part of judging" → trông như đang lách luật cấm demo.
 

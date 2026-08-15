@@ -125,9 +125,9 @@ Tất cả đều đã có trong code, không phải kế hoạch:
 
 | Thành phần | Nói thế nào trên sân khấu |
 |---|---|
-| **Cưỡng chế giá bằng ràng buộc CSDL** | Khung giá công khai; quản trị viên **không thể** báo giá ngoài khung, vì ràng buộc nằm dưới tầng dữ liệu chứ không ở giao diện |
-| **Phân xử tranh chấp bằng ràng buộc duy nhất** | Hai người bấm cùng lúc thì đúng một người thắng — do hệ thống quyết, không do ai gọi trước |
-| **Sổ chỉ-ghi-thêm** | Không có ô số dư để sửa; mỗi sự kiện chỉ trả thưởng được một lần |
+| **Cưỡng chế giá ở tầng máy chủ** | Khung giá công khai; quản trị viên báo giá ngoài khung thì API trả về lỗi 422, không phải cảnh báo ở giao diện |
+| **Phân xử tranh chấp bằng ràng buộc duy nhất của database** | Hai người bấm cùng lúc thì **chính database** cho đúng một người qua |
+| **Sổ chỉ-ghi-thêm** | Không có ô số dư để sửa; database từ chối lần trả thưởng thứ hai cho cùng một sự kiện |
 | **Tầng dữ liệu không gian có tách quyền riêng tư** | Toạ độ chính xác cho vận hành, toạ độ thô cho công chúng — dựng được bản đồ điểm nóng mà không lộ địa chỉ của ai |
 
 **Thứ được phép nói là tương lai** (và phải gọi đúng là tương lai): khi đã có mật
@@ -209,15 +209,16 @@ Ngoặc vuông là chỉ dẫn, không đọc.
 >
 > We took those three and moved them into the system.
 >
-> **Price.** The band is public, and it is enforced underneath the application —
-> not even our own operator can quote outside it. It is not a policy. It is a
-> rule the database will not break.
+> **Price.** The band is public, and the server rejects any quote outside it —
+> not even our own operator can put a price above the band. It is not a guideline
+> in a manual. It is a rule the system will not let anyone break.
 >
-> **Ownership.** Two dealers claiming the same lot at the same second: the system
-> decides, in one place, and exactly one of them wins. Not whoever called first.
+> **Ownership.** Two dealers claiming the same lot in the same second: the
+> database itself lets exactly one of them through. Not whoever called first.
 >
 > **Reward.** The points ledger has no balance field to edit. A balance is the
-> sum of the events, and each event can pay out once.
+> sum of the events, and the database refuses a second payout for the same
+> event.
 >
 > People reach for blockchain to get exactly these three properties. We got them
 > with a database a city can actually run.
@@ -390,8 +391,8 @@ that's the opportunity
 inside the band** · one lot one buyer · both sides have a record · neighbourhood
 half, same ledger
 **B (slide công nghệ)** → where is the technology · today every step needs someone
-trusted · **price** — enforced underneath, not a policy · **ownership** — system
-decides, not who called first · **reward** — no balance field, sum of events ·
+trusted · **price** — server rejects it, not a guideline · **ownership** —
+database lets one through · **reward** — no balance field, sum of events ·
 *blockchain line* · location layer, exact + coarse · built and running, not
 demoing it, not guessing
 
@@ -431,10 +432,11 @@ rộng, B nhận sản phẩm, A nhận vấn đề và người dùng. Nhưng c
 > Our technology is not a machine that sorts waste. Today, three things in this
 > trade depend on trusting a person: the price you are quoted, who gets a lot
 > when two buyers want the same one, and whether your reward is remembered. We
-> moved all three into the system. The price band is enforced below the
-> application, so even our own operator cannot quote outside it. A contested lot
-> is decided in one place, and exactly one buyer wins. The ledger has no balance
-> to edit — a balance is the sum of the events. People reach for blockchain to
+> moved all three into the system. The server rejects any quote outside the
+> published band, so even our own operator cannot overprice a lot. A contested
+> lot is settled by a database constraint, so exactly one buyer wins. The ledger
+> has no balance to edit — a balance is the sum of the events, and the database
+> refuses to pay the same event twice. People reach for blockchain to
 > get exactly those three properties. We got them with a database a city can
 > actually run. That is what transforming an existing practice looks like here.
 
