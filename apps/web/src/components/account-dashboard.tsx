@@ -29,6 +29,19 @@ import { formatCategoryName, formatDate, formatNumber, formatVnd } from "@/lib/f
 
 const DASHBOARD_LIMIT = 5;
 
+/**
+ * One list idiom for every record this page shows — points, sales,
+ * reservations, payments, cleanup reports.
+ *
+ * Each of those used to be its own bordered card stacked inside a Section that
+ * already draws a boundary, and some of them held a second tinted surface for
+ * the rows: three levels of container for one list. Sharing the shell means the
+ * page reads as one document rather than a wall of identical boxes, and the
+ * records differ by what they say rather than by how they are framed.
+ */
+const LIST_SHELL = "divide-y divide-rule rounded-lg border border-edge bg-paper";
+const LIST_ROW = "flex flex-wrap items-start justify-between gap-3 p-4";
+
 type LoadState<T> =
   | { status: "loading" }
   | { status: "error" }
@@ -238,9 +251,11 @@ function AuthenticatedAccountDashboard({
   return (
     <div data-testid="account-dashboard" className="min-w-0 space-y-10">
       <Section id="account-profile" title={tAccount("profileTitle")} tone="open">
+        {/* No card: the Section already bounds this, and identity reads better
+            as a heading with details under it than as a boxed record. */}
         <div
           data-testid="account-profile"
-          className="grid gap-4 rounded-xl border border-edge bg-paper p-5 sm:grid-cols-2 sm:p-6"
+          className="grid gap-4 sm:grid-cols-2"
         >
           <div>
             <p className="break-words font-display text-2xl font-bold tracking-tight text-ink">
@@ -271,8 +286,11 @@ function AuthenticatedAccountDashboard({
             <SectionError testId="account-points-error" />
           ) : (
             <>
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-                <div className="rounded-xl border border-warm-100 bg-warm-100/50 p-5">
+              {/* The balance is one number, so it is set as one number rather
+                  than boxed. The two ways to earn are a short list, not two
+                  tinted pills inside a card inside a section. */}
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+                <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-warm-900">
                     {tAccount("pointsBalance")}
                   </p>
@@ -280,20 +298,16 @@ function AuthenticatedAccountDashboard({
                     {formatNumber(points.data.balance, locale)} {tCommon("points")}
                   </p>
                 </div>
-                <div className="rounded-xl border border-edge bg-paper p-5">
+                <div className="min-w-0">
                   <h3 className="font-display text-lg font-bold text-ink">
                     {tAccount("pointsHow")}
                   </h3>
                   <p className="mt-2 text-sm leading-6 text-muted">
                     {tAccount("pointsHowText")}
                   </p>
-                  <ul className="mt-3 grid gap-2 text-sm text-ink sm:grid-cols-2">
-                    <li className="rounded-md bg-paper-2 px-3 py-2">
-                      {tAccount("pointsSale")}
-                    </li>
-                    <li className="rounded-md bg-paper-2 px-3 py-2">
-                      {tAccount("pointsCleanup")}
-                    </li>
+                  <ul className="mt-3 space-y-1 text-sm text-ink">
+                    <li>{tAccount("pointsSale")}</li>
+                    <li>{tAccount("pointsCleanup")}</li>
                   </ul>
                 </div>
               </div>
@@ -352,11 +366,11 @@ function AuthenticatedAccountDashboard({
           ) : sales.data.length === 0 ? (
             <EmptyState title={tAccount("salesEmpty")} />
           ) : (
-            <ul className="space-y-3">
+            <ul className={LIST_SHELL}>
               {sales.data.map((sale) => (
                 <li
                   key={sale.id}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-edge bg-paper p-4"
+                  className={LIST_ROW}
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-ink">
@@ -402,11 +416,11 @@ function AuthenticatedAccountDashboard({
           ) : history.data.reservations.length === 0 ? (
             <EmptyState title={tAccount("reservationsEmpty")} />
           ) : (
-            <ul className="space-y-3">
+            <ul className={LIST_SHELL}>
               {history.data.reservations.map((reservation) => (
                 <li
                   key={reservation.id}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-edge bg-paper p-4"
+                  className={LIST_ROW}
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-ink">
@@ -438,7 +452,7 @@ function AuthenticatedAccountDashboard({
 
       <Section id="account-subscription" title={tAccount("subscriptionTitle")}>
         <div data-testid="account-subscription" aria-live="polite" className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-xl border border-edge bg-paper p-5">
+          <div>
             <h3 className="font-display text-lg font-bold text-ink">
               {tAccount("currentPass")}
             </h3>
@@ -466,7 +480,7 @@ function AuthenticatedAccountDashboard({
             )}
           </div>
 
-          <div className="rounded-xl border border-edge bg-paper p-5">
+          <div>
             <h3 className="font-display text-lg font-bold text-ink">
               {tAccount("subscriptionHistory")}
             </h3>
@@ -477,9 +491,9 @@ function AuthenticatedAccountDashboard({
             ) : history.data.subscriptions.length === 0 ? (
               <p className="mt-3 text-sm text-muted">{tAccount("subscriptionsEmpty")}</p>
             ) : (
-              <ul className="mt-3 space-y-3">
+              <ul className={`mt-3 ${LIST_SHELL}`}>
                 {history.data.subscriptions.map((item) => (
-                  <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
+                  <li key={item.id} className={`${LIST_ROW} text-sm`}>
                     <span className="text-muted">
                       {formatDate(item.startsAt, locale)} – {formatDate(item.expiresAt, locale)}
                     </span>
@@ -490,7 +504,7 @@ function AuthenticatedAccountDashboard({
             )}
           </div>
 
-          <div className="rounded-xl border border-edge bg-paper p-5 lg:col-span-2">
+          <div className="lg:col-span-2">
             <h3 className="font-display text-lg font-bold text-ink">
               {tAccount("paymentHistory")}
             </h3>
@@ -501,11 +515,11 @@ function AuthenticatedAccountDashboard({
             ) : history.data.payments.length === 0 ? (
               <p className="mt-3 text-sm text-muted">{tAccount("paymentsEmpty")}</p>
             ) : (
-              <ul className="mt-3 space-y-3">
+              <ul className={`mt-3 ${LIST_SHELL}`}>
                 {history.data.payments.map((payment) => (
                   <li
                     key={payment.id}
-                    className="flex flex-wrap items-start justify-between gap-3 rounded-md bg-paper-2 p-3"
+                    className={LIST_ROW}
                   >
                     <div>
                       <p className="font-medium tabular-nums text-ink">
@@ -542,11 +556,11 @@ function AuthenticatedAccountDashboard({
           ) : cleanup.data.length === 0 ? (
             <EmptyState title={tAccount("cleanupEmpty")} />
           ) : (
-            <ul className="space-y-3">
+            <ul className={LIST_SHELL}>
               {cleanup.data.map((report) => (
                 <li
                   key={report.id}
-                  className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-edge bg-paper p-4"
+                  className={LIST_ROW}
                 >
                   <div className="min-w-0">
                     <p className="break-words font-medium text-ink">{report.description}</p>
@@ -571,7 +585,7 @@ function AuthenticatedAccountDashboard({
       <Section id="account-withdrawal" title={tAccount("withdrawalTitle")} tone="band">
         <div
           data-testid="account-withdrawal-not-supported"
-          className="max-w-3xl rounded-xl border border-coral/30 bg-paper p-5"
+          className="max-w-3xl border-l-2 border-coral pl-5"
         >
           <p className="font-display text-xl font-bold text-ink">
             {tAccount("withdrawalNoCash")}

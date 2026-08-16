@@ -72,7 +72,7 @@ export function RewardOfferPreviewDialog({
 
           <dl className="mt-5 space-y-3 border-y border-dashed border-rule py-4">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-widest text-muted">
+              <dt className="text-xs font-medium text-muted">
                 {t("illustrativePartner")}
               </dt>
               <dd className="mt-1 font-display text-lg font-bold text-ink [overflow-wrap:anywhere]">
@@ -80,7 +80,7 @@ export function RewardOfferPreviewDialog({
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-widest text-muted">
+              <dt className="text-xs font-medium text-muted">
                 {t("previewOfferLabel")}
               </dt>
               <dd className="mt-1 text-sm leading-6 text-muted">
@@ -88,7 +88,7 @@ export function RewardOfferPreviewDialog({
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-widest text-muted">
+              <dt className="text-xs font-medium text-muted">
                 {t("previewCostLabel")}
               </dt>
               <dd className="mt-1 font-display text-lg font-bold text-primary tabular-nums">
@@ -96,7 +96,7 @@ export function RewardOfferPreviewDialog({
               </dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-widest text-muted">
+              <dt className="text-xs font-medium text-muted">
                 {t("previewCodeLabel")}
               </dt>
               <dd className="mt-1 font-mono text-sm text-ink">DEMO-ONLY</dd>
