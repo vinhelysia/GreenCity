@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/page-header";
 import { Section } from "@/components/section";
 import { SignInRequired } from "@/components/sign-in-required";
 import { AccountReservationDetails } from "@/components/reservation-details";
+import { GoogleAuthButton } from "@/components/google-auth-button";
 import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
@@ -265,6 +266,7 @@ function AuthenticatedAccountDashboard({
               {user.displayName?.trim() || user.email}
             </p>
             <p className="mt-1 break-words text-sm text-muted">{user.email}</p>
+            <div className="mt-4 max-w-sm"><GoogleAuthButton link /></div>
           </div>
           <dl className="grid gap-3 text-sm sm:grid-cols-2">
             <div>

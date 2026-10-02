@@ -121,6 +121,9 @@ const EnvSchema = z.object({
    */
   PUBLIC_API_URL: blankAsUnset(publicUrl),
   PUBLIC_WEB_URL: blankAsUnset(publicUrl),
+  /** Google OAuth web client credentials: backend only, no NEXT_PUBLIC_ copies. */
+  GOOGLE_CLIENT_ID: blankAsUnset(z.string().min(1).max(512)),
+  GOOGLE_CLIENT_SECRET: blankAsUnset(z.string().min(1).max(512)),
   /**
    * Chatwoot website-inbox HMAC secret, from the inbox's identity-validation
    * setting. Optional: absent leaves support chat anonymous, which is a

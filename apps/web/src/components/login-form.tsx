@@ -7,6 +7,7 @@ import { useAuth } from "@/components/auth-provider";
 import { useRouter, type Pathnames } from "@/i18n/routing";
 import { AuthEntryLink } from "@/components/auth-entry-link";
 import { firstFieldErrors } from "@/lib/api";
+import { GoogleAuthButton } from "./google-auth-button";
 
 type FormState = "idle" | "submitting" | "success";
 
@@ -104,6 +105,7 @@ export function LoginForm({ returnTo = "/tai-khoan" }: { returnTo?: Pathnames })
       noValidate
       aria-describedby={statusId}
     >
+      <GoogleAuthButton returnTo={returnTo} disabled={formState === "submitting"} />
       <div>
         <label htmlFor={emailId} className="block text-sm font-medium text-ink">
           {tAuth("emailLabel")}

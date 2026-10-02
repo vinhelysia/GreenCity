@@ -101,6 +101,22 @@ export const LoginRequestSchema = z.object({
 });
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
+// Exact same-origin destinations only, including next-intl's localized URLs.
+export const GoogleOAuthStartSchema = z.object({
+  returnTo: z.enum([
+    "/", "/thung-rac", "/dich-vu", "/ban-phe-lieu", "/dong-gop", "/cho-online",
+    "/diem-thuong", "/tai-khoan", "/admin/bao-gia", "/admin/dong-gop", "/admin/giao-dich",
+    "/en", "/en/recycling-bins", "/en/services", "/en/sell-scrap", "/en/community-cleanup",
+    "/en/marketplace", "/en/rewards", "/en/account", "/en/admin/quotes", "/en/admin/cleanup",
+    "/en/admin/transactions",
+  ]).default("/tai-khoan"),
+});
+export type GoogleOAuthStart = z.infer<typeof GoogleOAuthStartSchema>;
+export const GoogleOAuthStatusSchema = z.object({ enabled: z.boolean(), linked: z.boolean() });
+export const GoogleOAuthUrlSchema = z.object({
+  url: z.string().url().regex(/^https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth\?/),
+});
+
 export const PublicUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),

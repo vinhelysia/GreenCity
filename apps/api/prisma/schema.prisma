@@ -27,6 +27,8 @@ model User {
   displayName  String?
   /// Required for local email/password accounts (enforced in application layer).
   passwordHash String?
+  /// Google OpenID subject, never use email as the external identity key.
+  googleSubject String? @unique
   roles        UserRole[] @default([USER])
   status       UserStatus @default(ACTIVE)
   createdAt    DateTime   @default(now())
@@ -44,6 +46,20 @@ model User {
   subscriptionPayments SubscriptionPayment[]
   cleanupReports      CleanupReport[]
   pointEntries        PointEntry[]
+}
+
+/// Ten-minute, single-use OAuth flow. Raw provider tokens are never persisted.
+model GoogleOAuthAttempt {
+  stateHash    String   @id
+  browserHash  String
+  nonce        String
+  codeVerifier String
+  returnTo     String
+  /// Linking is bound to the existing authenticated session.
+  sessionId    String?
+  expiresAt    DateTime
+
+  @@index([expiresAt])
 }
 
 model Session {

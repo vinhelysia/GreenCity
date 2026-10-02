@@ -119,6 +119,14 @@
     }
   },
   "auth": {
+    "googleSignIn": "Đăng nhập với Google",
+    "googleLink": "Liên kết tài khoản Google",
+    "googleLinked": "Đã liên kết Google. Bạn có thể đăng nhập bằng Google.",
+    "googleLinkHint": "Chọn tài khoản Google có cùng email với tài khoản GreenCity của bạn.",
+    "googleOrEmail": "Hoặc tiếp tục bằng email",
+    "googleRedirecting": "Đang mở Google...",
+    "googleFailed": "Không thể hoàn tất đăng nhập Google. Vui lòng thử lại.",
+    "googleLinkRequired": "Email này đã có tài khoản GreenCity. Hãy đăng nhập bằng mật khẩu rồi liên kết Google trong trang tài khoản.",
     "loginTitle": "Đăng nhập",
     "loginDesc": "Đăng nhập để quản lý yêu cầu bán phế liệu, theo dõi mua hàng và sổ điểm thưởng.",
     "registerTitle": "Đăng ký",

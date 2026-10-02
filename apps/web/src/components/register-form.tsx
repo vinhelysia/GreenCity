@@ -1,5 +1,7 @@
 "use client";
 
+import { GoogleAuthButton } from "./google-auth-button";
+
 import { useLocale, useTranslations } from "next-intl";
 import { FormEvent, useId, useState } from "react";
 import { RegisterRequestSchema } from "@greencity/shared";
@@ -130,6 +132,7 @@ export function RegisterForm({ returnTo = "/tai-khoan" }: { returnTo?: Pathnames
       noValidate
       aria-describedby={statusId}
     >
+      <GoogleAuthButton returnTo={returnTo} disabled={formState === "submitting"} />
       <div>
         <label
           htmlFor={displayNameId}
