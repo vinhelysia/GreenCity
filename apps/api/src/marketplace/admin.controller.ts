@@ -1,7 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import {
   CreateQuoteRequestSchema,
+  CancelReservationSchema,
+  CompleteReservationSchema,
+  ScheduleReservationSchema,
+  type CancelReservation,
+  type CompleteReservation,
+  type ScheduleReservation,
   GrantSubscriptionRequestSchema,
   ListingStatusSchema,
   PaginationQuerySchema,
@@ -64,6 +70,7 @@ export class AdminController {
   }
 
   @Get('listings')
+  @Header('Cache-Control', 'private, no-store')
   async listListings(
     @Query(new ZodValidationPipe(AdminListingQuerySchema))
     query: AdminListingQuery,
@@ -71,13 +78,32 @@ export class AdminController {
     return this.listings.adminList(query.status, parsePaginationQuery(query));
   }
 
-  @Post('listings/:id/complete')
+  @Post('reservations/:id/complete')
   async completeListing(
     @CurrentUser() auth: AuthContext,
     @Param('id') id: string,
+    @Body(new ZodValidationPipe(CompleteReservationSchema)) body: CompleteReservation,
     @Req() req: Request,
   ) {
-    return this.listings.adminComplete(auth, id, getRequestId(req));
+    return this.listings.adminComplete(auth, id, body, getRequestId(req));
+  }
+
+  @Post('reservations/:id/schedule')
+  async scheduleReservation(
+    @CurrentUser() auth: AuthContext, @Param('id') id: string,
+    @Body(new ZodValidationPipe(ScheduleReservationSchema)) body: ScheduleReservation,
+    @Req() req: Request,
+  ) {
+    return this.listings.adminSchedule(auth, id, body, getRequestId(req));
+  }
+
+  @Post('reservations/:id/cancel')
+  async cancelReservation(
+    @CurrentUser() auth: AuthContext, @Param('id') id: string,
+    @Body(new ZodValidationPipe(CancelReservationSchema)) body: CancelReservation,
+    @Req() req: Request,
+  ) {
+    return this.listings.adminCancel(auth, id, body, getRequestId(req));
   }
 
   // Grant only. There is deliberately no revoke and no list-all-passes route:

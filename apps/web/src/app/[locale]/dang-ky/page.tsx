@@ -4,7 +4,8 @@ import { EcoBadge } from "@/components/eco-badge";
 import { IconLeaf, IconShieldCheck, IconSparkles } from "@/components/eco-icons";
 import { PageHeader } from "@/components/page-header";
 import { RegisterForm } from "@/components/register-form";
-import { Link } from "@/i18n/routing";
+import { AuthEntryLink } from "@/components/auth-entry-link";
+import { getAuthReturnPath } from "@/lib/auth-return";
 
 export async function generateMetadata({
   params,
@@ -25,12 +26,15 @@ export async function generateMetadata({
 
 export default async function DangKyPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ next?: string | string[] }>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("auth");
+  const returnTo = getAuthReturnPath((await searchParams).next);
 
   return (
     <div className="min-w-0">
@@ -42,18 +46,18 @@ export default async function DangKyPage({
             description={
               <p>
                 {t("registerDesc")}{" "}
-                <Link
+                <AuthEntryLink
                   href="/dang-nhap"
                   className="font-semibold text-primary underline-offset-4 hover:underline"
                 >
                   {t("loginNow")}
-                </Link>
+                </AuthEntryLink>
                 .
               </p>
             }
           />
           <div className="mt-6 rounded-2xl border border-edge bg-card p-6 shadow-eco sm:p-8">
-            <RegisterForm />
+            <RegisterForm returnTo={returnTo} />
           </div>
         </div>
 

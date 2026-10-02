@@ -1,12 +1,13 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SubscriptionState } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EcoBadge } from "@/components/eco-badge";
 import { IconShieldCheck, IconSparkles } from "@/components/eco-icons";
-import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   createSubscriptionPayment,
@@ -384,12 +385,12 @@ export function BuyerPassPanel({
           <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted">
             {tSub("desc")}
           </p>
-          <Link
+          <AuthEntryLink
             href="/dang-nhap"
             className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
             {tMkt("loginToBuyPass")} &rarr;
-          </Link>
+          </AuthEntryLink>
         </>
       );
     }

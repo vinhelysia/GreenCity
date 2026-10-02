@@ -45,6 +45,8 @@ describe('Account history', () => {
         findMany: jest.fn().mockResolvedValue([
           {
             id: 'reservation-1',
+            buyerId: 'owner-1',
+            status: 'COMPLETED',
             createdAt,
             listing: {
               categoryName: 'Giấy carton',
@@ -90,6 +92,7 @@ describe('Account history', () => {
           // Same Math.round(pricePerKg * weight) rule as MarketplaceListing.
           estimatedTotalVnd: 37047,
           status: 'COMPLETED',
+          role: 'BUYER',
           createdAt: createdAt.toISOString(),
         },
       ],
@@ -115,18 +118,19 @@ describe('Account history', () => {
 
     expect(prisma.reservation.findMany).toHaveBeenCalledWith(
       {
-        where: { buyerId: 'owner-1' },
+        where: { OR: [{ buyerId: 'owner-1' }, { listing: { sellerId: 'owner-1' } }] },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: 5,
         select: {
           id: true,
+          buyerId: true,
+          status: true,
           createdAt: true,
           listing: {
             select: {
               categoryName: true,
               estimatedWeightKg: true,
               buyerPricePerKgVnd: true,
-              status: true,
             },
           },
         },

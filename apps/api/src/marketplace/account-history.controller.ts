@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Header, Query } from '@nestjs/common';
 import {
   AccountHistoryQuerySchema,
   type AccountHistory,
@@ -15,6 +15,7 @@ export class AccountHistoryController {
   constructor(private readonly accountHistory: AccountHistoryService) {}
 
   @Get('history')
+  @Header('Cache-Control', 'private, no-store')
   history(
     @CurrentUser() auth: AuthContext,
     @Query(new ZodValidationPipe(AccountHistoryQuerySchema))

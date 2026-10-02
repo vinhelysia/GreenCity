@@ -78,7 +78,8 @@ test.describe("Auth flows @core", () => {
     await expect(page.getByTestId("header-user-label")).toContainText(
       /Người test|auth-ui/i,
     );
-    await expect(page.getByTestId("register-success")).toBeVisible();
+    await expect(page).toHaveURL(/\/tai-khoan$/);
+    await expect(page.getByTestId("account-dashboard")).toBeVisible();
     await expect(page.getByTestId("header-login")).toHaveCount(0);
     assertCleanRuntime(issues, "register");
   });

@@ -78,7 +78,7 @@ function PriceBandTable({ categories }: { categories: ScrapCategory[] }) {
   }
   return (
     <div className="min-w-0 overflow-x-auto rounded-md border border-edge">
-      <table className="w-full min-w-[28rem] border-collapse text-left text-sm">
+      <table className="w-full border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-edge bg-paper-2">
             <th scope="col" className="px-3 py-2.5 font-medium text-ink">

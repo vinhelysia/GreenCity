@@ -1,5 +1,8 @@
 import {
   CreateQuoteRequestSchema,
+  CompleteReservationSchema,
+  ScheduleReservationSchema,
+  CancelReservationSchema,
   CreateScrapRequestSchema,
   ListingStatusSchema,
   MARKETPLACE_ERROR_CODES,
@@ -126,5 +129,18 @@ describe('marketplace contracts', () => {
     expect(MARKETPLACE_ERROR_CODES).toContain('SUBSCRIPTION_REQUIRED');
     expect(MARKETPLACE_ERROR_CODES).toContain('CANNOT_RESERVE_OWN_LISTING');
     expect(MARKETPLACE_ERROR_CODES).toContain('QUOTE_OUT_OF_PUBLISHED_RANGE');
+  });
+
+  it('requires a bounded actual settlement and a nonblank receipt', () => {
+    const valid = { actualWeightKg: 1.5, sellerReceivedAmountVnd: 2250, receiptNote: 'Cash receipt' };
+    expect(CompleteReservationSchema.parse(valid)).toEqual(valid);
+    for (const invalid of [
+      { actualWeightKg: 0 }, { actualWeightKg: 1001 }, { actualWeightKg: Infinity },
+      { sellerReceivedAmountVnd: 0 }, { sellerReceivedAmountVnd: 1.5 }, { sellerReceivedAmountVnd: 2147483648 },
+      { receiptNote: '  ' }, { receiptNote: 'x'.repeat(501) },
+    ]) expect(CompleteReservationSchema.safeParse({ ...valid, ...invalid }).success).toBe(false);
+    expect(CompleteReservationSchema.safeParse({ actualWeightKg: 1 }).success).toBe(false);
+    expect(CancelReservationSchema.safeParse({ reason: ' ' }).success).toBe(false);
+    expect(ScheduleReservationSchema.safeParse({ scheduledAt: 'not-a-date', pickupLocation: 'Campus', coordinatorContact: 'Admin' }).success).toBe(false);
   });
 });

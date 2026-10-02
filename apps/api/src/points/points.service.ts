@@ -5,14 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 
 // Tunable reward rates; adjust these values when the points policy changes.
 const POINTS_RULES = {
-  LISTING_COMPLETED: (
-    estimatedWeightKg: number,
-    sellerPricePerKgVnd: number,
-  ) =>
-    Math.max(
-      1,
-      Math.floor((estimatedWeightKg * sellerPricePerKgVnd) / 1000),
-    ),
+  LISTING_COMPLETED: (sellerReceivedAmountVnd: number) =>
+    Math.max(1, Math.floor(sellerReceivedAmountVnd / 1000)),
   CLEANUP_VERIFIED: 50,
 } as const;
 
@@ -25,17 +19,13 @@ export class PointsService {
     listing: {
       id: string;
       sellerId: string;
-      estimatedWeightKg: number;
-      sellerPricePerKgVnd: number;
     },
+    sellerReceivedAmountVnd: number,
   ) {
     return tx.pointEntry.create({
       data: {
         userId: listing.sellerId,
-        delta: POINTS_RULES.LISTING_COMPLETED(
-          listing.estimatedWeightKg,
-          listing.sellerPricePerKgVnd,
-        ),
+        delta: POINTS_RULES.LISTING_COMPLETED(sellerReceivedAmountVnd),
         reason: 'LISTING_COMPLETED',
         referenceId: listing.id,
       },

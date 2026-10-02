@@ -13,6 +13,7 @@ describe('Points integration', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let adminCookie: string;
+  let adminId: string;
   let categoryId: string;
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
@@ -49,6 +50,7 @@ describe('Points integration', () => {
 
     const admin = await register('admin');
     adminCookie = admin.cookie;
+    adminId = admin.userId;
     await prisma.user.update({
       where: { id: admin.userId },
       data: { roles: ['ADMIN'] },
@@ -210,7 +212,7 @@ describe('Points integration', () => {
     name: string,
     estimatedWeightKg: number,
     sellerPricePerKgVnd: number,
-  ): Promise<string> {
+  ): Promise<{ listingId: string; reservationId: string }> {
     const mediaAssetId = await createMedia(sellerId, `${name}-listing`);
     const scrapRequest = await prisma.scrapRequest.create({
       data: {
@@ -242,7 +244,8 @@ describe('Points integration', () => {
         mediaAssetId,
       },
     });
-    return listing.id;
+    const reservation = await prisma.reservation.create({ data: { listingId: listing.id, buyerId: adminId } });
+    return { listingId: listing.id, reservationId: reservation.id };
   }
 
   async function createSubmittedReport(
@@ -260,11 +263,12 @@ describe('Points integration', () => {
     return report.id;
   }
 
-  async function completeListing(listingId: string) {
+  async function completeListing(reservationId: string) {
     return request(app.getHttpServer())
-      .post(`/admin/listings/${listingId}/complete`)
+      .post(`/admin/reservations/${reservationId}/complete`)
       .set('Origin', 'http://localhost:3000')
-      .set('Cookie', adminCookie);
+      .set('Cookie', adminCookie)
+      .send({ actualWeightKg: 1.8, sellerReceivedAmountVnd: 2700, receiptNote: 'Cash receipt POINTS-001' });
   }
 
   async function verifyCleanup(reportId: string) {
@@ -276,14 +280,14 @@ describe('Points integration', () => {
 
   it('awards the seller from a RESERVED listing using the configured formula', async () => {
     const seller = await register('listing-award-seller');
-    const listingId = await createReservedListing(
+    const { reservationId } = await createReservedListing(
       seller.userId,
       'award',
       2.5,
       1500,
     );
 
-    const completed = await completeListing(listingId);
+    const completed = await completeListing(reservationId);
     expect(completed.status).toBe(201);
 
     const points = await request(app.getHttpServer())
@@ -291,8 +295,8 @@ describe('Points integration', () => {
       .set('Cookie', seller.cookie);
     expect(points.status).toBe(200);
     expect(points.body).toMatchObject({
-      balance: 3,
-      entries: [{ delta: 3, reason: 'LISTING_COMPLETED' }],
+      balance: 2,
+      entries: [{ delta: 2, reason: 'LISTING_COMPLETED' }],
     });
     expect(points.body.entries).toHaveLength(1);
     expect(points.body.entries[0].occurredAt).toEqual(expect.any(String));
@@ -300,17 +304,17 @@ describe('Points integration', () => {
 
   it('rejects completing the same listing twice without a duplicate ledger row', async () => {
     const seller = await register('listing-idempotent-seller');
-    const listingId = await createReservedListing(
+    const { listingId, reservationId } = await createReservedListing(
       seller.userId,
       'idempotent',
       1,
       1000,
     );
 
-    expect((await completeListing(listingId)).status).toBe(201);
-    const second = await completeListing(listingId);
+    expect((await completeListing(reservationId)).status).toBe(201);
+    const second = await completeListing(reservationId);
     expect(second.status).toBe(409);
-    expect(second.body.error.code).toBe('LISTING_NOT_AVAILABLE');
+    expect(second.body.error.code).toBe('RESERVATION_NOT_ACTIVE');
     expect(
       await prisma.pointEntry.count({
         where: { reason: 'LISTING_COMPLETED', referenceId: listingId },

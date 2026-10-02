@@ -1,5 +1,7 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useTranslations } from "next-intl";
 import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
@@ -124,7 +126,7 @@ export function HeaderLoginLink() {
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      <Link
+      <AuthEntryLink
         href="/dang-ky"
         aria-current={registerActive ? "page" : undefined}
         className={[
@@ -135,8 +137,8 @@ export function HeaderLoginLink() {
         ].join(" ")}
       >
         {tFooter("register")}
-      </Link>
-      <Link
+      </AuthEntryLink>
+      <AuthEntryLink
         href="/dang-nhap"
         aria-current={loginActive ? "page" : undefined}
         data-testid="header-login"
@@ -148,7 +150,7 @@ export function HeaderLoginLink() {
         ].join(" ")}
       >
         {tFooter("login")}
-      </Link>
+      </AuthEntryLink>
     </div>
   );
 }

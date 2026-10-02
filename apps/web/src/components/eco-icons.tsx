@@ -1,5 +1,9 @@
 import type { SVGProps } from "react";
 
+// Stroke paths also feed Morphicons without another icon-pack dependency.
+export const ECO_ARROW_PATH = "M5 12h14M12 5l7 7-7 7";
+export const ECO_PACKAGE_PATH = "M16.5 9.4 7.55 4.24M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96 12 12.01l8.73-5.05M12 22.08V12";
+
 export function IconRecycle(props: SVGProps<SVGSVGElement>) {
   const arrowPath =
     "M22 38 34 17C36.5 12.7 41 10 46 10H59V3L78 20 59 37V29H48C46 29 44.5 30 43.5 31.8L34 47Z";
@@ -129,7 +133,7 @@ export function IconArrowRight(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 24 24"
       {...props}
     >
-      <path d="M5 12h14M12 5l7 7-7 7" />
+      <path d={ECO_ARROW_PATH} />
     </svg>
   );
 }
@@ -146,8 +150,7 @@ export function IconPackage(props: SVGProps<SVGSVGElement>) {
       viewBox="0 0 24 24"
       {...props}
     >
-      <path d="M16.5 9.4 7.55 4.24M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-      <path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12" />
+      <path d={ECO_PACKAGE_PATH} />
     </svg>
   );
 }

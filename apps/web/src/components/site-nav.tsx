@@ -5,6 +5,17 @@ import { Suspense, useCallback, useEffect, useId, useRef, useState } from "react
 import { Link, usePathname } from "@/i18n/routing";
 import { LanguageSwitcher } from "./language-switcher";
 import { isNavActive, NAV_LINKS } from "./nav-links";
+import { EcoMorphIcon, MORPH_PATHS } from "./morph-icon";
+
+const NAV_ICONS = {
+  home: MORPH_PATHS.home,
+  recyclingBins: MORPH_PATHS.bin,
+  services: MORPH_PATHS.truck,
+  sellScrap: MORPH_PATHS.package,
+  communityCleanup: MORPH_PATHS.pin,
+  marketplace: MORPH_PATHS.store,
+  rewards: MORPH_PATHS.points,
+};
 
 function LanguageSwitcherFallback() {
   return (
@@ -53,7 +64,7 @@ export function SiteNav() {
   return (
     <nav
       aria-label={tCommon("mainNavigation")}
-      className="min-w-0"
+      className="min-w-0 shrink-0"
       onKeyDown={(event) => {
         if (event.key === "Escape" && open) {
           event.stopPropagation();
@@ -64,12 +75,13 @@ export function SiteNav() {
       <button
         ref={toggleRef}
         type="button"
-        className="nav-toggle inline-flex min-h-11 min-w-11 items-center justify-center rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink lg:hidden"
+        className="nav-toggle inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md border border-edge bg-paper px-3 text-sm font-medium text-ink lg:hidden"
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
       >
         <span className="sr-only">{open ? tCommon("closeMenu") : tCommon("openMenu")}</span>
+        <EcoMorphIcon icon={open ? MORPH_PATHS.close : MORPH_PATHS.menu} className="h-5 w-5 shrink-0" />
         <span aria-hidden="true">{open ? tCommon("closeShort") : tCommon("menuShort")}</span>
       </button>
 
@@ -102,13 +114,14 @@ export function SiteNav() {
                 aria-current={active ? "page" : undefined}
                 onClick={close}
                 className={[
-                  "block whitespace-nowrap rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors duration-quick ease-out",
-                  "min-h-11 lg:min-h-0 lg:py-2 lg:text-sm",
+                  "flex items-center gap-3 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-base font-medium transition-colors duration-quick ease-out",
+                  "min-h-11 lg:min-h-0 lg:px-2 lg:py-2 lg:text-sm",
                   active
                     ? "bg-mint-surface text-primary font-semibold"
                     : "text-muted hover:bg-mint-surface/50 hover:text-ink",
                 ].join(" ")}
               >
+                <EcoMorphIcon icon={NAV_ICONS[key]} className="h-5 w-5 shrink-0 lg:hidden" />
                 {translatedLabel}
               </Link>
             </li>

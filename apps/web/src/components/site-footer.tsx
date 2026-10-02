@@ -1,3 +1,4 @@
+import { AuthEntryLink } from "@/components/auth-entry-link";
 import { useTranslations } from "next-intl";
 import { APP_NAME } from "@greencity/shared";
 import { Link } from "@/i18n/routing";
@@ -48,20 +49,20 @@ export function SiteFooter() {
               </li>
             ))}
             <li>
-              <Link
+              <AuthEntryLink
                 href="/dang-ky"
                 className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition-colors hover:text-primary hover:underline"
               >
                 {tFooter("register")}
-              </Link>
+              </AuthEntryLink>
             </li>
             <li>
-              <Link
+              <AuthEntryLink
                 href="/dang-nhap"
                 className="inline-flex min-h-11 items-center text-sm font-medium text-muted transition-colors hover:text-primary hover:underline"
               >
                 {tFooter("login")}
-              </Link>
+              </AuthEntryLink>
             </li>
           </ul>
         </nav>

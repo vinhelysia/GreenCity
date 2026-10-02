@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, Header, Param, Post, Query, Req, Res } from '@nestjs/common';
 import {
   PaginationQuerySchema,
   type PaginationQuery,
@@ -14,7 +14,7 @@ import { ListingService } from './listing.service';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { parsePaginationQuery } from '../common/pagination';
 
-@Controller('marketplace/listings')
+@Controller('marketplace')
 export class ListingController {
   constructor(
     private readonly listings: ListingService,
@@ -22,7 +22,7 @@ export class ListingController {
   ) {}
 
   @Public()
-  @Get()
+  @Get('listings')
   async list(
     @Query(new ZodValidationPipe(PaginationQuerySchema))
     query: PaginationQuery,
@@ -35,7 +35,7 @@ export class ListingController {
 
   /** Photo visibility follows the listing, not the underlying asset's ownership. */
   @Public()
-  @Get(':id/photo')
+  @Get('listings/:id/photo')
   async photo(@Param('id') id: string, @Res() res: Response) {
     const { contentType, body } = await this.listings.getPhoto(id);
     res.setHeader('Content-Type', contentType);
@@ -48,13 +48,19 @@ export class ListingController {
     res.send(body);
   }
 
-  @Post(':id/reserve')
+  @Post('listings/:id/reserve')
   async reserve(
     @CurrentUser() auth: AuthContext,
     @Param('id') id: string,
     @Req() req: Request,
   ) {
     return this.listings.reserve(auth, id, getRequestId(req));
+  }
+
+  @Get('reservations/:id')
+  @Header('Cache-Control', 'private, no-store')
+  async reservation(@CurrentUser() auth: AuthContext, @Param('id') id: string) {
+    return this.listings.getReservation(auth, id);
   }
 
   /** Best-effort session resolution — an absent or invalid cookie is not an error here. */

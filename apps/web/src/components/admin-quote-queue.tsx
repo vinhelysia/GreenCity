@@ -1,11 +1,12 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useLocale, useTranslations } from "next-intl";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { CreateQuoteRequestSchema, type ScrapRequestDto } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
-import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   fetchAdminSubmittedScrapRequests,
@@ -67,12 +68,12 @@ export function AdminQuoteQueue() {
         title={locale === "en" ? "Sign In Required" : "Cần đăng nhập"}
         description={
           <p>
-            <Link
+            <AuthEntryLink
               href="/dang-nhap"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
               {tAuth("loginButton")}
-            </Link>{" "}
+            </AuthEntryLink>{" "}
             {locale === "en" ? "with an administrator account to view the queue." : "bằng tài khoản quản trị viên để xem hàng chờ báo giá."}
           </p>
         }

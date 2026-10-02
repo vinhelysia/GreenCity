@@ -16,6 +16,7 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Section } from "@/components/section";
 import { SignInRequired } from "@/components/sign-in-required";
+import { AccountReservationDetails } from "@/components/reservation-details";
 import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
@@ -154,6 +155,7 @@ function AuthenticatedAccountDashboard({
   const locale = useLocale();
   const tAccount = useTranslations("account");
   const tCommon = useTranslations("common");
+  const tCollection = useTranslations("collection");
   const [points, setPoints] = useState<LoadState<PointsBalance>>({
     status: "loading",
   });
@@ -250,6 +252,7 @@ function AuthenticatedAccountDashboard({
 
   return (
     <div data-testid="account-dashboard" className="min-w-0 space-y-10">
+      <AccountReservationDetails />
       <Section id="account-profile" title={tAccount("profileTitle")} tone="open">
         {/* No card: the Section already bounds this, and identity reads better
             as a heading with details under it than as a boxed record. */}
@@ -437,6 +440,10 @@ function AuthenticatedAccountDashboard({
                     </p>
                   </div>
                   <StatusBadge status={reservation.status} />
+                  <div className="flex w-full flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-muted">{tCollection(reservation.role === "BUYER" ? "buyer" : "seller")}</span>
+                    <Link href={{ pathname: "/tai-khoan", query: { reservation: reservation.id } }} className="inline-flex min-h-11 items-center font-semibold text-primary underline-offset-4 hover:underline">{tCollection("view")}</Link>
+                  </div>
                 </li>
               ))}
             </ul>

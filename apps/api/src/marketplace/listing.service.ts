@@ -6,7 +6,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type { ListingStatus, MarketplaceListingList } from '@greencity/shared';
+import type {
+  AdminListingList, CancelReservation, CompleteReservation,
+  ListingStatus, MarketplaceListingList, ScheduleReservation,
+} from '@greencity/shared';
 import { AuditService } from '../audit/audit.service';
 import type { AuthContext } from '../authz/auth-context';
 import { PointsService } from '../points/points.service';
@@ -21,7 +24,13 @@ import {
   type ObjectStorage,
 } from '../storage/storage.types';
 import { SubscriptionService } from './subscription.service';
-import { toListingDto } from './marketplace.mapper';
+import { toListingDto, toReservationDto } from './marketplace.mapper';
+
+const contactSelect = { displayName: true, email: true, phone: true } as const;
+const reservationInclude = {
+  listing: { include: { seller: { select: contactSelect } } },
+  buyer: { select: contactSelect },
+} as const;
 
 @Injectable()
 export class ListingService {
@@ -75,7 +84,7 @@ export class ListingService {
   async adminList(
     status?: ListingStatus,
     pagination: PaginationParams = { limit: 20 },
-  ): Promise<MarketplaceListingList> {
+  ): Promise<AdminListingList> {
     const baseWhere = status ? { status } : {};
     const rows = await this.prisma.marketplaceListing.findMany({
       where: pagination.cursor
@@ -83,13 +92,19 @@ export class ListingService {
         : baseWhere,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: pagination.limit + 1,
-      include: { scrapRequest: { include: { category: true } } },
+      include: {
+        scrapRequest: { include: { category: true } },
+        reservations: { where: { status: 'RESERVED' }, take: 1, include: reservationInclude },
+      },
     });
     // No viewer: an admin is acting on the listing, not shopping for it.
     const page = rows.slice(0, pagination.limit);
     const next = rows.length > pagination.limit ? page.at(-1) : undefined;
     return {
-      listings: page.map((row) => toListingDto(row, null)),
+      listings: page.map((row) => ({
+        ...toListingDto(row, null),
+        reservation: row.reservations[0] ? toReservationDto(row.reservations[0], true) : null,
+      })),
       ...(next
         ? {
             nextCursor: encodePaginationCursor({
@@ -206,43 +221,69 @@ export class ListingService {
     return { ok: true, reservationId: reservation.id };
   }
 
-  async adminComplete(
-    auth: AuthContext,
-    id: string,
-    requestId?: string,
-  ): Promise<{ ok: true }> {
+  async getReservation(auth: AuthContext, id: string) {
+    const isAdmin = auth.roles.includes('ADMIN');
+    const row = await this.prisma.reservation.findFirst({
+      where: {
+        id,
+        ...(isAdmin ? {} : { OR: [{ buyerId: auth.user.id }, { listing: { sellerId: auth.user.id } }] }),
+      },
+      include: reservationInclude,
+    });
+    if (!row) throw new NotFoundException({ code: 'RESERVATION_NOT_FOUND', message: 'Reservation not found.' });
+    return toReservationDto(row, isAdmin);
+  }
+
+  async adminSchedule(auth: AuthContext, id: string, body: ScheduleReservation, requestId?: string) {
     await this.prisma.$transaction(async (tx) => {
-      const update = await tx.marketplaceListing.updateMany({
+      const updated = await tx.reservation.updateMany({
         where: { id, status: 'RESERVED' },
-        data: { status: 'COMPLETED' },
+        data: { ...body, scheduledAt: new Date(body.scheduledAt), scheduledById: auth.user.id },
       });
-      if (update.count === 0) {
-        throw new ConflictException({
-          code: 'LISTING_NOT_AVAILABLE',
-          message: 'Listing is not reserved',
-        });
+      if (!updated.count) throw new ConflictException({ code: 'RESERVATION_NOT_ACTIVE', message: 'Reservation is no longer active.' });
+      await tx.auditLog.create({ data: { actorId: auth.user.id, action: 'reservation.schedule', targetType: 'Reservation', targetId: id, requestId } });
+    });
+    return { ok: true };
+  }
+
+  adminComplete(auth: AuthContext, id: string, body: CompleteReservation, requestId?: string) {
+    return this.finishReservation(auth, id, { status: 'COMPLETED', settlement: body }, requestId);
+  }
+
+  adminCancel(auth: AuthContext, id: string, body: CancelReservation, requestId?: string) {
+    return this.finishReservation(auth, id, { status: 'CANCELLED', reason: body.reason }, requestId);
+  }
+
+  private async finishReservation(
+    auth: AuthContext, id: string,
+    outcome: { status: 'COMPLETED'; settlement: CompleteReservation } | { status: 'CANCELLED'; reason: string },
+    requestId?: string,
+  ) {
+    await this.prisma.$transaction(async (tx) => {
+      const row = await tx.reservation.findUnique({ where: { id }, include: { listing: true } });
+      if (!row) throw new NotFoundException({ code: 'RESERVATION_NOT_FOUND', message: 'Reservation not found.' });
+      // Lock listing before reservation, matching reserve(). The relation guard
+      // prevents an old reservation from changing a rebooked listing.
+      const listing = await tx.marketplaceListing.updateMany({
+        where: { id: row.listingId, status: 'RESERVED', reservations: { some: { id, status: 'RESERVED' } } },
+        data: { status: outcome.status === 'COMPLETED' ? 'COMPLETED' : 'AVAILABLE' },
+      });
+      if (!listing.count) throw new ConflictException({ code: 'RESERVATION_NOT_ACTIVE', message: 'Reservation is no longer active.' });
+      const updated = await tx.reservation.updateMany({
+        where: { id, status: 'RESERVED' },
+        data: outcome.status === 'COMPLETED'
+          ? { status: outcome.status, ...outcome.settlement, completedAt: new Date(), completedById: auth.user.id }
+          : { status: outcome.status, cancelReason: outcome.reason, cancelledAt: new Date(), cancelledById: auth.user.id },
+      });
+      if (!updated.count) throw new ConflictException({ code: 'RESERVATION_NOT_ACTIVE', message: 'Reservation is no longer active.' });
+      if (outcome.status === 'COMPLETED') {
+        await this.points.awardListingCompleted(tx, row.listing, outcome.settlement.sellerReceivedAmountVnd);
       }
-
-      const listing = await tx.marketplaceListing.findUniqueOrThrow({
-        where: { id },
-        select: {
-          id: true,
-          sellerId: true,
-          estimatedWeightKg: true,
-          sellerPricePerKgVnd: true,
-        },
-      });
-      await this.points.awardListingCompleted(tx, listing);
+      await tx.auditLog.create({ data: {
+        actorId: auth.user.id, action: outcome.status === 'COMPLETED' ? 'reservation.complete' : 'reservation.cancel',
+        targetType: 'Reservation', targetId: id, requestId, metadata: { listingId: row.listingId },
+      } });
     });
-
-    await this.audit.record({
-      actorId: auth.user.id,
-      action: 'listing.complete',
-      targetType: 'MarketplaceListing',
-      targetId: id,
-      requestId,
-    });
-
     return { ok: true };
   }
 }

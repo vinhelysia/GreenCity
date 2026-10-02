@@ -16,6 +16,7 @@
   "dependencies": {
     "@greencity/shared": "workspace:*",
     "leaflet": "^1.9.4",
+    "morphicons": "1.7.1",
     "next": "^15.5.21",
     "next-intl": "^4.13.4",
     "react": "^19.0.0",

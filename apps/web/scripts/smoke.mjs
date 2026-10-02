@@ -5,6 +5,7 @@
 import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import "./auth-return.test.mjs";
 
 const webRoot = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const srcRoot = join(webRoot, "src");
