@@ -17,7 +17,7 @@
     "@greencity/shared": "workspace:*",
     "leaflet": "^1.9.4",
     "morphicons": "1.7.1",
-    "next": "^15.5.21",
+    "next": "^15.5.24",
     "next-intl": "^4.13.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -31,7 +31,7 @@
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.17.0",
-    "eslint-config-next": "^15.5.21",
+    "eslint-config-next": "^15.5.24",
     "postcss": "^8.5.23",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
