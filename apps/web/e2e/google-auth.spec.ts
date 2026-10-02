@@ -36,7 +36,7 @@ test("Google email collision is localized, email login stays usable, narrow layo
   for (const [route, button, message] of [
     ["/dang-nhap?googleError=link_required", "Đăng nhập với Google", "Hãy đăng nhập bằng mật khẩu"],
     ["/en/login?googleError=link_required", "Sign in with Google", "Sign in with your password"],
-  ]) {
+  ] as const) {
     await page.setViewportSize({ width: 320, height: 900 });
     await page.goto(route);
     await expect(page.getByRole("button", { name: button, exact: true })).toBeVisible();
