@@ -5,11 +5,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { PasswordService } from './password.service';
 import { SessionModule } from './session.module';
+import { GoogleAuthService } from './google-auth.service';
+import { GoogleAuthController } from './google-auth.controller';
 
 @Module({
   imports: [AuditModule, SessionModule, AuthzModule],
-  controllers: [AuthController],
-  providers: [AuthService, PasswordService],
+  controllers: [AuthController, GoogleAuthController],
+  providers: [AuthService, PasswordService, GoogleAuthService],
   exports: [AuthService, PasswordService, SessionModule],
 })
 export class AuthModule {}

@@ -119,6 +119,14 @@
     }
   },
   "auth": {
+    "googleSignIn": "Sign in with Google",
+    "googleLink": "Link Google account",
+    "googleLinked": "Google account linked. You can sign in with Google.",
+    "googleLinkHint": "Choose the Google account with the same email as your GreenCity account.",
+    "googleOrEmail": "Or continue with email",
+    "googleRedirecting": "Opening Google...",
+    "googleFailed": "Unable to complete Google sign-in. Please try again.",
+    "googleLinkRequired": "This email already has a GreenCity account. Sign in with your password, then link Google from your account page.",
     "loginTitle": "Sign In",
     "loginDesc": "Sign in to manage sell requests, track purchases, and view your rewards ledger.",
     "registerTitle": "Create Account",

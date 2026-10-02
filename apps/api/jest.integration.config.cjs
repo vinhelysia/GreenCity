@@ -10,6 +10,7 @@ const base = require('./jest.config.cjs');
 module.exports = {
   ...base,
   testMatch: [
+    '<rootDir>/test/google-auth.integration.test.ts',
     '<rootDir>/test/phase1.integration.test.ts',
     '<rootDir>/test/marketplace.integration.test.ts',
     '<rootDir>/test/cleanup.integration.test.ts',

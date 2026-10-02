@@ -25,6 +25,7 @@
     "argon2": "^0.44.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^16.6.1",
+    "google-auth-library": "^10.9.1",
     "multer": "2.3.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
