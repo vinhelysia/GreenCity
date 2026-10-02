@@ -161,6 +161,12 @@ enum ListingStatus {
   CANCELLED
 }
 
+enum ReservationStatus {
+  RESERVED
+  COMPLETED
+  CANCELLED
+}
+
 enum SubscriptionStatus {
   ACTIVE
   EXPIRED
@@ -249,23 +255,37 @@ model MarketplaceListing {
   mediaAssetId        String
   createdAt           DateTime      @default(now())
 
-  reservation Reservation?
+  reservations Reservation[]
 
   @@index([status])
 }
 
-/// At most one reservation per listing — enforced here by @unique and, in the
-/// application layer, by a conditional status update so two concurrent
-/// reserve calls resolve to exactly one success.
+/// History survives cancellation. A partial unique index in the migration
+/// allows at most one RESERVED row per listing; status transitions also lock
+/// the listing with a conditional update inside the same transaction.
 model Reservation {
   id        String             @id @default(cuid())
-  listingId String             @unique
+  listingId String
   listing   MarketplaceListing @relation(fields: [listingId], references: [id])
   buyerId   String
   buyer     User               @relation(fields: [buyerId], references: [id])
   createdAt DateTime           @default(now())
+  status    ReservationStatus  @default(RESERVED)
+  scheduledAt DateTime?
+  pickupLocation String?
+  coordinatorContact String?
+  scheduledById String?
+  completedAt DateTime?
+  completedById String?
+  actualWeightKg Float?
+  sellerReceivedAmountVnd Int?
+  receiptNote String?
+  cancelledAt DateTime?
+  cancelledById String?
+  cancelReason String?
 
   @@index([buyerId])
+  @@index([listingId])
 }
 
 /// Eligibility gate for reserving a listing. Not a role — several rows per

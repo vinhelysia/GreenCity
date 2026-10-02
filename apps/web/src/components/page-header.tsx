@@ -18,7 +18,7 @@ export function PageHeader({ title, description, eyebrow }: PageHeaderProps) {
           </EcoBadge>
         </div>
       ) : null}
-      <h1 className="font-display text-3.5xl font-extrabold tracking-tight text-ink sm:text-4xl">
+      <h1 className="font-display text-3xl font-extrabold tracking-tight text-ink sm:text-4xl">
         {title}
       </h1>
       {description ? (

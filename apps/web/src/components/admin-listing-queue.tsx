@@ -1,24 +1,27 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { MarketplaceListing } from "@greencity/shared";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import type { AdminListingList } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
-import { Link } from "@/i18n/routing";
+import { ReservationSummary } from "@/components/reservation-details";
 import {
   checkAuthExpiry,
-  completeListing,
+  completeReservation,
+  cancelReservation,
+  scheduleReservation,
   fetchAdminReservedListings,
   marketplaceErrorMessage,
 } from "@/lib/api";
-import { formatCategoryName, formatVnd } from "@/lib/format";
 
 type LoadState =
   | { status: "loading" }
   | { status: "forbidden" }
   | { status: "error"; message: string }
-  | { status: "ready"; data: MarketplaceListing[]; nextCursor?: string };
+  | { status: "ready"; data: AdminListingList["listings"]; nextCursor?: string };
 
 export function AdminListingQueue() {
   const locale = useLocale();
@@ -26,6 +29,7 @@ export function AdminListingQueue() {
   const tCommon = useTranslations("common");
   const tAuth = useTranslations("auth");
   const tErr = useTranslations("errors");
+  const tCollection = useTranslations("collection");
   const { status: authStatus, user, clearSessionAndRedirect } = useAuth();
   const isAdmin = user?.roles.includes("ADMIN") ?? false;
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -116,12 +120,12 @@ export function AdminListingQueue() {
         title={locale === "en" ? "Sign In Required" : "Cần đăng nhập"}
         description={
           <p>
-            <Link
+            <AuthEntryLink
               href="/dang-nhap"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
               {tAuth("loginButton")}
-            </Link>{" "}
+            </AuthEntryLink>{" "}
             {locale === "en" ? "with an administrator account." : "bằng tài khoản quản trị viên để xem giao dịch đang chờ."}
           </p>
         }
@@ -141,6 +145,7 @@ export function AdminListingQueue() {
 
   return (
     <div role="status" aria-live="polite" className="min-w-0">
+      <button type="button" disabled={state.status === "loading"} onClick={() => void load()} className="mb-4 inline-flex min-h-11 items-center rounded-md border border-edge px-4 text-sm font-semibold disabled:opacity-60">{tCollection("refresh")}</button>
       {state.status === "loading" ? (
         <div aria-hidden="true" className="flex flex-col gap-3">
           <div className="skeleton h-28 w-full" />
@@ -204,26 +209,41 @@ function AdminListingRow({
   onActionComplete,
   clearSessionAndRedirect,
 }: {
-  listing: MarketplaceListing;
+  listing: AdminListingList["listings"][number];
   onActionComplete: () => void;
   clearSessionAndRedirect: () => void;
 }) {
   const locale = useLocale();
-  const tAdmin = useTranslations("admin");
-  const tMkt = useTranslations("marketplace");
+  const t = useTranslations("collection");
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const reservation = listing.reservation;
+  const inputClass = "mt-1 block min-h-11 w-full min-w-0 rounded-md border border-edge bg-paper px-3 py-2 text-sm";
+  const buttonClass = "inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60";
+  const localAppointment = reservation?.scheduledAt ? new Date(new Date(reservation.scheduledAt).getTime() - new Date(reservation.scheduledAt).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : "";
 
-  async function onComplete() {
+  async function onSubmit(event: FormEvent<HTMLFormElement>, action: "schedule" | "complete" | "cancel") {
+    event.preventDefault();
+    if (!reservation || submitting) return;
+    const data = new FormData(event.currentTarget);
+    const appointment = new Date(String(data.get("scheduledAt")));
+    if (action === "schedule" && !Number.isFinite(appointment.getTime())) {
+      setServerError(t("appointment"));
+      return;
+    }
     setServerError(null);
     setSubmitting(true);
     const result = checkAuthExpiry(
-      await completeListing(listing.id),
+      await (action === "schedule"
+        ? scheduleReservation(reservation.id, { scheduledAt: appointment.toISOString(), pickupLocation: String(data.get("pickupLocation")), coordinatorContact: String(data.get("coordinatorContact")) })
+        : action === "complete"
+          ? completeReservation(reservation.id, { actualWeightKg: Number(data.get("actualWeightKg")), sellerReceivedAmountVnd: Number(data.get("sellerReceivedAmountVnd")), receiptNote: String(data.get("receiptNote")) })
+          : cancelReservation(reservation.id, { reason: String(data.get("reason")) })),
       clearSessionAndRedirect,
     );
+    setSubmitting(false);
     if (!result.ok) {
       setServerError(marketplaceErrorMessage(result.error, locale));
-      setSubmitting(false);
       return;
     }
     onActionComplete();
@@ -231,33 +251,42 @@ function AdminListingRow({
 
   return (
     <li className="min-w-0 rounded-md border border-edge bg-paper p-4">
-      <div className="min-w-0">
-        <p className="font-medium text-ink">{formatCategoryName(listing.categoryName, locale)}</p>
-        <p className="mt-1 text-sm text-muted">
-          {tMkt("quantity", { weight: listing.estimatedWeightKg })} ·{" "}
-          {tMkt("unitPrice", { price: formatVnd(listing.buyerPricePerKgVnd, locale) })}
-        </p>
-        <p className="mt-1 text-sm font-semibold text-ink">
-          {locale === "en" ? "Estimate: " : "Ước tính: "}{formatVnd(listing.estimatedTotalVnd, locale)}
-        </p>
-        <p className="mt-1 text-xs text-muted">
-          {locale === "en" ? "Reserved, awaiting delivery confirmation." : "Đã được đặt giữ, chờ xác nhận giao hàng."}
-        </p>
-      </div>
-
-      <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2 border-t border-rule pt-3">
-        <button
-          type="button"
-          disabled={submitting}
-          onClick={() => void onComplete()}
-          className="inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-eco-sm transition-opacity duration-quick ease-out hover:opacity-90 disabled:opacity-60"
-        >
-          {submitting ? tAdmin("processing") : tAdmin("completeTx")}
-        </button>
-        <p className="text-xs text-muted">
-          {locale === "en" ? "Seller awarded points upon completion." : "Người bán được cộng điểm thưởng khi hoàn tất."}
-        </p>
-      </div>
+      {reservation ? (
+        <>
+          <ReservationSummary reservation={reservation} />
+          <fieldset disabled={submitting} className="mt-4 min-w-0 space-y-3 border-t border-rule pt-3 disabled:opacity-60">
+            <details>
+              <summary className="cursor-pointer py-3 font-semibold text-primary">{t("schedule")}</summary>
+              <form onSubmit={event => void onSubmit(event, "schedule")} className="space-y-3 pb-3 text-sm">
+                <label className="block">{t("appointment")}<input className={inputClass} name="scheduledAt" type="datetime-local" defaultValue={localAppointment} required /></label>
+                <p className="text-xs text-muted">{t("timezone", { zone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</p>
+                <label className="block">{t("location")}<input className={inputClass} name="pickupLocation" minLength={3} maxLength={240} defaultValue={reservation.pickupLocation ?? ""} required /></label>
+                <label className="block">{t("contact")}<input className={inputClass} name="coordinatorContact" minLength={3} maxLength={160} defaultValue={reservation.coordinatorContact ?? ""} required /></label>
+                <button className={buttonClass} type="submit">{submitting ? t("processing") : t("saveSchedule")}</button>
+              </form>
+            </details>
+            <details>
+              <summary className="cursor-pointer py-3 font-semibold text-primary">{t("complete")}</summary>
+              <form onSubmit={event => void onSubmit(event, "complete")} className="space-y-3 pb-3 text-sm">
+                <p className="leading-6 text-muted">{t("manualNotice")}</p>
+                <label className="block">{t("actualWeight")}<input className={inputClass} name="actualWeightKg" type="number" min="0.001" max="1000" step="0.001" required /></label>
+                <label className="block">{t("receivedAmount")}<input className={inputClass} name="sellerReceivedAmountVnd" type="number" min="1" max="2147483647" step="1" required /></label>
+                <label className="block">{t("receipt")}<textarea className={inputClass} name="receiptNote" minLength={3} maxLength={500} required /></label>
+                <p className="text-xs text-muted">{t("pointsNotice")}</p>
+                <button className={buttonClass} type="submit">{submitting ? t("processing") : t("complete")}</button>
+              </form>
+            </details>
+            <details>
+              <summary className="cursor-pointer py-3 font-semibold text-coral">{t("cancel")}</summary>
+              <form onSubmit={event => void onSubmit(event, "cancel")} className="space-y-3 pb-3 text-sm">
+                <p className="leading-6 text-muted">{t("cancelNotice")}</p>
+                <label className="block">{t("cancelReason")}<textarea className={inputClass} name="reason" minLength={3} maxLength={500} required /></label>
+                <button className="inline-flex min-h-11 items-center rounded-md border border-coral px-4 py-2 font-semibold text-coral disabled:opacity-60" type="submit">{submitting ? t("processing") : t("cancel")}</button>
+              </form>
+            </details>
+          </fieldset>
+        </>
+      ) : <p className="text-sm text-muted">{t("noReservation")}</p>}
 
       {serverError ? (
         <p role="alert" className="mt-2 text-sm text-red-800">

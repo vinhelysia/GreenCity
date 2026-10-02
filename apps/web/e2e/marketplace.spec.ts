@@ -1,7 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { attachRuntimeGuards, assertCleanRuntime, waitForAuthReady } from "./helpers";
+import { mkdirSync } from "node:fs";
+import { attachRuntimeGuards, assertCleanRuntime, assertNoHorizontalOverflow, waitForAuthReady } from "./helpers";
 
 /**
  * The full marketplace flow through the browser, proving the screens wire to the
@@ -10,15 +11,15 @@ import { attachRuntimeGuards, assertCleanRuntime, waitForAuthReady } from "./hel
  * and the seeded (subscribed) buyer reserves it — after which it is no longer
  * on the market.
  *
- * Requires the local DB to be seeded (pnpm --filter api db:seed): it uses the
- * seeded admin@ and buyer@ accounts and the seeded categories. Admin role and a
- * buyer subscription cannot be created through the UI by design, so they must
- * come from the seed. DEMO_PASSWORD must match what the DB was seeded with.
+ * Requires seeded admin and categories. The buyer is test-owned and gets a
+ * pass through the admin grant UI, so the test never depends on an old demo
+ * subscription's expiry. DEMO_PASSWORD must match the seeded admin account.
  */
 
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "GreenCity-Demo-2026";
 const SUFFIX = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 const SELLER_EMAIL = `seller-${SUFFIX}@market-${SUFFIX}.test`;
+const BUYER_EMAIL = `buyer-${SUFFIX}@market-${SUFFIX}.test`;
 
 // A unique weight per run so this run's request/listing never collides with a
 // leftover from another run or the seeded PET listings.
@@ -53,6 +54,7 @@ async function logout(page: Page) {
 }
 
 test("seller submits, admin quotes, seller accepts, buyer reserves @core", async ({ page }) => {
+  test.setTimeout(120_000);
   const issues = attachRuntimeGuards(page, { allowConflict: true });
 
   // 1. Fresh seller registers.
@@ -88,7 +90,7 @@ test("seller submits, admin quotes, seller accepts, buyer reserves @core", async
   await page.getByRole("button", { name: "Gửi yêu cầu" }).click();
   expect((await submitResp).status()).toBe(201);
   // The request appears in "my requests" with its weight.
-  await expect(page.getByText(`${WEIGHT}kg`, { exact: false })).toBeVisible({
+  await expect(page.getByText(`${Number(WEIGHT)}kg`, { exact: false })).toBeVisible({
     timeout: 15_000,
   });
   await logout(page);
@@ -108,7 +110,7 @@ test("seller submits, admin quotes, seller accepts, buyer reserves @core", async
   ).toBeVisible();
 
   await page.goto("/admin/bao-gia", { waitUntil: "networkidle" });
-  const adminRow = page.locator("li").filter({ hasText: `${WEIGHT}kg` }).first();
+  const adminRow = page.locator("li").filter({ hasText: `${Number(WEIGHT)}kg` }).first();
   await expect(adminRow).toBeVisible({ timeout: 15_000 });
   await adminRow.getByLabel("Giá báo (đ/kg)").fill(String(PRICE));
   const quoteResp = page.waitForResponse(
@@ -132,8 +134,23 @@ test("seller submits, admin quotes, seller accepts, buyer reserves @core", async
   });
   await logout(page);
 
-  // 5. Seeded, subscribed buyer reserves the now-live listing.
-  await login(page, "buyer@greencity.demo", DEMO_PASSWORD);
+  // 5. A fresh buyer gets a test-only pass from the existing admin grant UI.
+  await page.goto("/dang-ky", { waitUntil: "networkidle" });
+  await waitForAuthReady(page);
+  await page.getByLabel(/Tên hiển thị/i).fill("Buyer Test");
+  await page.getByLabel("Email").fill(BUYER_EMAIL);
+  await page.getByLabel("Mật khẩu", { exact: true }).fill(DEMO_PASSWORD);
+  await page.getByRole("button", { name: "Đăng ký", exact: true }).click();
+  await expect(page.getByTestId("header-logout")).toBeVisible();
+  await logout(page);
+  await login(page, "admin@greencity.demo", DEMO_PASSWORD);
+  await page.goto("/admin/giao-dich", { waitUntil: "networkidle" });
+  await page.getByLabel("Email tài khoản").fill(BUYER_EMAIL);
+  await page.getByLabel("Lý do cấp").fill("Disposable collection browser test");
+  await page.getByRole("button", { name: "Cấp gói", exact: true }).click();
+  await expect(page.getByTestId("grant-pass-success")).toContainText(BUYER_EMAIL);
+  await logout(page);
+  await login(page, BUYER_EMAIL, DEMO_PASSWORD);
   await page.goto("/cho-online", { waitUntil: "networkidle" });
   const listingCard = page
     .locator("li")
@@ -148,14 +165,81 @@ test("seller submits, admin quotes, seller accepts, buyer reserves @core", async
   );
   await listingCard.getByRole("button", { name: "Đặt giữ" }).click();
   // The reservation is created: this is the end-to-end proof the flow works.
-  expect((await reserveResp).status()).toBe(201);
+  const reserved = await reserveResp;
+  expect(reserved.status()).toBe(201);
+  const { reservationId } = await reserved.json();
 
   // A 201 alone is not proof the buyer was told it worked. Checking only the
   // response let a bug ship where the reservation succeeded while the row
-  // showed an error, so assert what the buyer ends up looking at. On success
-  // the list reloads and the listing leaves the market; on that failure the
-  // reload never ran and the card stayed put next to an error.
-  await expect(listingCard).toHaveCount(0, { timeout: 15_000 });
+  // showed an error. The buyer must reach the new private order details.
+  await expect(page).toHaveURL(new RegExp(`/tai-khoan\\?reservation=${reservationId}$`));
+  await expect(page.getByTestId("account-reservation-detail")).toContainText(reservationId);
+  await expect(page.getByTestId("account-reservation-detail")).toContainText("Chờ admin điều phối");
+
+  // Cancel from the mobile admin UI, then rebook without erasing the first order.
+  await logout(page);
+  await login(page, "admin@greencity.demo", DEMO_PASSWORD);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/admin/giao-dich", { waitUntil: "networkidle" });
+  const cancelledRow = page.locator("li").filter({ hasText: reservationId });
+  await cancelledRow.locator("summary").filter({ hasText: "Hủy đơn và mở lại tin" }).click();
+  await cancelledRow.getByLabel("Lý do hủy").fill("Buyer needs another pickup appointment");
+  await cancelledRow.getByRole("button", { name: "Hủy đơn và mở lại tin" }).click();
+  await expect(cancelledRow).toHaveCount(0);
+  await logout(page);
+  await login(page, BUYER_EMAIL, DEMO_PASSWORD);
+  await page.goto(`/tai-khoan?reservation=${reservationId}`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("account-reservation-detail")).toContainText("Đã hủy");
+  await page.goto("/cho-online", { waitUntil: "networkidle" });
+  const rebookResponse = page.waitForResponse(r => /\/api\/marketplace\/listings\/[^/]+\/reserve/.test(r.url()) && r.request().method() === "POST");
+  await page.locator("li").filter({ hasText: LISTING_TOTAL }).first().getByRole("button", { name: "Đặt giữ" }).click();
+  const rebook = await rebookResponse;
+  expect(rebook.status()).toBe(201);
+  const nextId = (await rebook.json()).reservationId;
+  expect(nextId).not.toBe(reservationId);
+  await expect(page.getByTestId("account-reservation-detail")).toContainText(nextId);
+  await logout(page);
+  await login(page, "admin@greencity.demo", DEMO_PASSWORD);
+  await page.goto("/admin/giao-dich", { waitUntil: "networkidle" });
+  const activeRow = page.locator("li").filter({ hasText: nextId });
+  await activeRow.locator("summary").filter({ hasText: "Lịch lấy hàng" }).click();
+  await activeRow.getByLabel("Ngày giờ lấy hàng").fill("2026-11-01T08:00");
+  await activeRow.getByLabel("Điểm hẹn").fill("Campus collection point — UI test");
+  await activeRow.getByLabel("Liên hệ điều phối").fill("Coordinator TEST: 0900000000");
+  await assertNoHorizontalOverflow(page);
+  await activeRow.getByRole("button", { name: "Lưu lịch hẹn" }).click();
+  await expect(activeRow.getByTestId("reservation-summary")).toContainText("Campus collection point — UI test");
+  // The seller can see the appointment before completion.
+  await logout(page);
+  await login(page, SELLER_EMAIL, DEMO_PASSWORD);
+  await page.goto(`/tai-khoan?reservation=${nextId}`, { waitUntil: "networkidle" });
+  await expect(page.getByTestId("account-reservation-detail")).toContainText("Coordinator TEST: 0900000000");
+  await logout(page);
+  await login(page, "admin@greencity.demo", DEMO_PASSWORD);
+  await page.goto("/admin/giao-dich", { waitUntil: "networkidle" });
+  const completionRow = page.locator("li").filter({ hasText: nextId });
+  await completionRow.locator("summary").filter({ hasText: "Xác nhận đã thu gom và trả tiền" }).click();
+  const actualWeight = Number((Number(WEIGHT) - 1).toFixed(3));
+  const receivedAmount = Math.round(actualWeight * PRICE);
+  await completionRow.getByLabel("Khối lượng thực cân (kg)").fill(String(actualWeight));
+  await completionRow.getByLabel("Tiền seller đã nhận (VND)").fill(String(receivedAmount));
+  await completionRow.getByLabel("Mã hoặc ghi chú biên nhận").fill("Cash receipt UI-001 — seller confirmed");
+  await assertNoHorizontalOverflow(page);
+  await completionRow.getByRole("button", { name: "Xác nhận đã thu gom và trả tiền" }).click();
+  await expect(completionRow).toHaveCount(0);
+  await logout(page);
+  await login(page, SELLER_EMAIL, DEMO_PASSWORD);
+  await page.goto(`/tai-khoan?reservation=${nextId}`, { waitUntil: "networkidle" });
+  const completedDetail = page.getByTestId("account-reservation-detail");
+  await expect(completedDetail).toContainText("Hoàn tất");
+  await expect(completedDetail).toContainText(receivedAmount.toLocaleString("vi-VN"));
+  await expect(completedDetail).toContainText("Cash receipt UI-001");
+  await expect(page.getByTestId("account-points").getByText(`${Math.max(1, Math.floor(receivedAmount / 1000))} điểm`, { exact: true })).toBeVisible();
+  await assertNoHorizontalOverflow(page);
+  await page.setViewportSize({ width: 1280, height: 960 });
+  const screenshotPath = path.resolve(process.cwd(), "../../.local/verification/collection-flow-2026-10-02/collection-completed.png");
+  mkdirSync(path.dirname(screenshotPath), { recursive: true });
+  await page.screenshot({ path: screenshotPath });
 
   assertCleanRuntime(issues, "marketplace");
 });

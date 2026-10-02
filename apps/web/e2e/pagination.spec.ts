@@ -45,6 +45,19 @@ function currentUser(role: "USER" | "ADMIN") {
   };
 }
 
+function reservedListing(id: string, name: string) {
+  return {
+    ...listing(id, name), status: "RESERVED",
+    reservation: {
+      id: `reservation-${id}`, listingId: id, status: "RESERVED", categoryName: name,
+      estimatedWeightKg: 2, estimatedTotalVnd: 2400, createdAt: NOW,
+      scheduledAt: null, pickupLocation: null, coordinatorContact: null,
+      completedAt: null, actualWeightKg: null, sellerReceivedAmountVnd: null, receiptNote: null,
+      cancelledAt: null, cancelReason: null, contacts: null,
+    },
+  };
+}
+
 function scrapRequest(id: string, name: string) {
   return {
     id,
@@ -232,9 +245,9 @@ test.describe("Cursor pagination UI @core", () => {
         adminCursor = query.cursor ?? "";
         return reply(
           query.cursor
-            ? { listings: [listing("admin-two", "Admin page two")] }
+            ? { listings: [reservedListing("admin-two", "Admin page two")] }
             : {
-                listings: [listing("admin-one", "Admin page one")],
+                listings: [reservedListing("admin-one", "Admin page one")],
                 nextCursor: "admin-cursor",
               },
         );

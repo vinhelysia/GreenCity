@@ -5,6 +5,8 @@ import type {
   ScrapCategory,
   ScrapRequest,
   Subscription,
+  Reservation,
+  User,
 } from '@prisma/client';
 import type {
   MarketplaceListing,
@@ -13,6 +15,7 @@ import type {
   ScrapCategory as ScrapCategoryDto,
   ScrapRequestDto,
   Subscription as SubscriptionDto,
+  ReservationDetail,
 } from '@greencity/shared';
 
 export function toCategoryDto(category: ScrapCategory): ScrapCategoryDto {
@@ -105,5 +108,33 @@ export function toSubscriptionDto(subscription: Subscription): SubscriptionDto {
     startsAt: subscription.startsAt.toISOString(),
     expiresAt: subscription.expiresAt.toISOString(),
     note: subscription.note,
+  };
+}
+
+export function toReservationDto(
+  row: Reservation & {
+    listing: MarketplaceListingRow & { seller: Pick<User, 'displayName' | 'email' | 'phone'> };
+    buyer: Pick<User, 'displayName' | 'email' | 'phone'>;
+  },
+  isAdmin: boolean,
+): ReservationDetail {
+  return {
+    id: row.id,
+    listingId: row.listingId,
+    status: row.status,
+    categoryName: row.listing.categoryName,
+    estimatedWeightKg: row.listing.estimatedWeightKg,
+    estimatedTotalVnd: Math.round(row.listing.estimatedWeightKg * row.listing.buyerPricePerKgVnd),
+    createdAt: row.createdAt.toISOString(),
+    scheduledAt: row.scheduledAt?.toISOString() ?? null,
+    pickupLocation: row.pickupLocation,
+    coordinatorContact: row.coordinatorContact,
+    completedAt: row.completedAt?.toISOString() ?? null,
+    actualWeightKg: row.actualWeightKg,
+    sellerReceivedAmountVnd: row.sellerReceivedAmountVnd,
+    receiptNote: row.receiptNote,
+    cancelledAt: row.cancelledAt?.toISOString() ?? null,
+    cancelReason: row.cancelReason,
+    contacts: isAdmin ? { seller: row.listing.seller, buyer: row.buyer } : null,
   };
 }

@@ -1,12 +1,13 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 import type { CleanupReportDto } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
 import { EmptyState } from "@/components/empty-state";
 import { ReportCoordinates } from "@/components/report-coordinates";
-import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   fetchAdminCleanupReports,
@@ -72,12 +73,12 @@ export function AdminCleanupQueue() {
         title={locale === "en" ? "Sign In Required" : "Cần đăng nhập"}
         description={
           <p>
-            <Link
+            <AuthEntryLink
               href="/dang-nhap"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
               {tAuth("loginButton")}
-            </Link>{" "}
+            </AuthEntryLink>{" "}
             {locale === "en" ? "with an administrator account." : "bằng tài khoản quản trị viên để xem hàng chờ báo cáo."}
           </p>
         }

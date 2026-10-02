@@ -344,8 +344,8 @@ export type MarketplaceListingList = z.infer<typeof MarketplaceListingListSchema
 // ─── Marketplace: reservation ────────────────────────────────────────────────
 
 /**
- * At most one reservation per listing, enforced by a unique constraint on
- * listingId as well as by the conditional status update. Two buyers racing on
+ * At most one active reservation per listing, enforced by a partial unique
+ * index and a conditional status update. Two buyers racing on
  * the same listing produce exactly one 201 and one 409 LISTING_NOT_AVAILABLE.
  */
 export const ReservationSchema = z.object({
@@ -355,6 +355,64 @@ export const ReservationSchema = z.object({
   createdAt: z.string(),
 });
 export type Reservation = z.infer<typeof ReservationSchema>;
+
+export const ReserveListingResponseSchema = z.object({ ok: z.literal(true), reservationId: z.string().min(1) });
+export type ReserveListingResponse = z.infer<typeof ReserveListingResponseSchema>;
+
+export const ReservationStatusSchema = z.enum(["RESERVED", "COMPLETED", "CANCELLED"]);
+export const ScheduleReservationSchema = z.object({
+  scheduledAt: z.string().datetime({ offset: true }),
+  pickupLocation: z.string().trim().min(3).max(240),
+  coordinatorContact: z.string().trim().min(3).max(160),
+});
+export type ScheduleReservation = z.infer<typeof ScheduleReservationSchema>;
+
+export const CompleteReservationSchema = z.object({
+  actualWeightKg: z.number().finite().positive().max(1000),
+  sellerReceivedAmountVnd: z.number().int().positive().max(2147483647),
+  receiptNote: z.string().trim().min(3).max(500),
+});
+export type CompleteReservation = z.infer<typeof CompleteReservationSchema>;
+
+export const CancelReservationSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});
+export type CancelReservation = z.infer<typeof CancelReservationSchema>;
+
+const ReservationContactSchema = z.object({
+  displayName: z.string().nullable(),
+  email: z.string(),
+  phone: z.string().nullable(),
+});
+
+/** Private operational data: participant/admin access only, never public browse. */
+export const ReservationDetailSchema = z.object({
+  id: z.string(),
+  listingId: z.string(),
+  status: ReservationStatusSchema,
+  categoryName: z.string(),
+  estimatedWeightKg: z.number().positive(),
+  estimatedTotalVnd: z.number().int().nonnegative(),
+  createdAt: z.string(),
+  scheduledAt: z.string().nullable(),
+  pickupLocation: z.string().nullable(),
+  coordinatorContact: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  actualWeightKg: z.number().positive().nullable(),
+  sellerReceivedAmountVnd: z.number().int().positive().nullable(),
+  receiptNote: z.string().nullable(),
+  cancelledAt: z.string().nullable(),
+  cancelReason: z.string().nullable(),
+  /** Existing account contact fields, available only to the coordinating admin. */
+  contacts: z.object({ seller: ReservationContactSchema, buyer: ReservationContactSchema }).nullable(),
+});
+export type ReservationDetail = z.infer<typeof ReservationDetailSchema>;
+
+export const AdminListingListSchema = z.object({
+  listings: z.array(MarketplaceListingSchema.extend({ reservation: ReservationDetailSchema.nullable() })),
+  nextCursor: PaginationCursorTokenSchema.optional(),
+});
+export type AdminListingList = z.infer<typeof AdminListingListSchema>;
 
 // ─── Marketplace: subscription gate ──────────────────────────────────────────
 
@@ -464,14 +522,15 @@ export const AccountHistoryQuerySchema = z.object({
 });
 export type AccountHistoryQuery = z.infer<typeof AccountHistoryQuerySchema>;
 
-/** A buyer's own reservation, without any seller identity or contact details. */
+/** A participant's own reservation, without counterpart identity or contact details. */
 export const AccountReservationHistorySchema = z.object({
   id: z.string(),
   categoryName: z.string(),
   estimatedWeightKg: z.number().positive(),
   buyerPricePerKgVnd: z.number().int().positive(),
   estimatedTotalVnd: z.number().int().nonnegative(),
-  status: ListingStatusSchema,
+  status: ReservationStatusSchema,
+  role: z.enum(["BUYER", "SELLER"]),
   createdAt: z.string().datetime({ offset: true }),
 });
 export type AccountReservationHistory = z.infer<
@@ -536,6 +595,8 @@ export const MARKETPLACE_ERROR_CODES = [
   "QUOTE_OUT_OF_PUBLISHED_RANGE",
   "PENDING_QUOTE_EXISTS",
   "LISTING_NOT_AVAILABLE",
+  "RESERVATION_NOT_FOUND",
+  "RESERVATION_NOT_ACTIVE",
   "SUBSCRIPTION_REQUIRED",
   "CANNOT_RESERVE_OWN_LISTING",
   // A photo can back only one scrap request (MediaAsset.mediaAssetId is unique

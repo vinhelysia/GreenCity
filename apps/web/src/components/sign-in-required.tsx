@@ -1,8 +1,9 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/empty-state";
-import { Link } from "@/i18n/routing";
 
 type SignInRequiredProps = {
   testId?: string;
@@ -39,18 +40,18 @@ export function SignInRequired({ testId, actionKey }: SignInRequiredProps) {
           <p className="flex flex-wrap gap-x-4 gap-y-2">
             {/* Locale-aware Link: on /en these must go to /en/login and
                 /en/register, not the Vietnamese paths. */}
-            <Link
+            <AuthEntryLink
               href="/dang-nhap"
               className="font-medium text-accent underline-offset-4 hover:underline"
             >
               {t("loginButton")}
-            </Link>
-            <Link
+            </AuthEntryLink>
+            <AuthEntryLink
               href="/dang-ky"
               className="font-medium text-accent underline-offset-4 hover:underline"
             >
               {t("createNewAccount")}
-            </Link>
+            </AuthEntryLink>
           </p>
         </div>
       }

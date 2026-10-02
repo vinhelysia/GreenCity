@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import sharp from 'sharp';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { AppModule } from '../src/app.module';
 import { ApiExceptionFilter } from '../src/common/http-exception.filter';
 import { requestIdMiddleware } from '../src/common/request-id';
@@ -265,10 +267,15 @@ describe('Marketplace integration', () => {
     ).toBe(true);
 
     const completeRes = await request(app.getHttpServer())
-      .post(`/admin/listings/${listingId}/complete`)
+      .post(`/admin/reservations/${reserveRes.body.reservationId}/complete`)
       .set('Origin', 'http://localhost:3000')
-      .set('Cookie', adminCookie);
+      .set('Cookie', adminCookie)
+      .send({ actualWeightKg: 3, sellerReceivedAmountVnd: 4500, receiptNote: 'Cash receipt TEST-001' });
     expect(completeRes.status).toBe(201);
+    const listing = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listingId } });
+    const earned = await prisma.pointEntry.findUniqueOrThrow({ where: { reason_referenceId: { reason: 'LISTING_COMPLETED', referenceId: listingId } } });
+    expect(earned.delta).toBe(4); // Actual 4,500 VND, rather than the 6,000 VND estimate.
+    expect(listing.status).toBe('COMPLETED');
 
     const queuedAfter = await request(app.getHttpServer())
       .get('/admin/listings?status=RESERVED')
@@ -570,5 +577,125 @@ describe('Marketplace integration', () => {
       });
       expect(res.status).toBe(403);
     });
+  });
+
+  function reservationAction(id: string, action: string, body: object, cookie = adminCookie) {
+    return request(app.getHttpServer()).post(`/admin/reservations/${id}/${action}`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', cookie).send(body);
+  }
+
+  const settlement = { actualWeightKg: 1.5, sellerReceivedAmountVnd: 2250, receiptNote: 'Cash receipt COLLECTION-001' };
+
+  it('keeps cancelled history, restricts private details, and allows a new buyer to reserve again', async () => {
+    const { listingId, sellerCookie } = await createAvailableListing('collection');
+    const reserve = await request(app.getHttpServer()).post(`/marketplace/listings/${listingId}/reserve`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', subscribedBuyerCookie);
+    const id = reserve.body.reservationId;
+    expect(reserve.status).toBe(201);
+    const detail = (cookie: string) => request(app.getHttpServer()).get(`/marketplace/reservations/${id}`).set('Cookie', cookie);
+    expect((await request(app.getHttpServer()).get(`/marketplace/reservations/${id}`)).status).toBe(401);
+    const outsider = cookieFrom(await register('collection-outsider'));
+    expect((await detail(outsider)).status).toBe(404);
+    for (const cookie of [sellerCookie, subscribedBuyerCookie]) {
+      const own = await detail(cookie);
+      expect(own.status).toBe(200);
+      expect(own.headers['cache-control']).toBe('private, no-store');
+      expect(own.body.contacts).toBeNull();
+      expect(own.body.scheduledAt).toBeNull();
+    }
+    expect((await detail(adminCookie)).body.contacts.buyer.email).toBe(subscribedBuyerEmail);
+    const schedule = { scheduledAt: '2026-11-01T08:00:00+07:00', pickupLocation: 'Campus collection point', coordinatorContact: 'Coordinator: 0900000000' };
+    for (const [action, body] of [['schedule', schedule], ['cancel', { reason: 'Buyer unavailable' }], ['complete', settlement]] as const) {
+      expect((await reservationAction(id, action, body, subscribedBuyerCookie)).status).toBe(403);
+    }
+    expect((await reservationAction(id, 'schedule', schedule)).status).toBe(201);
+    expect((await detail(sellerCookie)).body).toMatchObject({ ...schedule, scheduledAt: '2026-11-01T01:00:00.000Z' });
+    expect((await reservationAction(id, 'complete', {})).status).toBe(400);
+    expect((await reservationAction(id, 'complete', { ...settlement, sellerReceivedAmountVnd: -1 })).status).toBe(400);
+    expect((await reservationAction(id, 'cancel', { reason: ' ' })).status).toBe(400);
+    expect((await reservationAction(id, 'cancel', { reason: 'Buyer unavailable' })).status).toBe(201);
+    expect((await prisma.reservation.findUniqueOrThrow({ where: { id } }))).toMatchObject({ status: 'CANCELLED', cancelledById: expect.any(String) });
+    expect((await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listingId } })).status).toBe('AVAILABLE');
+    const nextCookie = cookieFrom(await register('collection-next-buyer'));
+    expect((await reservationAction(id, 'complete', settlement)).status).toBe(409);
+    await request(app.getHttpServer()).post('/admin/subscriptions').set('Origin', 'http://localhost:3000').set('Cookie', adminCookie)
+      .send({ email: email('collection-next-buyer'), note: 'Collection rebooking test' }).expect(201);
+    const next = await request(app.getHttpServer()).post(`/marketplace/listings/${listingId}/reserve`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', nextCookie);
+    expect(next.status).toBe(201);
+    expect(next.body.reservationId).not.toBe(id);
+    expect((await reservationAction(id, 'complete', settlement)).status).toBe(409);
+    expect((await request(app.getHttpServer()).get(`/marketplace/reservations/${next.body.reservationId}`).set('Cookie', subscribedBuyerCookie)).status).toBe(404);
+    const oldHistory = await request(app.getHttpServer()).get('/account/history?limit=10').set('Cookie', subscribedBuyerCookie);
+    expect(oldHistory.body.reservations.find((r: { id: string }) => r.id === id)).toMatchObject({ status: 'CANCELLED', role: 'BUYER' });
+    const sellerHistory = await request(app.getHttpServer()).get('/account/history').set('Cookie', sellerCookie);
+    expect(sellerHistory.body.reservations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id, status: 'CANCELLED', role: 'SELLER' }),
+      expect.objectContaining({ id: next.body.reservationId, status: 'RESERVED', role: 'SELLER' }),
+    ]));
+    const active = await prisma.reservation.findUniqueOrThrow({ where: { id: next.body.reservationId } });
+    await expect(prisma.reservation.create({ data: { listingId, buyerId: active.buyerId } })).rejects.toMatchObject({ code: 'P2002' });
+    expect((await reservationAction(active.id, 'complete', settlement)).status).toBe(201);
+    expect((await request(app.getHttpServer()).get(`/marketplace/reservations/${active.id}`).set('Cookie', sellerCookie)).body).toMatchObject({ status: 'COMPLETED', ...settlement, contacts: null });
+    const point = await prisma.pointEntry.findUniqueOrThrow({ where: { reason_referenceId: { reason: 'LISTING_COMPLETED', referenceId: listingId } } });
+    expect(point.delta).toBe(2);
+    expect((await prisma.auditLog.findMany({ where: { targetId: active.id, action: 'reservation.complete' } }))).toHaveLength(1);
+  });
+
+  it('serializes competing cancel/complete operations and never rewards a cancelled reservation', async () => {
+    const { listingId } = await createAvailableListing('collection-race');
+    const reserved = await request(app.getHttpServer()).post(`/marketplace/listings/${listingId}/reserve`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', subscribedBuyerCookie);
+    const id = reserved.body.reservationId;
+    const results = await Promise.all([
+      reservationAction(id, 'complete', settlement),
+      reservationAction(id, 'cancel', { reason: 'Cancelled while completing' }),
+    ]);
+    expect(results.map(r => r.status).sort()).toEqual([201, 409]);
+    const row = await prisma.reservation.findUniqueOrThrow({ where: { id } });
+    const listing = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listingId } });
+    expect(listing.status).toBe(row.status === 'COMPLETED' ? 'COMPLETED' : 'AVAILABLE');
+    expect(await prisma.pointEntry.count({ where: { referenceId: listingId, reason: 'LISTING_COMPLETED' } })).toBe(row.status === 'COMPLETED' ? 1 : 0);
+    expect((await reservationAction(id, 'schedule', { scheduledAt: '2026-11-02T01:00:00Z', pickupLocation: 'Campus', coordinatorContact: 'Admin' })).status).toBe(409);
+  });
+
+  it('rolls back settlement and listing state if the points ledger write fails', async () => {
+    const { listingId } = await createAvailableListing('collection-rollback');
+    const reserved = await request(app.getHttpServer()).post(`/marketplace/listings/${listingId}/reserve`)
+      .set('Origin', 'http://localhost:3000').set('Cookie', subscribedBuyerCookie);
+    const listing = await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listingId } });
+    await prisma.pointEntry.create({ data: { userId: listing.sellerId, reason: 'LISTING_COMPLETED', referenceId: listingId, delta: 1 } });
+    expect((await reservationAction(reserved.body.reservationId, 'complete', settlement)).status).toBe(500);
+    expect((await prisma.marketplaceListing.findUniqueOrThrow({ where: { id: listingId } })).status).toBe('RESERVED');
+    expect((await prisma.reservation.findUniqueOrThrow({ where: { id: reserved.body.reservationId } }))).toMatchObject({ status: 'RESERVED', completedAt: null, sellerReceivedAmountVnd: null });
+  });
+
+  it('backfills historical outcomes without inventing settlement data', async () => {
+    const schema = `collection_migration_${suffix.replace(/[^a-z0-9]/g, '')}`;
+    const migration = readFileSync(path.join(__dirname, '../prisma/migrations/20261002000001_reservation_collection_flow/migration.sql'), 'utf8');
+    // Only trusted migration SQL and a locally generated identifier are used.
+    // A forced rollback leaves this isolated test schema and fixture rows absent.
+    const rollback = new Error('rollback migration fixture');
+    try {
+      await prisma.$transaction(async tx => {
+        await tx.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);
+        await tx.$executeRawUnsafe(`SET LOCAL search_path TO "${schema}"`);
+        await tx.$executeRawUnsafe('CREATE TABLE "MarketplaceListing" (id TEXT PRIMARY KEY, status TEXT NOT NULL)');
+        await tx.$executeRawUnsafe('CREATE TABLE "Reservation" (id TEXT PRIMARY KEY, "listingId" TEXT NOT NULL)');
+        await tx.$executeRawUnsafe('CREATE UNIQUE INDEX "Reservation_listingId_key" ON "Reservation"("listingId")');
+        await tx.$executeRawUnsafe(`INSERT INTO "MarketplaceListing" VALUES ('a','RESERVED'),('b','COMPLETED'),('c','CANCELLED'),('d','AVAILABLE')`);
+        await tx.$executeRawUnsafe(`INSERT INTO "Reservation" VALUES ('r-a','a'),('r-b','b'),('r-c','c'),('r-d','d')`);
+        for (const statement of migration.split(';')) {
+          const sql = statement.replace(/--[^\n]*/g, '').trim();
+          if (sql && sql !== 'BEGIN' && sql !== 'COMMIT') await tx.$executeRawUnsafe(sql);
+        }
+        const rows = await tx.$queryRawUnsafe<Array<{ id: string; status: string; actualWeightKg: number | null; sellerReceivedAmountVnd: number | null }>>('SELECT id,status,"actualWeightKg","sellerReceivedAmountVnd" FROM "Reservation" ORDER BY id');
+        expect(rows.map(r => r.status)).toEqual(['RESERVED', 'COMPLETED', 'CANCELLED', 'CANCELLED']);
+        expect(rows.every(r => r.actualWeightKg === null && r.sellerReceivedAmountVnd === null)).toBe(true);
+        throw rollback;
+      });
+    } catch (err) {
+      if (err !== rollback) throw err;
+    }
   });
 });

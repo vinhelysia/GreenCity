@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/routing";
 import { EcoBadge } from "./eco-badge";
-import { IconArrowRight, IconLeaf, IconSparkles } from "./eco-icons";
+import { IconLeaf } from "./eco-icons";
+import { MorphActionLink } from "./morph-icon";
 
 /**
  * Opening hero section — Server Component.
@@ -58,26 +58,27 @@ export async function HomeHero() {
         </p>
 
         <div className="mt-8 flex min-w-0 flex-wrap items-center gap-3.5">
-          <Link
+          <MorphActionLink
+            icon="package"
             href="/ban-phe-lieu"
             className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-warm-600 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-warm-900"
           >
             <span>{t("sellAction")}</span>
-            <IconArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
+          </MorphActionLink>
+          <MorphActionLink
+            icon="pin"
             href="/dong-gop"
             className="inline-flex min-h-12 items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-edge bg-card px-6 py-3 text-base font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-mint-surface/40"
           >
             <span>{t("reportAction")}</span>
-          </Link>
-          <Link
+          </MorphActionLink>
+          <MorphActionLink
+            icon="store"
             href="/cho-online"
             className="inline-flex min-h-12 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-4 py-3 text-sm font-semibold text-primary transition-colors hover:text-primary-hover hover:underline"
           >
-            <IconSparkles className="h-4 w-4" />
             <span>{t("exploreMarketplace")}</span>
-          </Link>
+          </MorphActionLink>
         </div>
 
         {/* One shield icon repeated three times said nothing three times. The

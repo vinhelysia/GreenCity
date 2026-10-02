@@ -4,12 +4,14 @@ import { useLocale, useTranslations } from "next-intl";
 import { FormEvent, useId, useState } from "react";
 import { LoginRequestSchema } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
-import { Link } from "@/i18n/routing";
+import { useRouter, type Pathnames } from "@/i18n/routing";
+import { AuthEntryLink } from "@/components/auth-entry-link";
 import { firstFieldErrors } from "@/lib/api";
 
 type FormState = "idle" | "submitting" | "success";
 
-export function LoginForm() {
+export function LoginForm({ returnTo = "/tai-khoan" }: { returnTo?: Pathnames }) {
+  const router = useRouter();
   const locale = useLocale();
   const tAuth = useTranslations("auth");
   const tVal = useTranslations("validation");
@@ -76,6 +78,7 @@ export function LoginForm() {
     }
 
     setFormState("success");
+    router.replace(returnTo);
   }
 
   if (authStatus === "authenticated" && user) {
@@ -193,12 +196,12 @@ export function LoginForm() {
             ? tAuth("loginSuccess")
             : tAuth("noAccount")}
         {formState === "idle" && !serverError ? (
-          <Link
+          <AuthEntryLink
             href="/dang-ky"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
             {tAuth("registerNow")}
-          </Link>
+          </AuthEntryLink>
         ) : null}
       </p>
     </form>

@@ -11,6 +11,7 @@ const SCRAP_PATH = "/api/scrap-requests/mine";
 const CLEANUP_PATH = "/api/cleanup-reports/mine";
 const SUBSCRIPTION_PATH = "/api/subscriptions/me";
 const HISTORY_PATH = "/api/account/history";
+const DETAIL_PATH = "/api/marketplace/reservations/reservation-account-e2e";
 const CREATED_AT = "2026-08-09T00:00:00.000Z";
 
 const SESSION = {
@@ -42,6 +43,14 @@ type ApiCall = { path: string; search: string; method: string };
 function accountRoutes(overrides: Record<string, Reply> = {}): Record<string, Reply> {
   return {
     [ME_PATH]: { status: 200, json: SESSION },
+    [DETAIL_PATH]: { status: 200, json: {
+      id: "reservation-account-e2e", listingId: "listing-account-e2e", status: "COMPLETED",
+      categoryName: "Giấy carton", estimatedWeightKg: 12.5, estimatedTotalVnd: 37500,
+      createdAt: CREATED_AT, scheduledAt: CREATED_AT, pickupLocation: "Campus meeting point",
+      coordinatorContact: "Coordinator TEST", completedAt: CREATED_AT, actualWeightKg: 10,
+      sellerReceivedAmountVnd: 30000, receiptNote: "Cash receipt DETAIL-001", contacts: null,
+      cancelledAt: null, cancelReason: null,
+    } },
     [POINTS_PATH]: {
       status: 200,
       json: { balance: 123, entries: [] },
@@ -137,6 +146,7 @@ function accountRoutes(overrides: Record<string, Reply> = {}): Record<string, Re
         reservations: [
           {
             id: "reservation-account-e2e",
+            role: "BUYER",
             categoryName: "Giấy carton",
             estimatedWeightKg: 12.5,
             buyerPricePerKgVnd: 3000,
@@ -215,6 +225,65 @@ async function installApiMock(
 }
 
 test.describe("Account dashboard", () => {
+  for (const sample of [
+    { name: "pending", step: 0, status: "RESERVED", scheduledAt: null },
+    { name: "scheduled", step: 1, status: "RESERVED", scheduledAt: CREATED_AT },
+    { name: "cancelled", step: null, status: "CANCELLED", scheduledAt: null },
+    { name: "legacy", step: null, status: "COMPLETED", scheduledAt: null },
+  ]) {
+    test(`collection progress reflects ${sample.name} at 320px`, async ({ page }) => {
+      const routes = accountRoutes();
+      const receipt = routes[DETAIL_PATH];
+      if (!receipt) throw new Error("Missing reservation fixture");
+      receipt.json = {
+        ...(receipt.json as Record<string, unknown>),
+        status: sample.status, scheduledAt: sample.scheduledAt,
+        completedAt: sample.status === "COMPLETED" ? CREATED_AT : null,
+        actualWeightKg: null, sellerReceivedAmountVnd: null,
+        cancelReason: sample.status === "CANCELLED" ? "Pickup cancelled" : null,
+      };
+      await installApiMock(page, routes, []);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await page.goto("/tai-khoan?reservation=reservation-account-e2e", { waitUntil: "networkidle" });
+      const detail = page.getByTestId("reservation-summary");
+      await expect(detail).toBeVisible();
+      if (sample.step !== null) {
+        await expect(detail.locator('ol [aria-current="step"]')).toHaveCount(1);
+        await expect(detail.locator("ol li").nth(sample.step)).toHaveAttribute("aria-current", "step");
+      } else await expect(detail.locator("ol")).toHaveCount(0);
+      const logout = await page.getByTestId("header-logout").boundingBox();
+      expect(logout!.x + logout!.width).toBeLessThanOrEqual(320);
+      for (const width of [1024, 1280, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        const overlaps = await page.getByRole("banner").evaluate(header => {
+          const boxes = Array.from(header.querySelectorAll("a,button"))
+            .map(el => el.getBoundingClientRect()).filter(box => box.width && box.height);
+          return boxes.some((a, i) => boxes.slice(i + 1).some(b => a.left < b.right - 1 && a.right > b.left + 1 && a.top < b.bottom && a.bottom > b.top));
+        });
+        expect(overlaps, `header controls overlap at ${width}px`).toBe(false);
+      }
+    });
+  }
+
+  for (const sample of [
+    { path: "/tai-khoan", title: "Chi tiết đơn thu gom", amount: "30.000đ" },
+    { path: "/en/account", title: "Collection order details", amount: "30,000 VND" },
+  ]) {
+    test(`shows the private receipt and appointment on ${sample.path}`, async ({ page }) => {
+      const issues = attachRuntimeGuards(page);
+      const calls: ApiCall[] = [];
+      await installApiMock(page, accountRoutes(), calls);
+      await page.goto(`${sample.path}?reservation=reservation-account-e2e`, { waitUntil: "networkidle" });
+      const detail = page.getByTestId("account-reservation-detail");
+      await expect(detail).toContainText(sample.title);
+      await expect(detail).toContainText("Campus meeting point");
+      await expect(detail).toContainText(sample.amount);
+      await expect(detail).toContainText("Cash receipt DETAIL-001");
+      expect(calls.some(call => call.path === DETAIL_PATH && call.method === "GET")).toBe(true);
+      assertCleanRuntime(issues, "private collection receipt");
+    });
+  }
+
   test("anonymous Vietnamese visitors see the sign-in-required state and no private histories load", async ({
     page,
   }) => {

@@ -9,7 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/routing";
+import { getAuthReturnPath } from "@/lib/auth-return";
 import type { PublicUser } from "@greencity/shared";
 import {
   fetchMe,
@@ -45,8 +46,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 const AUTH_PAGES = new Set([
   "/dang-nhap",
   "/dang-ky",
-  "/en/login",
-  "/en/register",
 ]);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -59,8 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setStatus("unauthenticated");
     if (!AUTH_PAGES.has(pathname)) {
-      const isEn = pathname?.startsWith("/en");
-      router.replace(isEn ? "/en/login" : "/dang-nhap");
+      router.replace({
+        pathname: "/dang-nhap",
+        query: { next: getAuthReturnPath(pathname) },
+      });
     }
   }, [pathname, router]);
 

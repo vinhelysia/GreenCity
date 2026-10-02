@@ -10,6 +10,15 @@ import {
   ScrapRequestListSchema,
   type ScrapRequestList,
   MarketplaceListingListSchema,
+  AdminListingListSchema,
+  ReservationDetailSchema,
+  ReserveListingResponseSchema,
+  type ReserveListingResponse,
+  type AdminListingList,
+  type ReservationDetail,
+  type CompleteReservation,
+  type ScheduleReservation,
+  type CancelReservation,
   type MarketplaceListingList,
   SubscriptionStateSchema,
   type SubscriptionState,
@@ -235,6 +244,8 @@ const MARKETPLACE_ERROR_MESSAGES = {
     INVALID_RESPONSE: "Phản hồi máy chủ không hợp lệ.",
     SUBSCRIPTION_REQUIRED: "Bạn cần gói người mua để đặt giữ. Mua gói ở phần đầu trang.",
     LISTING_NOT_AVAILABLE: "Tin này vừa được người khác đặt giữ.",
+    RESERVATION_NOT_FOUND: "Không tìm thấy đơn thu gom hoặc bạn không có quyền xem.",
+    RESERVATION_NOT_ACTIVE: "Đơn đã hoàn tất hoặc đã hủy. Vui lòng tải lại dữ liệu.",
     CANNOT_RESERVE_OWN_LISTING: "Đây là tin đăng của bạn.",
     QUOTE_OUT_OF_PUBLISHED_RANGE: "Giá phải nằm trong khoảng đã công khai.",
     PENDING_QUOTE_EXISTS: "Yêu cầu này đã có báo giá đang chờ phản hồi.",
@@ -255,6 +266,8 @@ const MARKETPLACE_ERROR_MESSAGES = {
     INVALID_RESPONSE: "The server returned an invalid response.",
     SUBSCRIPTION_REQUIRED: "A Buyer Pass is required to reserve a listing. Purchase one at the top of the page.",
     LISTING_NOT_AVAILABLE: "This listing was just reserved by someone else.",
+    RESERVATION_NOT_FOUND: "Collection order not found or access is unavailable.",
+    RESERVATION_NOT_ACTIVE: "This order was completed or cancelled. Please reload.",
     CANNOT_RESERVE_OWN_LISTING: "This is your listing.",
     QUOTE_OUT_OF_PUBLISHED_RANGE: "The price must be within the published range.",
     PENDING_QUOTE_EXISTS: "This request already has a quote awaiting a response.",
@@ -467,20 +480,17 @@ export async function fetchMarketplaceListings(options?: PaginationOptions): Pro
   return { ok: true, data: parsed.data, status: result.status };
 }
 
-/** POST /api/marketplace/listings/:id/reserve */
-/**
- * The endpoint answers `{ ok, reservationId }` and the caller only needs to
- * know whether it worked, so nothing is parsed out of the body. It used to
- * read a `reservation` object that this route has never returned, which failed
- * validation and showed the buyer an error on a reservation that had in fact
- * been created.
- */
+/** Validate the reservation ID before navigating to the new private order. */
 export async function reserveListing(
   id: string,
-): Promise<ApiResult<unknown>> {
-  return apiFetch<unknown>(`/api/marketplace/listings/${id}/reserve`, {
+): Promise<ApiResult<ReserveListingResponse>> {
+  const result = await apiFetch<unknown>(`/api/marketplace/listings/${encodeURIComponent(id)}/reserve`, {
     method: "POST",
   });
+  if (!result.ok) return result;
+  const parsed = ReserveListingResponseSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
 }
 
 /**
@@ -622,23 +632,42 @@ export async function fetchAdminCleanupReports(): Promise<
 
 /** Reserved listings only: those are the ones an admin can still complete. */
 export async function fetchAdminReservedListings(options?: PaginationOptions): Promise<
-  ApiResult<MarketplaceListingList>
+  ApiResult<AdminListingList>
 > {
   const query = new URLSearchParams({ status: "RESERVED" });
   if (options?.limit !== undefined) query.set("limit", String(options.limit));
   if (options?.cursor !== undefined) query.set("cursor", options.cursor);
   const result = await apiFetch<unknown>(`/api/admin/listings?${query}`);
   if (!result.ok) return result;
-  const parsed = MarketplaceListingListSchema.safeParse(result.data);
+  const parsed = AdminListingListSchema.safeParse(result.data);
   if (!parsed.success) return invalidResponse(result.status);
   return { ok: true, data: parsed.data, status: result.status };
 }
 
-export async function completeListing(
-  id: string,
-): Promise<ApiResult<unknown>> {
-  return apiFetch<unknown>(`/api/admin/listings/${id}/complete`, {
+export async function fetchReservation(id: string): Promise<ApiResult<ReservationDetail>> {
+  const result = await apiFetch<unknown>(`/api/marketplace/reservations/${encodeURIComponent(id)}`);
+  if (!result.ok) return result;
+  const parsed = ReservationDetailSchema.safeParse(result.data);
+  if (!parsed.success) return invalidResponse(result.status);
+  return { ok: true, data: parsed.data, status: result.status };
+}
+
+export async function completeReservation(id: string, body: CompleteReservation): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/admin/reservations/${encodeURIComponent(id)}/complete`, {
+    method: "POST", body: JSON.stringify(body),
+  });
+}
+
+export async function scheduleReservation(id: string, body: ScheduleReservation): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/admin/reservations/${encodeURIComponent(id)}/schedule`, {
+    method: "POST", body: JSON.stringify(body),
+  });
+}
+
+export async function cancelReservation(id: string, body: CancelReservation): Promise<ApiResult<unknown>> {
+  return apiFetch<unknown>(`/api/admin/reservations/${encodeURIComponent(id)}/cancel`, {
     method: "POST",
+    body: JSON.stringify(body),
   });
 }
 

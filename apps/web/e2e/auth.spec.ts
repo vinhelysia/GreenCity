@@ -78,7 +78,8 @@ test.describe("Auth flows @core", () => {
     await expect(page.getByTestId("header-user-label")).toContainText(
       /Người test|auth-ui/i,
     );
-    await expect(page.getByTestId("register-success")).toBeVisible();
+    await expect(page).toHaveURL(/\/tai-khoan$/);
+    await expect(page.getByTestId("account-dashboard")).toBeVisible();
     await expect(page.getByTestId("header-login")).toHaveCount(0);
     assertCleanRuntime(issues, "register");
   });
@@ -135,6 +136,12 @@ test.describe("Auth flows @core", () => {
     page,
   }) => {
     await registerViaUi(page, email("logout-401"));
+
+    // Finish registration navigation, then leave the dashboard before revoking
+    // cookies: its pending private fetches otherwise sign out before the click.
+    await expect(page).toHaveURL(/\/tai-khoan$/);
+    await page.goto("/", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("header-logout")).toBeVisible();
 
     // Simulate a session that was revoked in another tab before this click.
     // The stale client state must converge on the server's 401 response.

@@ -1,6 +1,6 @@
 /**
  * Delete the full scrap→listing→reservation chain a marketplace e2e run created,
- * plus its throwaway seller (email contains @market-<suffix>.test).
+ * plus its throwaway seller and buyer (email contains @market-<suffix>.test).
  * Usage: node e2e/cleanup-marketplace.mjs <suffix>
  *
  * MarketplaceListing and Reservation use onDelete: Restrict (deliberate — a
@@ -76,7 +76,7 @@ try {
       where: { id: { in: sellerIds } },
     });
     console.log(
-      `cleanup: ${users.count} sellers, ${listings.length} listings, ${res.count} reservations for ${marker}`,
+      `cleanup: ${users.count} test users, ${listings.length} listings, ${res.count} reservations for ${marker}`,
     );
   } else {
     console.log(`cleanup: nothing matching ${marker}`);

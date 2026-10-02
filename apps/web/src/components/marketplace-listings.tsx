@@ -1,16 +1,18 @@
 "use client";
 
+import { AuthEntryLink } from "@/components/auth-entry-link";
+
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MarketplaceListing } from "@greencity/shared";
 import { useAuth } from "@/components/auth-provider";
+import { useRouter } from "@/i18n/routing";
 import {
   BuyerPassPanel,
   type SubscriptionLoad,
 } from "@/components/buyer-pass-panel";
 import { EcoBadge } from "@/components/eco-badge";
 import { EmptyState } from "@/components/empty-state";
-import { Link } from "@/i18n/routing";
 import {
   checkAuthExpiry,
   fetchMarketplaceListings,
@@ -209,6 +211,7 @@ function ListingCard({
 }) {
   const locale = useLocale();
   const tMkt = useTranslations("marketplace");
+  const router = useRouter();
   const [reserving, setReserving] = useState(false);
   const [rowError, setRowError] = useState<string | null>(null);
 
@@ -225,7 +228,7 @@ function ListingCard({
       if (result.status === 409) onReserved();
       return;
     }
-    onReserved();
+    router.push({ pathname: "/tai-khoan", query: { reservation: result.data.reservationId } });
   }
 
   return (
@@ -280,12 +283,12 @@ function ListingCard({
               {locale === "en" ? "Reserved" : "Đã được đặt giữ"}
             </EcoBadge>
           ) : authStatus === "unauthenticated" ? (
-            <Link
+            <AuthEntryLink
               href="/dang-nhap"
               className="inline-flex min-h-11 items-center justify-center rounded-xl border border-edge bg-card px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-primary/40 hover:bg-mint-surface/30"
             >
               {tMkt("loginToReserve")}
-            </Link>
+            </AuthEntryLink>
           ) : eligible === "eligible" ? (
             <button
               type="button"

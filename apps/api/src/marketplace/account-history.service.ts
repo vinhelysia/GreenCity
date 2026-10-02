@@ -18,18 +18,19 @@ export class AccountHistoryService {
   async getRecent(userId: string, limit: number): Promise<AccountHistory> {
     const [reservations, subscriptions, payments] = await Promise.all([
       this.prisma.reservation.findMany({
-        where: { buyerId: userId },
+        where: { OR: [{ buyerId: userId }, { listing: { sellerId: userId } }] },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: limit,
         select: {
           id: true,
+          buyerId: true,
+          status: true,
           createdAt: true,
           listing: {
             select: {
               categoryName: true,
               estimatedWeightKg: true,
               buyerPricePerKgVnd: true,
-              status: true,
             },
           },
         },
@@ -73,7 +74,8 @@ export class AccountHistoryService {
           reservation.listing.buyerPricePerKgVnd *
             reservation.listing.estimatedWeightKg,
         ),
-        status: reservation.listing.status,
+        status: reservation.status,
+        role: reservation.buyerId === userId ? 'BUYER' : 'SELLER',
         createdAt: reservation.createdAt.toISOString(),
       })),
       subscriptions: subscriptions.map((subscription) => ({
