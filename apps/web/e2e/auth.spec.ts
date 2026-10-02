@@ -137,6 +137,12 @@ test.describe("Auth flows @core", () => {
   }) => {
     await registerViaUi(page, email("logout-401"));
 
+    // Finish registration navigation, then leave the dashboard before revoking
+    // cookies: its pending private fetches otherwise sign out before the click.
+    await expect(page).toHaveURL(/\/tai-khoan$/);
+    await page.goto("/", { waitUntil: "networkidle" });
+    await expect(page.getByTestId("header-logout")).toBeVisible();
+
     // Simulate a session that was revoked in another tab before this click.
     // The stale client state must converge on the server's 401 response.
     await page.context().clearCookies();
