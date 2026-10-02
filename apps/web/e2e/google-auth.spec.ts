@@ -3,6 +3,13 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 import { assertNoHorizontalOverflow } from "./helpers";
 
+test("OAuth callback keeps no-referrer through the Next proxy @core", async ({ request }) => {
+  const response = await request.get("/api/auth/google/callback?error=access_denied", { maxRedirects: 0 });
+  expect(response.status()).toBe(303);
+  expect(response.headers()["referrer-policy"]).toBe("no-referrer");
+  expect(response.headers()["cache-control"]).toMatch(/private.*no-store/);
+});
+
 test("Google sign-in keeps VI/EN destinations, pending state, retry and safe redirects @core", async ({ page }) => {
   await page.route("**/api/auth/google/status", route => route.fulfill({ json: { enabled: true, linked: false } }));
   const requests: unknown[] = [];
